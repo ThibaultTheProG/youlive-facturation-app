@@ -1,37 +1,50 @@
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useState, useEffect } from "react";
 
 type RadioCustomProps = {
-  value?: string;
   onChange?: (val: string) => void;
   defaultValue?: boolean;
+  name?: string;
 };
 
-export default function RadioCustom({ value, onChange, defaultValue }: RadioCustomProps) {
+export default function RadioCustom({
+  onChange,
+  defaultValue,
+  name,
+}: RadioCustomProps) {
+  const [valeurParDefaut, setValeurParDefaut] = useState("not-set");
 
-  let valeurParDefaut = "";
-
-  if (defaultValue) {
-    valeurParDefaut = "Oui";
-  } else if (defaultValue === false) {
-    valeurParDefaut = "Non"
-  } else {
-    valeurParDefaut = "Non renseigné"
-  }
+  useEffect(() => {
+    if (defaultValue === true) {
+      setValeurParDefaut("oui");
+    } else if (defaultValue === false) {
+      setValeurParDefaut("non");
+    } else {
+      setValeurParDefaut("not-set");
+    }
+  }, [defaultValue]);
 
   return (
-    <RadioGroup defaultValue={valeurParDefaut} value={value} onValueChange={(val) => onChange?.(val)}>
+    <RadioGroup
+      name={name}
+      value={valeurParDefaut}
+      onValueChange={(val) => {
+        setValeurParDefaut(val);
+        onChange?.(val);
+      }}
+    >
       <div className="flex items-center space-x-2">
-        <RadioGroupItem value="Oui" id="r2" />
-        <Label htmlFor="r2">Oui</Label>
+        <RadioGroupItem value="oui" id={`${name}-oui`} />
+        <Label htmlFor={`${name}-oui`}>Oui</Label>
       </div>
       <div className="flex items-center space-x-2">
-        <RadioGroupItem value="Non" id="r3" />
-        <Label htmlFor="r3">Non</Label>
+        <RadioGroupItem value="non" id={`${name}-non`} />
+        <Label htmlFor={`${name}-non`}>Non</Label>
       </div>
       <div className="flex items-center space-x-2">
-        <RadioGroupItem value="Non renseigné" id="r3" />
-        <Label htmlFor="r3">Non renseigné</Label>
+        <RadioGroupItem value="not-set" id={`${name}-not-set`} />
+        <Label htmlFor={`${name}-not-set`}>Non renseigné</Label>
       </div>
     </RadioGroup>
   );
