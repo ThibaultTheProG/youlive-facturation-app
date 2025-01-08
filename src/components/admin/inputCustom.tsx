@@ -1,15 +1,14 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
 
 type inputCustomProps = {
   disable: boolean;
   name?: string;
   label: string;
   id: string;
-  type: string;
+  type?: string;
   placeholder?: string;
-  defaultValue?: string | number;
+  value?: string | number;
   onChange?: (val: string | number) => void;
 };
 
@@ -20,21 +19,13 @@ export default function InputCustom({
   id,
   type,
   placeholder,
-  defaultValue,
+  value,
   onChange,
 }: inputCustomProps) {
-  const [inputValue, setInputValue] = useState(defaultValue || ""); // Initialise avec defaultValue
-
-  // Met à jour l'état si defaultValue change
-  useEffect(() => {
-    setInputValue(defaultValue || "");
-  }, [defaultValue]);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!disable) {
-      const value = type === "number" ? Number(e.target.value) : e.target.value; // Convertir en nombre si nécessaire
-      setInputValue(value); // Met à jour l'état local
-      onChange?.(value); // Appeler la fonction onChange si elle est définie
+      const newValue = type === "number" ? Number(e.target.value) : e.target.value;
+      onChange?.(newValue); // Met à jour l'état parent
     }
   };
 
@@ -47,7 +38,7 @@ export default function InputCustom({
         id={id}
         type={type}
         placeholder={placeholder}
-        value={inputValue}
+        value={value} // Utilise la valeur contrôlée
         onChange={handleChange}
       />
     </div>
