@@ -13,10 +13,10 @@ type SelectItemType = string | { key: number; name: string };
 interface SelectCustomProps {
   placeholder: string;
   selectLabel: string;
-  options: SelectItemType[]; // Options disponibles
-  value: string; // Valeur actuellement sélectionnée
-  onChange: (val: string) => void; // Fonction pour signaler un changement
-  name?: string;
+  options: SelectItemType[]; // Tableau contenant soit des chaînes, soit des objets
+  value: string; // La valeur sélectionnée
+  onChange: (val: string) => void; // Callback pour gérer le changement
+  name?: string; // Nom du champ
 }
 
 export default function SelectCustom({
@@ -30,9 +30,7 @@ export default function SelectCustom({
   return (
     <Select
       value={value}
-      onValueChange={(val) => {
-        onChange(val); // Informe le parent de la nouvelle valeur sélectionnée
-      }}
+      onValueChange={(val) => onChange(val)} // Informe le parent de la nouvelle valeur
       name={name}
     >
       <SelectTrigger className="w-[180px] rounded-md">

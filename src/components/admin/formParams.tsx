@@ -6,7 +6,7 @@ import SelectCustom from "@/components/admin/selectCustom";
 import { Label } from "@/components/ui/label";
 import RadioCustom from "@/components/admin/radioCustom";
 import { Button } from "@/components/ui/button";
-
+import { Conseiller, SelectItem } from "@/lib/types";
 import {
   getConseillersBDD,
   updateConseillersBDD,
@@ -15,25 +15,6 @@ import {
   getParrains,
 } from "@/backend/gestionConseillers";
 import { calculRetrocession } from "@/utils/calculs";
-
-export interface Conseiller {
-  prenom: string;
-  nom: string;
-  id: number;
-  email?: string;
-  telephone?: string;
-  adresse?: string;
-  idapimo?: number;
-  tva?: boolean;
-  typecontrat?: string;
-  siren?: number;
-  chiffre_affaires?: number;
-}
-
-type SelectItem = {
-  key: number;
-  name: string;
-};
 
 export default function FormParams() {
   const [localConseillers, setLocalConseillers] = useState<Conseiller[]>([]);
@@ -96,12 +77,13 @@ export default function FormParams() {
   }));
 
   // Exclure le conseiller sélectionné de la liste des parrains
-  const conseillersNomsSansSelf = localConseillers
-    .filter((c) => c.idapimo !== selectedConseiller?.idapimo) // Exclure le conseiller sélectionné
-    .map((c) => ({
-      key: c.idapimo,
-      name: `${c.prenom} ${c.nom}`,
-    }));
+  const conseillersNomsSansSelf: { key: number; name: string }[] =
+    localConseillers
+      .filter((c) => c.idapimo !== selectedConseiller?.idapimo)
+      .map((c) => ({
+        key: c.idapimo!, // Assurez-vous que `idapimo` n'est pas `undefined`
+        name: `${c.prenom} ${c.nom}`,
+      }));
 
   // Gérer la sélection du conseiller
   const handleSelectConseiller = async (val: string) => {
