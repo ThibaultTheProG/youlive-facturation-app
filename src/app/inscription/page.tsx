@@ -11,7 +11,7 @@ import {
   CardFooter,
   CardContent,
 } from "@/components/ui/card";
-import SelectCustom from "@/components/admin/selectCustom";
+import SelectCustom from "@/components/uiCustom/selectCustom";
 import { getConseillersBDD } from "@/backend/gestionConseillers";
 import { Conseiller, SelectItem } from "@/lib/types";
 

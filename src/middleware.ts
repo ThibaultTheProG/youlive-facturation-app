@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest) {
   
   const token = request.cookies.get("authToken")?.value;
 
-  console.log("Token reçu dans le middleware :", token);
+  //console.log("Token reçu dans le middleware :", token);
 
   // Si aucun token, redirigez vers /login
   if (!token) {
@@ -24,7 +24,7 @@ export async function middleware(request: NextRequest) {
   // Vérifiez le token
   const user = await verifyToken(token);
 
-  console.log("Utilisateur détecté dans le middleware :", user);
+  //console.log("Utilisateur détecté dans le middleware :", user);
 
   // Si le token est invalide ou l'utilisateur est null, redirigez vers /login
   if (!user) {

@@ -1,7 +1,6 @@
 "use client";
 
-import { Settings, FileCheck, LogOut } from "lucide-react";
-
+import { User, Users, FileCheck, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -40,7 +39,7 @@ export function AppSidebar() {
   return (
     <Sidebar side="left">
       <SidebarHeader />
-      <SidebarContent className="justify-bewteen">
+      <SidebarContent className="justify-between">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -58,30 +57,39 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link
-                    href="/admin/parametres"
+                    href="/conseiller/compte"
                     className={`${
-                      pathname === "/admin/parametres"
-                        ? "text-orangeStrong"
-                        : ""
+                      pathname === "/compte" ? "text-orangeStrong" : ""
                     }`}
                   >
-                    <span>Paramètres des conseillers</span>
-                    <Settings />
+                    <span>Mon compte</span>
+                    <User />
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link
-                    href="/admin/suiviFactures"
+                    href="/conseiller/factures"
                     className={`${
-                      pathname === "/admin/suiviFactures"
-                        ? "text-orangeStrong"
-                        : ""
+                      pathname === "/factures" ? "text-orangeStrong" : ""
                     }`}
                   >
-                    <span>Suivi des factures</span>
+                    <span>Mes factures</span>
                     <FileCheck />
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link
+                    href="/conseiller/filleuls"
+                    className={`${
+                      pathname === "/filleuls" ? "text-orangeStrong" : ""
+                    }`}
+                  >
+                    <span>Mes filleuls</span>
+                    <Users />
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

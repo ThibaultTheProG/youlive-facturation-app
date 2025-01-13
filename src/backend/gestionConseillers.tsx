@@ -1,7 +1,7 @@
 "use server";
 
 import db from "../lib/db.js";
-import { Conseiller } from "@/components/admin/formParams.jsx";
+import { Conseiller } from "@/lib/types";
 
 export async function insertConseillers(conseillers: object) {
   if (!Array.isArray(conseillers)) {

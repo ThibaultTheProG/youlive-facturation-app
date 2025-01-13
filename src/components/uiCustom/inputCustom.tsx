@@ -1,16 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { inputCustomProps } from "@/lib/types";
 
-type inputCustomProps = {
-  disable: boolean;
-  name?: string;
-  label: string;
-  id: string;
-  type?: string;
-  placeholder?: string;
-  value?: string | number;
-  onChange?: (val: string | number) => void;
-};
 
 export default function InputCustom({
   disable,
@@ -40,6 +31,7 @@ export default function InputCustom({
         placeholder={placeholder}
         value={value} // Utilise la valeur contrôlée
         onChange={handleChange}
+        className={`${disable ? "bg-gray-100" : ""}`}
       />
     </div>
   );

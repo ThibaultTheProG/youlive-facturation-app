@@ -1,16 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import InputCustom from "@/components/admin/inputCustom";
-import SelectCustom from "@/components/admin/selectCustom";
+import InputCustom from "@/components/uiCustom/inputCustom";
+import SelectCustom from "@/components/uiCustom/selectCustom";
 import { Label } from "@/components/ui/label";
-import RadioCustom from "@/components/admin/radioCustom";
+import RadioCustom from "@/components/uiCustom/radioCustom";
 import { Button } from "@/components/ui/button";
 import { Conseiller, SelectItem } from "@/lib/types";
 import {
   getConseillersBDD,
   updateConseillersBDD,
-  //getParrainnageBDD,
   upsertParrainnageBDD,
   getParrains,
 } from "@/backend/gestionConseillers";
@@ -403,7 +402,7 @@ export default function FormParams() {
           />
         </div>
       </div>
-      <Button type="submit">Valider</Button>
+      <Button className="bg-orangeStrong" type="submit">Valider</Button>
     </form>
   );
 }

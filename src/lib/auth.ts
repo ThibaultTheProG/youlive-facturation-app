@@ -1,13 +1,15 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
+import { User } from "@/lib/types";
 
 // Définir la clé secrète utilisée pour signer et vérifier les tokens
-const SECRET_KEY = new TextEncoder().encode(
-  process.env.JWT_SECRET
-);
+const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET);
 
 // Générer un token JWT
-export async function generateToken(user: { id: number; role: string }): Promise<string> {
+export async function generateToken(user: {
+  id: number;
+  role: string;
+}): Promise<string> {
   return new SignJWT({ id: user.id, role: user.role })
     .setProtectedHeader({ alg: "HS256" }) // Algorithme HS256
     .setExpirationTime("1h") // Durée de validité : 1 heure
@@ -15,13 +17,21 @@ export async function generateToken(user: { id: number; role: string }): Promise
 }
 
 // Vérifier et décoder un token JWT
-export async function verifyToken(token: string): Promise<{ id: number; role: string } | null> {
+export async function verifyToken(token: string): Promise<User | null> {
   try {
-    const { payload } = await jwtVerify(token, SECRET_KEY); // Vérification et décodage
-    return payload as { id: number; role: string }; // Typage des données décodées
+    const { payload } = await jwtVerify(token, SECRET_KEY);
+
+    const user: User = {
+      id: payload.id as number,
+      role: payload.role as "admin" | "conseiller",
+      name: (payload.name as string) || "Nom par défaut", // Remplacez par une valeur par défaut
+      email: (payload.email as string) || "email@example.com", // Remplacez par une valeur par défaut
+    };
+
+    return user;
   } catch (error) {
     console.error("Erreur lors de la vérification du token :", error);
-    return null; // Retourner null en cas d'erreur
+    return null;
   }
 }
 

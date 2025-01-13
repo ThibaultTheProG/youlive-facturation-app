@@ -1,10 +1,17 @@
-import React from 'react';
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "../../components/conseiller/sidebarConseiller";
+import "../globals.css";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+
   return (
-    <div className="admin-layout">
-      <nav>Conseiller Navigation</nav>
-      <main>{children}</main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <main>
+        <SidebarTrigger />
+        {children}
+      </main>
+    </SidebarProvider>
   );
 }

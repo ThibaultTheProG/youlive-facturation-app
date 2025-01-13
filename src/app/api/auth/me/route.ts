@@ -16,7 +16,7 @@ export async function GET() {
     }
 
     // Vérifier le token JWT
-    const user = verifyToken(token);
+    const user = await verifyToken(token);
 
     if (!user || typeof user !== "object" || !("id" in user)) {
       return NextResponse.json(
