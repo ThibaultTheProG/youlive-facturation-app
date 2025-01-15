@@ -10,15 +10,18 @@ import { Conseiller, SelectItem } from "@/lib/types";
 import {
   getConseillersBDD,
   updateConseillersBDD,
-  upsertParrainnageBDD,
-  getParrains,
+  handleParrainages,
+  getParrainLevel,
 } from "@/backend/gestionConseillers";
 import { calculRetrocession } from "@/utils/calculs";
 
 export default function FormParams() {
   const [localConseillers, setLocalConseillers] = useState<Conseiller[]>([]);
-  const [selectedParrain, setSelectedParrain] = useState("");
-  const [assujettiTVA, setAssujettiTVA] = useState("non");
+  const [selectedParrain, setSelectedParrain] = useState<string>("Aucun");
+  const [selectedParrainId, setSelectedParrainId] = useState<number | null>(
+    null
+  );
+  const [assujettiTVA, setAssujettiTVA] = useState<string>("non");
   const [selectedConseiller, setSelectedConseiller] =
     useState<Conseiller | null>(null);
   const [selectedTypeContrat, setSelectedTypeContrat] = useState<string>("");
@@ -30,7 +33,7 @@ export default function FormParams() {
   // Récupérer les conseillers depuis la BDD
   useEffect(() => {
     const fetchConseillers = async () => {
-      const data = await getConseillersBDD(); // Remplacez par votre logique de récupération
+      const data = await getConseillersBDD();
       setLocalConseillers(data);
     };
 
@@ -40,25 +43,62 @@ export default function FormParams() {
   // Synchroniser les champs lorsque `selectedConseiller` change
   useEffect(() => {
     if (selectedConseiller) {
-      setSelectedTypeContrat(selectedConseiller.typecontrat || "");
-      setChiffreAffaires(selectedConseiller.chiffre_affaires || 0);
-      setAssujettiTVA(selectedConseiller.tva ? "oui" : "non");
+      const { typecontrat, chiffre_affaires, tva, parrain_id } =
+        selectedConseiller;
+
+      setSelectedTypeContrat(typecontrat || "");
+      setChiffreAffaires(chiffre_affaires || 0);
+      setAssujettiTVA(tva ? "oui" : "non");
       setRetrocession(
-        selectedConseiller.chiffre_affaires && selectedConseiller.typecontrat
-          ? calculRetrocession(
-              selectedConseiller.typecontrat,
-              selectedConseiller.chiffre_affaires
-            )
+        chiffre_affaires && typecontrat
+          ? calculRetrocession(typecontrat, chiffre_affaires)
           : 0
       );
+
+      // Mettre à jour le parrain sélectionné
+      const parrain = localConseillers.find((c) => c.id === parrain_id);
+      setSelectedParrain(
+        parrain ? `${parrain.prenom} ${parrain.nom}` : "Aucun"
+      );
+      setSelectedParrainId(parrain?.id || null);
+
+      if (selectedConseiller?.id) {
+        // Récupérer le parrain de niveau 2
+        getParrainLevel(selectedConseiller.id, 2)
+          .then((parrain) => setParrainNiveau2(parrain))
+          .catch((error) => {
+            console.error(
+              "Erreur lors de la récupération du parrain de niveau 2 :",
+              error
+            );
+            setParrainNiveau2("Aucun");
+          });
+
+        // Récupérer le parrain de niveau 3
+        getParrainLevel(selectedConseiller.id, 3)
+          .then((parrain) => setParrainNiveau3(parrain))
+          .catch((error) => {
+            console.error(
+              "Erreur lors de la récupération du parrain de niveau 3 :",
+              error
+            );
+            setParrainNiveau3("Aucun");
+          });
+      } else {
+        // Réinitialiser les valeurs si aucun conseiller n'est sélectionné
+        setParrainNiveau2("Aucun");
+        setParrainNiveau3("Aucun");
+      }
     } else {
       // Réinitialiser les valeurs si aucun conseiller sélectionné
       setSelectedTypeContrat("");
       setChiffreAffaires(0);
       setAssujettiTVA("non");
       setRetrocession(0);
+      setSelectedParrain("Aucun");
+      setSelectedParrainId(null);
     }
-  }, [selectedConseiller]);
+  }, [selectedConseiller, localConseillers]);
 
   // Calculer la rétrocession à chaque changement de chiffre d'affaires ou de type de contrat
   useEffect(() => {
@@ -69,20 +109,31 @@ export default function FormParams() {
     }
   }, [chiffreAffaires, selectedTypeContrat]);
 
-  // Générer le tableau des conseillers
-  const conseillersNoms: SelectItem[] = localConseillers.map((conseiller) => ({
-    key: conseiller.id,
-    name: `${conseiller.prenom} ${conseiller.nom}`,
-  }));
+  // Générer le tableau des conseillers et classer par ordre alphabétique
+  const conseillersNoms: SelectItem[] = localConseillers
+    .map((conseiller) => ({
+      key: conseiller.id,
+      name: `${conseiller.prenom} ${conseiller.nom}`,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-  // Exclure le conseiller sélectionné de la liste des parrains
-  const conseillersNomsSansSelf: { key: number; name: string }[] =
-    localConseillers
-      .filter((c) => c.idapimo !== selectedConseiller?.idapimo)
-      .map((c) => ({
-        key: c.idapimo!, // Assurez-vous que `idapimo` n'est pas `undefined`
-        name: `${c.prenom} ${c.nom}`,
-      }));
+  // Exclure le conseiller sélectionné de la liste des parrains et classer par ordre alphabétique
+  const parrains: { key: number; name: string }[] = localConseillers
+    .filter((c) => c.id !== selectedConseiller?.id)
+    .map((c) => ({
+      key: c.id!,
+      name: `${c.prenom} ${c.nom}`,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  // Gérer la sélection du parrain
+  const handleSelectParrain = async (val: string) => {
+    setSelectedParrain(val);
+    const parrain = localConseillers.find(
+      (c) => `${c.prenom} ${c.nom}` === val
+    );
+    setSelectedParrainId(parrain?.id || null);
+  };
 
   // Gérer la sélection du conseiller
   const handleSelectConseiller = async (val: string) => {
@@ -90,123 +141,21 @@ export default function FormParams() {
       (c) => `${c.prenom} ${c.nom}` === val
     );
     setSelectedConseiller(conseiller || null);
-
-    if (conseiller?.idapimo) {
-      try {
-        // Typage explicite de la fonction `getParrains`
-        const parrains: { prenom: string; nom: string; niveau: number }[] =
-          await getParrains(conseiller.idapimo);
-
-        console.log("Parrains récupérés :", parrains);
-
-        // Réinitialiser les valeurs des parrains
-        setSelectedParrain("Aucun");
-        setParrainNiveau2("Aucun");
-        setParrainNiveau3("Aucun");
-
-        parrains.forEach((parrain) => {
-          if (parrain.niveau === 1) {
-            setSelectedParrain(`${parrain.prenom} ${parrain.nom}`);
-            console.log("Parrain de niveau 1 :", parrain);
-          } else if (parrain.niveau === 2) {
-            setParrainNiveau2(`${parrain.prenom} ${parrain.nom}`);
-            console.log("Parrain de niveau 2 :", parrain);
-          } else if (parrain.niveau === 3) {
-            setParrainNiveau3(`${parrain.prenom} ${parrain.nom}`);
-            console.log("Parrain de niveau 3 :", parrain);
-          }
-        });
-      } catch (error) {
-        console.error("Erreur lors de la récupération des parrains :", error);
-      }
-    } else {
-      console.log("Aucun conseiller sélectionné ou idApimo manquant.");
-      setSelectedParrain("Aucun");
-      setParrainNiveau2("Aucun");
-      setParrainNiveau3("Aucun");
-    }
   };
 
   // Recharger les conseillers après soumission
   const handleFormSubmit = async (formData: FormData) => {
     try {
       // Mise à jour des informations du conseiller dans la BDD
-      await updateConseillersBDD(formData);
+      await updateConseillersBDD(
+        formData,
+        selectedParrainId,
+        selectedConseiller?.id as number
+      );
 
-      const conseillerIdApimo = Number(formData.get("id_apimo"));
-      const parrainNom = formData.get("parrain");
-
-      if (conseillerIdApimo && parrainNom) {
-        // Trouver le parrain sélectionné dans la liste des conseillers
-        const parrain = localConseillers.find(
-          (c) => `${c.prenom} ${c.nom}` === parrainNom
-        );
-
-        if (parrain) {
-          // Mettre à jour ou insérer le parrain de niveau 1
-          await upsertParrainnageBDD(
-            conseillerIdApimo,
-            parrain.idapimo as number,
-            1
-          );
-
-          // Vérifier les niveaux de parrainage
-          const parrains: Array<{
-            prenom: string;
-            nom: string;
-            niveau: number;
-            parrain_id: number;
-          }> = await getParrains(conseillerIdApimo);
-
-          // Gérer les mises à jour des niveaux 2 et 3 si nécessaire
-          const parrainDeNiveau1 = parrains.find((p) => p.niveau === 1);
-
-          if (parrainDeNiveau1) {
-            const parrainDeNiveau2: Array<{
-              prenom: string;
-              nom: string;
-              niveau: number;
-              parrain_id: number;
-            }> = await getParrains(parrainDeNiveau1.parrain_id);
-            if (parrainDeNiveau2.length > 0) {
-              const parrainDeNiveau2Info = parrainDeNiveau2.find(
-                (p) => p.niveau === 1
-              );
-
-              if (parrainDeNiveau2Info) {
-                // Insérer ou mettre à jour le parrain de niveau 2
-                await upsertParrainnageBDD(
-                  conseillerIdApimo,
-                  parrainDeNiveau2Info.parrain_id,
-                  2
-                );
-
-                // Vérifier s'il y a un niveau 3
-                const parrainDeNiveau3: Array<{
-                  prenom: string;
-                  nom: string;
-                  niveau: number;
-                  parrain_id: number;
-                }> = await getParrains(parrainDeNiveau2Info.parrain_id);
-
-                if (parrainDeNiveau3.length > 0) {
-                  const parrainDeNiveau3Info = parrainDeNiveau3.find(
-                    (p) => p.niveau === 1
-                  );
-
-                  if (parrainDeNiveau3Info) {
-                    // Insérer ou mettre à jour le parrain de niveau 3
-                    await upsertParrainnageBDD(
-                      conseillerIdApimo,
-                      parrainDeNiveau3Info.parrain_id,
-                      3
-                    );
-                  }
-                }
-              }
-            }
-          }
-        }
+      // Gérer les parrainages de niveau 2 et 3 pour le parrain sélectionné
+      if (selectedParrainId) {
+        await handleParrainages(selectedParrain, selectedParrainId); // Utiliser selectedParrainId comme conseillerId
       }
 
       // Recharger les conseillers après mise à jour
@@ -215,29 +164,9 @@ export default function FormParams() {
 
       // Mettre à jour le conseiller sélectionné si existant
       const updatedConseiller = updatedConseillers.find(
-        (c: Conseiller) => c.idapimo === Number(formData.get("id_apimo"))
+        (c: Conseiller) => c.id === Number(formData.get("id"))
       );
       setSelectedConseiller(updatedConseiller || null);
-
-      // Mettre à jour les informations des parrains pour le conseiller sélectionné
-      if (updatedConseiller && updatedConseiller.idapimo !== undefined) {
-        const parrains: Array<{
-          prenom: string;
-          nom: string;
-          niveau: number;
-          parrain_id: number;
-        }> = await getParrains(updatedConseiller.idapimo);
-
-        parrains.forEach((parrain) => {
-          if (parrain.niveau === 1) {
-            setSelectedParrain(`${parrain.prenom} ${parrain.nom}`);
-          } else if (parrain.niveau === 2) {
-            setParrainNiveau2(`${parrain.prenom} ${parrain.nom}`);
-          } else if (parrain.niveau === 3) {
-            setParrainNiveau3(`${parrain.prenom} ${parrain.nom}`);
-          }
-        });
-      }
     } catch (error) {
       console.error(
         "Erreur lors de la mise à jour ou du rechargement :",
@@ -279,11 +208,11 @@ export default function FormParams() {
           />
           <InputCustom
             disable={true}
-            name="id_apimo"
-            label="ID Apimo"
-            id="id_apimo"
+            name="id"
+            label="ID dans l'application"
+            id="id"
             type="number"
-            value={selectedConseiller?.idapimo || ""}
+            value={selectedConseiller?.id || ""}
           />
         </div>
         <div className="flex flex-row justify-start space-x-4">
@@ -373,10 +302,10 @@ export default function FormParams() {
           <SelectCustom
             placeholder="Sélectionner un parrain"
             selectLabel="Parrains"
-            options={conseillersNomsSansSelf} // Exclut le conseiller lui-même
+            options={parrains} // Exclut le conseiller lui-même
             value={selectedParrain}
             name="parrain"
-            onChange={(val) => setSelectedParrain(val)}
+            onChange={handleSelectParrain}
           />
 
           <InputCustom
@@ -402,7 +331,9 @@ export default function FormParams() {
           />
         </div>
       </div>
-      <Button className="bg-orangeStrong" type="submit">Valider</Button>
+      <Button className="bg-orangeStrong" type="submit">
+        Valider
+      </Button>
     </form>
   );
 }

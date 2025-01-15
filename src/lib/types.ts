@@ -11,6 +11,7 @@ export interface Conseiller {
   siren?: number;
   chiffre_affaires?: number;
   retrocession?: number;
+  parrain_id?: number;
 }
 
 export type SelectItem = {
