@@ -1,20 +1,8 @@
-import insertContrats from "@/backend/gestionContrats";
+import {
+  insertContrats,
+} from "@/backend/gestionContrats";
+import { Contract } from "@/lib/types";
 
-interface Contract {
-  id: string;
-  step: string;
-  agency: string;
-  property: string;
-  currency: string;
-  price: string;
-  price_net: string;
-  commission: string;
-  commission_agency: string;
-  vat: string;
-  vat_rate: string;
-  // Ajoutez d'autres propriétés spécifiques si nécessaire
-  [key: string]: string | number | null | undefined;
-}
 
 export async function GET() {
   try {
@@ -45,8 +33,9 @@ export async function GET() {
     const filteredContracts = contracts.filter(
       (contract) => contract.step === "5"
     );
-
+    // Insérer les contrats et créer les relations
     await insertContrats(filteredContracts);
+
     return new Response(JSON.stringify({ data: filteredContracts }), {
       status: 200,
       headers: { "Content-Type": "application/json" },

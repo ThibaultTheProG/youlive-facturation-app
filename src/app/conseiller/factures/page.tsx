@@ -10,7 +10,7 @@ export default async function MesFactures() {
   if (process.env.AUTH_DISABLED === "true") {
     // Utilisateur fictif en mode développement
     user = {
-      id: 1,
+      id: 38,
       role: "conseiller",
       name: "Utilisateur Démo",
       email: "demo@example.com",
@@ -32,7 +32,7 @@ export default async function MesFactures() {
   return (
     <div className="container mx-auto p-4 space-y-4">
       <h1>Mes factures</h1>
-      <TableauFactures />
+      <TableauFactures user={user} />
     </div>
   );
 }
