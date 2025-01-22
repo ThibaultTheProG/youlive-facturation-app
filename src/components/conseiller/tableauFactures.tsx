@@ -15,8 +15,18 @@ import { getFactures } from "@/backend/gestionFactures";
 
 export default function TableauFactures({ user }: { user: User }) {
   const [facturesList, setFacturesList] = useState<Facture[] | null>(null);
-  
-  console.log(user.id, facturesList);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Calcul des données paginées
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  let currentItems;
+  let totalPages;
+  if (facturesList) {
+    currentItems = facturesList.slice(indexOfFirstItem, indexOfLastItem);
+    totalPages = Math.ceil(facturesList.length / itemsPerPage);
+  }
 
   useEffect(() => {
     getFactures(user.id)
@@ -41,19 +51,23 @@ export default function TableauFactures({ user }: { user: User }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {facturesList && facturesList.length > 0 ? (
-            facturesList.map((facture) => (
-              <TableRow key={facture.id}>
+          {currentItems && currentItems.length > 0 ? (
+            currentItems.map((facture, index) => (
+              <TableRow key={index}>
                 <TableCell className="font-medium">{facture.type}</TableCell>
-                <TableCell>{facture.honoraire.toFixed(2)} €</TableCell>
-                <TableCell>{facture.retrocession_amount.toFixed(2)} €</TableCell>
-                <TableCell className="text-right">{facture.numero_mandat || 'N/A'}</TableCell>
+                <TableCell>{facture.honoraires_agent} €</TableCell>
+                <TableCell>{facture.retrocession} €</TableCell>
+                <TableCell className="text-right">
+                  {facture.numero_mandat || "N/A"}
+                </TableCell>
                 <TableCell className="text-right">
                   {facture.date_signature
                     ? new Date(facture.date_signature).toLocaleDateString()
-                    : 'N/A'}
+                    : "N/A"}
                 </TableCell>
-                <TableCell className="text-right">{facture.statut_dispo}</TableCell>
+                <TableCell className="text-right">
+                  {facture.statut_dispo}
+                </TableCell>
               </TableRow>
             ))
           ) : (
@@ -65,6 +79,27 @@ export default function TableauFactures({ user }: { user: User }) {
           )}
         </TableBody>
       </Table>
+
+      {/* Pagination */}
+      <div className="flex justify-end space-x-2 mt-4">
+        <button
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage((prev) => prev - 1)}
+          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+        >
+          Précédent
+        </button>
+        <span>
+          Page {currentPage} sur {totalPages}
+        </span>
+        <button
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage((prev) => prev + 1)}
+          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+        >
+          Suivant
+        </button>
+      </div>
     </>
   );
 }

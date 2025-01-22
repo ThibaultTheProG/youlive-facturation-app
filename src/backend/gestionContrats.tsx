@@ -92,7 +92,7 @@ export async function insertContrats(contrats: object) {
 
           const queryRelation = `
             INSERT INTO relations_contrats 
-              (contrat_id, utilisateur_id, amount, vat, vat_rate) 
+              (contrat_id, utilisateur_id, honoraires_agent, vat, vat_rate) 
             VALUES ($1, $2, $3, $4, $5) 
             ON CONFLICT (contrat_id, utilisateur_id) DO NOTHING;
           `;

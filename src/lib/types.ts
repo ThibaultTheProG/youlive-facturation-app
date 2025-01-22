@@ -51,7 +51,6 @@ export interface Contract {
   vat: string;
   vat_rate: string;
   entries?: Entries[];
-  relationid: number; // Déclarez la clé entries comme un tableau facultatif
 }
 
 export interface Entries {
@@ -61,13 +60,30 @@ export interface Entries {
   vat_rate: number | string;
 }
 
+export interface RelationContrat {
+  honoraires: number;
+  user_id: number;
+  retrocession: number;
+  relationId: number;
+  relationid: number;
+}
+
+// Pour gérer les propriétés
+export interface Property {
+  id: string;
+  propertyId: string;
+  adress: string;
+  reference: string;
+  [key: string]: string | number | null | undefined;
+}
+
 // Pour gérer les factures
 export interface Facture {
   id: number;
   user_id: number;
   type: string;
-  honoraire: number;
-  retrocession_amount: number;
+  honoraires_agent: number;
+  retrocession: number;
   statut_dispo: string;
   statut_paiement: string;
   url_fichier: string | null;

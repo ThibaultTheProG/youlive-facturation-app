@@ -10,7 +10,7 @@ export default async function MesFactures() {
   if (process.env.AUTH_DISABLED === "true") {
     // Utilisateur fictif en mode développement
     user = {
-      id: 38,
+      id: 7,
       role: "conseiller",
       name: "Utilisateur Démo",
       email: "demo@example.com",

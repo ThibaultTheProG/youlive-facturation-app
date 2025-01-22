@@ -7,7 +7,7 @@ import RadioCustom from "@/components/uiCustom/radioCustom";
 import { Button } from "@/components/ui/button";
 import { Conseiller, User } from "@/lib/types";
 import getConseillerBDD from "@/backend/gestionConseiller";
-import { updateConseillersBDD } from "@/backend/gestionConseillers";
+import { updateConseillerBDD } from "@/backend/gestionConseillers";
 //import { set } from "zod";
 import { calculRetrocession } from "@/utils/calculs";
 
@@ -22,6 +22,7 @@ export default function FormParams({ user }: { user: User }) {
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Récupération des informations du conseiller
   useEffect(() => {
     const fetchConseillers = async () => {
       if (!user || !user.id) {
@@ -54,7 +55,7 @@ export default function FormParams({ user }: { user: User }) {
 
     try {
       setLoading(true);
-      await updateConseillersBDD(formData);
+      await updateConseillerBDD(formData, user.id);
       const updatedConseiller = await getConseillerBDD({ id: user.id });
       setLocalConseiller(updatedConseiller as Conseiller);
       console.log("Conseiller mis à jour avec succès.");

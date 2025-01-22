@@ -1,6 +1,7 @@
 import db from "../lib/db.js";
+import { Property } from "@/lib/types";
 
-export default async function insertProperties(properties) {
+export default async function insertProperties(properties: Property[]) {
   const client = await db.connect();
 
   if (!Array.isArray(properties)) {
@@ -16,7 +17,7 @@ export default async function insertProperties(properties) {
 
       // Vérifier si l'id est présent dans la colonne property_id de la table contrats
       const checkQuery = `
-        SELECT 1 
+        SELECT id 
         FROM contrats 
         WHERE property_id = $1 
         LIMIT 1;
@@ -26,16 +27,18 @@ export default async function insertProperties(properties) {
       console.log(`Vérification pour property_id ${idNumber} :`, checkResult.rows);
 
       // Si l'id existe dans contrats, insérer la propriété
-      if (checkResult.rowCount > 0) {
+      if (checkResult.rowCount! > 0) {
+        const idContrat = checkResult.rows[0].id; // Récupérer l'id du contrat
+
         const query = `
-          INSERT INTO property (property_id_apimo, address, numero_mandat) 
+          INSERT INTO property (adresse, numero_mandat, contrat_id) 
           VALUES ($1, $2, $3)
-          ON CONFLICT (property_id_apimo) 
+          ON CONFLICT (contrat_id) 
           DO UPDATE SET 
-            address = EXCLUDED.address,
+            adresse = EXCLUDED.adresse,
             numero_mandat = EXCLUDED.numero_mandat;
         `;
-        await client.query(query, [idNumber, address, reference]);
+        await client.query(query, [address, reference, idContrat]);
       }
     }
     console.log("Propriétés insérées ou mises à jour avec succès");

@@ -31,7 +31,7 @@ export async function GET() {
     const brut = await response.json();
     const contracts: Contract[] = brut.contracts || [];
     const filteredContracts = contracts.filter(
-      (contract) => contract.step === "5"
+      (contract) => contract.step === "4"
     );
     // Insérer les contrats et créer les relations
     await insertContrats(filteredContracts);

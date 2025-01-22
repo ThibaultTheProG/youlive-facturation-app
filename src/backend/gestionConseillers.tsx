@@ -63,10 +63,10 @@ export async function getConseillersBDD(): Promise<Conseiller[]> {
   }
 }
 
-export async function updateConseillersBDD(
+export async function updateConseillerBDD(
   formData: FormData,
-  parrain_id: number | null,
-  id: number
+  id: number,
+  parrain_id?: number | null
 ) {
   const client = await db.connect();
 
@@ -99,7 +99,10 @@ export async function updateConseillersBDD(
       ? Number(rawFormData.retrocession)
       : null;
 
-  const query = `
+  let query;
+
+  if (!parrain_id) {
+    query = `
     UPDATE utilisateurs
     SET 
       adresse = $1, 
@@ -108,21 +111,49 @@ export async function updateConseillersBDD(
       typecontrat = $4, 
       chiffre_affaires = $5, 
       retrocession = $6,
-      parrain_id = $7
+      updated_at = NOW()
+    WHERE id = $7;
+  `;
+  } else {
+    query = `
+    UPDATE utilisateurs
+    SET 
+      adresse = $1, 
+      siren = $2, 
+      tva = $3, 
+      typecontrat = $4, 
+      chiffre_affaires = $5, 
+      retrocession = $6,
+      parrain_id = $7,
+      updated_at = NOW()
     WHERE id = $8;
   `;
+  }
 
   try {
-    await client.query(query, [
-      rawFormData.localisation,
-      siren,
-      tva,
-      rawFormData.type_contrat,
-      chiffreAffaires,
-      retrocession,
-      parrain_id,
-      id,
-    ]);
+    if (!parrain_id) {
+      await client.query(query, [
+        rawFormData.localisation,
+        siren,
+        tva,
+        rawFormData.type_contrat,
+        chiffreAffaires,
+        retrocession,
+        id,
+      ]);
+    } else {
+      await client.query(query, [
+        rawFormData.localisation,
+        siren,
+        tva,
+        rawFormData.type_contrat,
+        chiffreAffaires,
+        retrocession,
+        parrain_id,
+        id,
+      ]);
+    }
+
     console.log("Conseiller mis à jour avec succès.");
   } catch (error) {
     console.error(
@@ -134,80 +165,6 @@ export async function updateConseillersBDD(
   }
 }
 
-export async function handleParrainages(
-  selectedParrain: string,
-  parrainId: number
-) {
-  const client = await db.connect();
-
-  try {
-    await client.query("BEGIN");
-    console.log(
-      `Gestion des relations pour le parrain sélectionné ${selectedParrain}`
-    );
-
-    // Fonction utilitaire pour récupérer les filleuls
-    const getFilleuls = async (parrainId: number) => {
-      const query = `
-        SELECT id, prenom
-        FROM utilisateurs
-        WHERE parrain_id = $1;
-      `;
-      return await client.query(query, [parrainId]);
-    };
-
-    // Gérer les relations de niveau 2
-    const filleulsNiveau1 = await getFilleuls(parrainId);
-    for (const filleul of filleulsNiveau1.rows) {
-      const filleulsNiveau2 = await getFilleuls(filleul.id);
-      for (const filleulNiveau2 of filleulsNiveau2.rows) {
-        await client.query(
-          `
-          INSERT INTO parrainages (prenom_filleul, filleul_id, prenom_parrain, parrain_id, niveau)
-          VALUES ($1, $2, $3, $4, $5)
-          ON CONFLICT (filleul_id, parrain_id, niveau) DO NOTHING;
-        `,
-          [
-            filleulNiveau2.prenom,
-            filleulNiveau2.id,
-            selectedParrain,
-            parrainId,
-            2,
-          ]
-        );
-
-        // Gérer les relations de niveau 3
-        const filleulsNiveau3 = await getFilleuls(filleulNiveau2.id);
-        for (const filleulNiveau3 of filleulsNiveau3.rows) {
-          await client.query(
-            `
-            INSERT INTO parrainages (prenom_filleul, filleul_id, prenom_parrain, parrain_id, niveau)
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (filleul_id, parrain_id, niveau) DO NOTHING;
-          `,
-            [
-              filleulNiveau3.prenom,
-              filleulNiveau3.id,
-              selectedParrain,
-              parrainId,
-              3,
-            ]
-          );
-        }
-      }
-    }
-    await client.query("COMMIT");
-    console.log("Parrainages traités avec succès.");
-  } catch (error) {
-    await client.query("ROLLBACK");
-    console.error(
-      "Erreur lors de la gestion des relations de parrainage :",
-      error
-    );
-  } finally {
-    client.release();
-  }
-}
 export async function getParrainLevel(
   idConseiller: number,
   niveau: number
@@ -230,6 +187,101 @@ export async function getParrainLevel(
       error
     );
     return "Aucun";
+  } finally {
+    client.release();
+  }
+}
+
+export async function handleParrainages(
+  selectedParrain: string,
+  parrainId: number
+) {
+  const client = await db.connect();
+
+  try {
+    console.log(
+      `Gestion des relations pour le parrain sélectionné ${selectedParrain} et son filleul avec l'id ${parrainId}`
+    );
+
+    // Récupérer les filleuls directs (niveau 1) du parrain sélectionné
+    const getFilleuls = `
+      SELECT id, prenom
+      FROM utilisateurs
+      WHERE parrain_id = $1;
+    `;
+    const filleuls = await client.query(getFilleuls, [parrainId]);
+
+    console.log("Filleuls de premier niveau :", filleuls.rows);
+
+    // Gestion 1 er niveau
+    if (filleuls.rows[0]) {
+      console.log("Lancement de la boucle sur les filleuls de premier niveau");
+      for (const filleul of filleuls.rows) {
+        const getFilleuls = `
+        SELECT id, prenom
+        FROM utilisateurs
+        WHERE parrain_id = $1;
+      `;
+        const filleuls = await client.query(getFilleuls, [filleul.id]);
+
+        console.log("Filleuls de deuxième niveau :", filleuls.rows);
+
+        // Gestion 2 ème niveau
+        if (filleuls.rows[0]) {
+          console.log(
+            "Lancement de la boucle sur les filleuls de deuxième niveau"
+          );
+          for (const filleul of filleuls.rows) {
+            const insertRelation2 = `INSERT INTO parrainages (prenom_filleul, filleul_id, prenom_parrain, parrain_id, niveau)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (filleul_id, parrain_id, niveau) DO NOTHING;`;
+
+            client.query(insertRelation2, [
+              filleul.prenom,
+              filleul.id,
+              selectedParrain,
+              parrainId,
+              2,
+            ]);
+
+            const getFilleuls = `
+        SELECT id, prenom
+        FROM utilisateurs
+        WHERE parrain_id = $1;
+      `;
+            const filleuls = await client.query(getFilleuls, [filleul.id]);
+
+            console.log("Filleuls de troisième niveau :", filleuls.rows);
+            // Gestion 3 ème niveau
+            if (filleuls.rows[0]) {
+              console.log(
+                "Lancement de la boucle sur les filleuls de troisième niveau"
+              );
+              for (const filleul of filleuls.rows) {
+                const insertRelation2 = `INSERT INTO parrainages (prenom_filleul, filleul_id, prenom_parrain, parrain_id, niveau)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (filleul_id, parrain_id, niveau) DO NOTHING;`;
+
+                client.query(insertRelation2, [
+                  filleul.prenom,
+                  filleul.id,
+                  selectedParrain,
+                  parrainId,
+                  3,
+                ]);
+
+                console.log("Fin de la logique de parrainage.");
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error(
+      "Erreur lors de la gestion des relations de parrainage :",
+      error
+    );
   } finally {
     client.release();
   }

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Conseiller, SelectItem } from "@/lib/types";
 import {
   getConseillersBDD,
-  updateConseillersBDD,
+  updateConseillerBDD,
   handleParrainages,
   getParrainLevel,
 } from "@/backend/gestionConseillers";
@@ -147,16 +147,18 @@ export default function FormParams() {
   const handleFormSubmit = async (formData: FormData) => {
     try {
       // Mise à jour des informations du conseiller dans la BDD
-      await updateConseillersBDD(
+      await updateConseillerBDD(
         formData,
+        selectedConseiller?.id as number,
         selectedParrainId,
-        selectedConseiller?.id as number
       );
 
       // Gérer les parrainages de niveau 2 et 3 pour le parrain sélectionné
       if (selectedParrainId) {
         await handleParrainages(selectedParrain, selectedParrainId); // Utiliser selectedParrainId comme conseillerId
       }
+
+      console.log("Parrain : ", selectedParrain, "id du parrain :", selectedParrainId);
 
       // Recharger les conseillers après mise à jour
       const updatedConseillers: Conseiller[] = await getConseillersBDD();
