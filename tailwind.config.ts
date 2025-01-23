@@ -12,6 +12,7 @@ export default {
   	extend: {
   		colors: {
 			orangeStrong:'#f28c1e',
+			orangeLight:'#FFE6D2',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

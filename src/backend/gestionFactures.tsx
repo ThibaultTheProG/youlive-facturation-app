@@ -44,6 +44,7 @@ async function createFactureCommission(
     const { honoraires, user_id, retrocession, relationid } = contrat;
 
     console.log("Relation ID =", relationid);
+    console.log("Retrocession :", retrocession);
 
     // Calculer le montant de rétrocession
     const retrocessionAmount = (honoraires * (retrocession / 100)).toFixed(2);
@@ -65,16 +66,14 @@ async function createFactureCommission(
       retrocessionAmount,
     ]);
 
-    console.log(
-      `Facture commission créée pour l'utilisateur ${user_id}`
-    );
+    console.log(`Facture commission créée pour l'utilisateur ${user_id}`);
   } catch (error) {
     console.error(
       "Erreur lors de la création de la facture de type commission :",
       error
     );
   }
-} 
+}
 
 // Sous-fonction pour créer des factures de type "parrainage"
 async function createFactureParrainage(
@@ -149,18 +148,21 @@ async function createFactureParrainage(
   }
 }
 
+// Récupérer les factures qui sont dans la BDD
 export async function getFactures(userId: number) {
   const client = await db.connect();
 
   try {
     const queryGetFactures = `
-        SELECT 
+        SELECT
+          f.id,
           f.type, 
           r.honoraires_agent, 
           f.retrocession, 
           p.numero_mandat, 
           c.date_signature, 
-          f.statut_dispo
+          f.statut_dispo,
+          f.url_fichier
         FROM factures f
         JOIN relations_contrats r ON f.relation_id = r.id
         JOIN contrats c ON r.contrat_id = c.id
@@ -169,9 +171,6 @@ export async function getFactures(userId: number) {
       `;
 
     const result = await client.query(queryGetFactures, [userId]);
-
-    // Log des résultats pour debug
-    console.log("Factures récupérées :", result.rows);
 
     return result.rows;
   } catch (error) {
@@ -184,4 +183,26 @@ export async function getFactures(userId: number) {
     // Libérer le client après exécution
     client.release();
   }
+}
+
+// Récupérer une facture depuis son ID
+export async function getFactureById(factureId) {
+  const client = db.connect();
+  try {
+    const query = `
+    SELECT 
+    f.type, 
+    f.retrocession,
+    f.created_at,
+    u.prenom,
+    u.nom, 
+    u.adresse, 
+    u.tel,
+    u.email,
+    u.siren,
+    u.retrocession,
+    p.adresse,
+    c.date_signature,
+    r.honoraires_agent`
+  } catch (error) {}
 }
