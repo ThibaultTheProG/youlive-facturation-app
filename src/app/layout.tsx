@@ -1,4 +1,4 @@
-import { AuthProvider } from "../app/context/authContext"; // Fournisseur de contexte pour l'auth
+//import { AuthProvider } from "../app/context/authContext"; // Fournisseur de contexte pour l'auth
 import "./globals.css";
 
 export default function RootLayout({
@@ -9,7 +9,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        {children}
       </body>
     </html>
   );

@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
-import {createFacture} from "@/backend/gestionFactures";
+import { createFacture } from "@/backend/gestionFactures";
 
-export async function GET() {
+export async function GET(request: Request) {
+  console.log("🚀 Requête reçue :", request.url);
+
   try {
-    // Appeler la fonction createFactures
     await createFacture();
-    console.log("Ok");
-    return NextResponse.json({
-      message: "Ok",
-    });
+    console.log("✅ Factures générées avec succès.");
+    return NextResponse.json({ message: "Ok" });
   } catch (error) {
-    console.error("Erreur lors de la génération des factures :", error);
+    console.error("❌ Erreur lors de la génération des factures :", error);
     return NextResponse.json(
       { error: "Erreur interne du serveur." },
       { status: 500 }

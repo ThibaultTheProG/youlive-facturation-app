@@ -10,26 +10,24 @@ export default async function insertProperties(properties: Property[]) {
 
   try {
     for (const property of properties) {
-      const { id, address, reference } = property;
+      const { id, address, reference, city } = property;
 
-      // Conversion des valeurs en nombres
+      // ✅ Conversion des valeurs
       const idNumber = Number(id);
+      const ville = city?.name ?? "";
+      const cp = city?.zipcode ?? "";
 
-      // Vérifier si l'id est présent dans la colonne property_id de la table contrats
-      const checkQuery = `
-        SELECT id 
-        FROM contrats 
-        WHERE property_id = $1 
-        LIMIT 1;
-      `;
+      // ✅ Concaténer l'adresse complète
+      const fullAddress = `${address}, ${cp} ${ville}`.trim();
+
+      // ✅ Vérification de l'existence du contrat
+      const checkQuery = `SELECT id FROM contrats WHERE property_id = $1 LIMIT 1;`;
       const checkResult = await client.query(checkQuery, [idNumber]);
 
-      console.log(`Vérification pour property_id ${idNumber} :`, checkResult.rows);
+      if (checkResult.rows.length > 0) {
+        const idContrat = checkResult.rows[0].id; // ID du contrat
 
-      // Si l'id existe dans contrats, insérer la propriété
-      if (checkResult.rowCount! > 0) {
-        const idContrat = checkResult.rows[0].id; // Récupérer l'id du contrat
-
+        // ✅ Insertion ou mise à jour de la propriété avec l'adresse complète
         const query = `
           INSERT INTO property (adresse, numero_mandat, contrat_id) 
           VALUES ($1, $2, $3)
@@ -38,12 +36,13 @@ export default async function insertProperties(properties: Property[]) {
             adresse = EXCLUDED.adresse,
             numero_mandat = EXCLUDED.numero_mandat;
         `;
-        await client.query(query, [address, reference, idContrat]);
+
+        await client.query(query, [fullAddress, reference, idContrat]);
       }
     }
-    console.log("Propriétés insérées ou mises à jour avec succès");
+    console.log("✅ Propriétés insérées ou mises à jour avec succès");
   } catch (error) {
-    console.error("Erreur lors de l'insertion ou de la mise à jour des propriétés :", error);
+    console.error("❌ Erreur lors de l'insertion des propriétés :", error);
   } finally {
     client.release();
   }

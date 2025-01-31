@@ -1,34 +1,29 @@
-import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { User } from "@/lib/types";
+"use client";
+
+import { useAuth } from "../../context/authContext";
 import TableauFactures from "@/components/conseiller/tableauFactures";
 
-export default async function MesFactures() {
-  let user: User | null = null;
+export default function MesFactures() {
+  const { user, loading } = useAuth();
 
-  if (process.env.AUTH_DISABLED === "true") {
-    // Utilisateur fictif en mode développement
-    user = {
-      id: 38,
-      role: "conseiller",
-      name: "Utilisateur Démo",
-      email: "demo@example.com",
-    };
-  } else {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("authToken")?.value;
+  console.log("Utilisateur dans MesFactures :", user);
 
-    if (!token) {
-      redirect("/login");
-    }
-
-    user = await verifyToken(token);
-
-    if (!user || user.role !== "conseiller") {
-      redirect("/login");
-    }
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4">
+        <p>Chargement en cours...</p>
+      </div>
+    );
   }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto p-4">
+        <p>Erreur : utilisateur non connecté.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4 space-y-4">
       <h1>Mes factures</h1>

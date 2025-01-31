@@ -107,7 +107,7 @@ export default function LoginPage() {
             {errorMessage && (
               <p className="text-sm text-red-600 text-center">{errorMessage}</p>
             )}
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full bg-orange-strong">
               Connexion
             </Button>
           </form>

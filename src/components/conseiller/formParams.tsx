@@ -185,7 +185,7 @@ export default function FormParams({ user }: { user: User }) {
       </div>
       {errorMessage && <p className="text-red-600">{errorMessage}</p>}
       {successMessage && <p className="text-green-600">{successMessage}</p>}
-      <Button className="bg-orangeStrong" type="submit" disabled={loading}>
+      <Button className="bg-orange-strong" type="submit" disabled={loading}>
         {loading ? "Chargement..." : "Valider"}
       </Button>
     </form>

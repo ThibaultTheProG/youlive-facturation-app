@@ -16,7 +16,6 @@ import { getFactures } from "@/backend/gestionFactures";
 export default function TableauFactures({ user }: { user: User }) {
   const [facturesList, setFacturesList] = useState<Facture[] | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [loadingId, setLoadingId] = useState<number | null>(null); // ID du bouton en cours de chargement
   const itemsPerPage = 10;
 
   // Calcul des données paginées
@@ -31,35 +30,37 @@ export default function TableauFactures({ user }: { user: User }) {
 
   useEffect(() => {
     getFactures(user.id)
-      .then((factures) => setFacturesList(factures))
+      .then((factures) => {
+        // Trier les factures par date de signature (les plus récentes en premier)
+        const facturesTriees = factures.sort((a, b) => {
+          const dateA = new Date(a.date_signature).getTime();
+          const dateB = new Date(b.date_signature).getTime();
+          return dateB - dateA; // Tri décroissant
+        });
+
+        setFacturesList(facturesTriees);
+      })
       .catch((error) => {
         console.error("Impossible de récupérer les factures :", error);
       });
   }, [user.id]);
 
-  const handleCreateFacture = async (factureId: number) => {
-    setLoadingId(factureId); // Indique le bouton en cours de chargement
-
+  const sendFacture = async (factureId: number) => {
     try {
-      const response = await fetch(`/api/factures/createPdf`, {
+      const response = await fetch("/api/factures/send", {
         method: "POST",
+        body: JSON.stringify({ factureId }),
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: factureId }),
       });
 
-      if (!response.ok) {
-        throw new Error("Erreur lors de la création de la facture.");
-      }
-
       const data = await response.json();
-      const factureUrl = data.url;
-
-      // Ouvrir la facture dans un nouvel onglet
-      window.open(factureUrl, "_blank");
+      if (response.ok) {
+        alert("Facture envoyée avec succès !");
+      } else {
+        alert(`Erreur : ${data.error}`);
+      }
     } catch (error) {
-      console.error("Erreur lors de la création de la facture :", error);
-    } finally {
-      setLoadingId(null); // Réinitialise l'état de chargement
+      console.error("Erreur lors de l'envoi de la facture :", error);
     }
   };
 
@@ -76,7 +77,8 @@ export default function TableauFactures({ user }: { user: User }) {
             <TableHead className="text-center">N° de mandat</TableHead>
             <TableHead className="text-center">Date de signature</TableHead>
             <TableHead className="text-center">Statut</TableHead>
-            <TableHead className="text-center">Action</TableHead>
+            <TableHead className="text-center">Générer facture</TableHead>
+            <TableHead className="text-center">Envoyer facture</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -99,16 +101,20 @@ export default function TableauFactures({ user }: { user: User }) {
                   {facture.statut_dispo}
                 </TableCell>
                 <TableCell className="text-center">
+                  <button className="px-4 py-2 rounded bg-orange-strong text-white hover:bg-orange-light hover:text-black">
+                    <a href={`/factures/${facture.id}/pdf`} target="_blank">
+                      Voir PDF
+                    </a>
+                  </button>
+                </TableCell>
+                <TableCell className="text-center">
                   <button
-                    onClick={() => handleCreateFacture(facture.id)}
-                    disabled={loadingId === facture.id}
-                    className={`px-4 py-2 rounded ${
-                      loadingId === facture.id
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-orangeStrong text-white hover:bg-orangeLight hover:text-black"
-                    }`}
+                    className={
+                      "px-4 py-2 rounded bg-orange-strong text-white hover:bg-orange-light hover:text-black"
+                    }
+                    onClick={() => sendFacture(facture.id)}
                   >
-                    {loadingId === facture.id ? "Création..." : "Créer Facture"}
+                    Envoyer facture
                   </button>
                 </TableCell>
               </TableRow>
@@ -128,7 +134,7 @@ export default function TableauFactures({ user }: { user: User }) {
         <button
           disabled={currentPage === 1}
           onClick={() => setCurrentPage((prev) => prev - 1)}
-          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+          className="px-4 py-2 bg-gray-200 rounded-sm hover:bg-gray-300 disabled:opacity-50"
         >
           Précédent
         </button>
@@ -138,7 +144,7 @@ export default function TableauFactures({ user }: { user: User }) {
         <button
           disabled={currentPage === totalPages}
           onClick={() => setCurrentPage((prev) => prev + 1)}
-          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+          className="px-4 py-2 bg-gray-200 rounded-sm hover:bg-gray-300 disabled:opacity-50"
         >
           Suivant
         </button>

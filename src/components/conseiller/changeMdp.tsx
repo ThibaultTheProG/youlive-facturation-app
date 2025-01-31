@@ -77,7 +77,7 @@ import { Button } from "@/components/ui/button";
         {errorMessage && <p className="text-red-600">{errorMessage}</p>}
         {successMessage && <p className="text-green-600">{successMessage}</p>}
         <Button
-          className="bg-orangeStrong"
+          className="bg-orange-strong"
           type="submit"
           disabled={loading}
         >

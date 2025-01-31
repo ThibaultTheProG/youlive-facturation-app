@@ -9,11 +9,18 @@ const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET);
 export async function generateToken(user: {
   id: number;
   role: string;
+  name: string;
+  email: string;
 }): Promise<string> {
-  return new SignJWT({ id: user.id, role: user.role })
-    .setProtectedHeader({ alg: "HS256" }) // Algorithme HS256
-    .setExpirationTime("1h") // Durée de validité : 1 heure
-    .sign(SECRET_KEY); // Signer avec la clé secrète
+  return new SignJWT({
+    id: user.id,
+    role: user.role,
+    name: user.name,
+    email: user.email,
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("1h") // Durée de validité du token
+    .sign(SECRET_KEY); // Clé secrète pour signer le token
 }
 
 // Vérifier et décoder un token JWT
@@ -21,17 +28,19 @@ export async function verifyToken(token: string): Promise<User | null> {
   try {
     const { payload } = await jwtVerify(token, SECRET_KEY);
 
+    console.log("Payload décodé :", payload);
+
     const user: User = {
       id: payload.id as number,
       role: payload.role as "admin" | "conseiller",
-      name: (payload.name as string) || "Nom par défaut", // Remplacez par une valeur par défaut
-      email: (payload.email as string) || "email@example.com", // Remplacez par une valeur par défaut
+      name: payload.name as string,
+      email: payload.email as string,
     };
 
     return user;
   } catch (error) {
     console.error("Erreur lors de la vérification du token :", error);
-    return null;
+    return null; // Retourne null si le token est invalide
   }
 }
 

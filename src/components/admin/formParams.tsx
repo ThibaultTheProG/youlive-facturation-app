@@ -22,6 +22,7 @@ export default function FormParams() {
     null
   );
   const [assujettiTVA, setAssujettiTVA] = useState<string>("non");
+  const [autoParrain, setAutoParrain] = useState<string>("non");
   const [selectedConseiller, setSelectedConseiller] =
     useState<Conseiller | null>(null);
   const [selectedTypeContrat, setSelectedTypeContrat] = useState<string>("");
@@ -43,15 +44,16 @@ export default function FormParams() {
   // Synchroniser les champs lorsque `selectedConseiller` change
   useEffect(() => {
     if (selectedConseiller) {
-      const { typecontrat, chiffre_affaires, tva, parrain_id } =
+      const { typecontrat, chiffre_affaires, tva, parrain_id, auto_parrain} =
         selectedConseiller;
 
       setSelectedTypeContrat(typecontrat || "");
       setChiffreAffaires(chiffre_affaires || 0);
       setAssujettiTVA(tva ? "oui" : "non");
+      setAutoParrain(auto_parrain);
       setRetrocession(
         chiffre_affaires && typecontrat
-          ? calculRetrocession(typecontrat, chiffre_affaires)
+          ? calculRetrocession(typecontrat, chiffre_affaires, auto_parrain)
           : 0
       );
 
@@ -94,6 +96,7 @@ export default function FormParams() {
       setSelectedTypeContrat("");
       setChiffreAffaires(0);
       setAssujettiTVA("non");
+      setAutoParrain("non");
       setRetrocession(0);
       setSelectedParrain("Aucun");
       setSelectedParrainId(null);
@@ -102,12 +105,12 @@ export default function FormParams() {
 
   // Calculer la rétrocession à chaque changement de chiffre d'affaires ou de type de contrat
   useEffect(() => {
-    if (chiffreAffaires > 0 && selectedTypeContrat) {
-      setRetrocession(calculRetrocession(selectedTypeContrat, chiffreAffaires));
+    if (chiffreAffaires >= 0 && selectedTypeContrat) {
+      setRetrocession(calculRetrocession(selectedTypeContrat, chiffreAffaires, autoParrain));
     } else {
       setRetrocession(0); // Réinitialiser si une des conditions n'est pas remplie
     }
-  }, [chiffreAffaires, selectedTypeContrat]);
+  }, [chiffreAffaires, selectedTypeContrat, autoParrain]);
 
   // Générer le tableau des conseillers et classer par ordre alphabétique
   const conseillersNoms: SelectItem[] = localConseillers
@@ -150,7 +153,7 @@ export default function FormParams() {
       await updateConseillerBDD(
         formData,
         selectedConseiller?.id as number,
-        selectedParrainId,
+        selectedParrainId
       );
 
       // Gérer les parrainages de niveau 2 et 3 pour le parrain sélectionné
@@ -158,7 +161,12 @@ export default function FormParams() {
         await handleParrainages(selectedParrain, selectedParrainId); // Utiliser selectedParrainId comme conseillerId
       }
 
-      console.log("Parrain : ", selectedParrain, "id du parrain :", selectedParrainId);
+      console.log(
+        "Parrain : ",
+        selectedParrain,
+        "id du parrain :",
+        selectedParrainId
+      );
 
       // Recharger les conseillers après mise à jour
       const updatedConseillers: Conseiller[] = await getConseillersBDD();
@@ -291,6 +299,14 @@ export default function FormParams() {
             value={chiffreAffaires}
             onChange={(val) => setChiffreAffaires(Number(val))}
           />
+          <div className="flex flex-col justify-start space-y-2">
+            <Label>Auto parrainé ?</Label>
+            <RadioCustom
+              onChange={(value) => setAutoParrain(value)}
+              value={autoParrain}
+              name="auto_parrain"
+            />
+          </div>
           <InputCustom
             disable={true}
             name="retrocession"
@@ -333,7 +349,7 @@ export default function FormParams() {
           />
         </div>
       </div>
-      <Button className="bg-orangeStrong" type="submit">
+      <Button className="bg-orange-strong" type="submit">
         Valider
       </Button>
     </form>

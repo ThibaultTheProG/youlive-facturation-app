@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       }
 
       // Générer un token JWT
-      const token = await generateToken({ id, role });
+      const token = await generateToken({ id, role, name, email });
      
 
       // Stocker le token dans un cookie sécurisé

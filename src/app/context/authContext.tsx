@@ -1,31 +1,43 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: "admin" | "conseiller";
-}
-
-interface AuthContextType {
-  user: User | null; // Typage approprié pour l'utilisateur
-  loading: boolean; // Indique si l'authentification est en cours
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-}
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { User, AuthContextType } from "@/lib/types";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null); // Assurez que le type `User | null` est utilisé
-  const [loading, setLoading] = useState<boolean>(false); // Indicateur de chargement
+export const AuthProvider = ({
+  children,
+  initialUser,
+}: {
+  children: React.ReactNode;
+  initialUser?: User | null;
+}) => {
+  const isAuthDisabled = process.env.NEXT_PUBLIC_AUTH_DISABLED === "true";
+
+  const testUser: User | null = isAuthDisabled
+    ? {
+        id: Number(process.env.NEXT_PUBLIC_TEST_USER_ID || 999),
+        name: process.env.NEXT_PUBLIC_TEST_USER_NAME || "Utilisateur Test",
+        email: process.env.NEXT_PUBLIC_TEST_USER_EMAIL || "test@example.com",
+        role:
+          (process.env.NEXT_PUBLIC_TEST_USER_ROLE as "admin" | "conseiller") ||
+          "conseiller",
+      }
+    : null;
+
+  const [user, setUser] = useState<User | null>(initialUser || testUser);
+  const [loading, setLoading] = useState<boolean>(!initialUser && !testUser);
+
+  useEffect(() => {
+    if (!initialUser) {
+      // Ajoutez une logique pour récupérer l'utilisateur si nécessaire
+      console.log("Aucun utilisateur initial défini");
+    }
+  }, [initialUser]);
 
   const login = async (email: string, password: string) => {
-    setLoading(true); // Démarre le chargement
+    setLoading(true);
     try {
-      // Envoyer la requête de connexion
       const response = await fetch("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
@@ -36,11 +48,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error("Échec de la connexion");
       }
 
-      // Appeler l'API `/me` pour récupérer les informations utilisateur
       const userResponse = await fetch("/api/auth/me", {
         method: "GET",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // Inclure les cookies pour le côté serveur
+        credentials: "include",
       });
 
       if (!userResponse.ok) {
@@ -53,13 +64,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("Erreur lors de la connexion :", error);
       throw error;
     } finally {
-      setLoading(false); // Arrête le chargement
+      setLoading(false);
     }
   };
 
   const logout = () => {
     setUser(null);
-    fetch("/api/auth/logout", { method: "POST", credentials: "include" }); // Assurez-vous que le cookie est supprimé côté serveur
+    fetch("/api/auth/logout", { method: "POST", credentials: "include" });
   };
 
   return (

@@ -18,11 +18,23 @@ export async function insertContrats(contrats: object) {
         commission,
         updated_at,
         entries,
+        contacts,
       } = contrat;
 
       // Validation des champs principaux
-      if (!id || !step || !property || !price || !price_net || !commission || !updated_at) {
-        console.error("Contrat invalide, certains champs requis sont manquants :", contrat);
+      if (
+        !id ||
+        !step ||
+        !property ||
+        !price ||
+        !price_net ||
+        !commission ||
+        !updated_at
+      ) {
+        console.error(
+          "Contrat invalide, certains champs requis sont manquants :",
+          contrat
+        );
         continue;
       }
 
@@ -67,7 +79,10 @@ export async function insertContrats(contrats: object) {
           const { user, amount, vat, vat_rate } = entry;
 
           if (!user || !amount || !vat || !vat_rate) {
-            console.warn("Relation invalide, certains champs requis sont manquants :", entry);
+            console.warn(
+              "Relation invalide, certains champs requis sont manquants :",
+              entry
+            );
             continue;
           }
 
@@ -81,10 +96,14 @@ export async function insertContrats(contrats: object) {
             FROM utilisateurs 
             WHERE idapimo = $1;
           `;
-          const resultUtilisateur = await client.query(queryUtilisateur, [userNumber]);
+          const resultUtilisateur = await client.query(queryUtilisateur, [
+            userNumber,
+          ]);
 
           if (resultUtilisateur.rows.length === 0) {
-            console.warn(`Utilisateur avec idapimo ${userNumber} non trouvé, relation ignorée.`);
+            console.warn(
+              `Utilisateur avec idapimo ${userNumber} non trouvé, relation ignorée.`
+            );
             continue;
           }
 
@@ -92,9 +111,9 @@ export async function insertContrats(contrats: object) {
 
           const queryRelation = `
             INSERT INTO relations_contrats 
-              (contrat_id, utilisateur_id, honoraires_agent, vat, vat_rate) 
+              (contrat_id, user_id, honoraires_agent, vat, vat_rate) 
             VALUES ($1, $2, $3, $4, $5) 
-            ON CONFLICT (contrat_id, utilisateur_id) DO NOTHING;
+            ON CONFLICT (contrat_id, user_id) DO NOTHING;
           `;
 
           await client.query(queryRelation, [
@@ -103,6 +122,33 @@ export async function insertContrats(contrats: object) {
             amountNumber,
             vatNumber,
             vatRateNumber,
+          ]);
+        }
+      }
+
+      // Insérer les contacts
+      if (contacts && Array.isArray(contacts)) {
+        for (const contact of contacts) {
+          const { contact: contactId, type } = contact;
+
+          // Ne pas insérer les contacts avec le type 3 ou 4
+          if (!contactId || !type || type === "3" || type === "4") {
+            console.warn(
+              `Contact avec ID ${contactId} et type ${type} ignoré (type 3 ou 4 ou invalide).`
+            );
+            continue;
+          }
+
+          const queryContactContrat = `
+      INSERT INTO contacts_contrats (contrat_id, contact_id, type)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (contrat_id, contact_id) DO NOTHING;
+    `;
+
+          await client.query(queryContactContrat, [
+            contratId,
+            Number(contactId),
+            Number(type),
           ]);
         }
       }

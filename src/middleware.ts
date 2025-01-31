@@ -3,36 +3,36 @@ import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {
+  const isAuthDisabled = process.env.NEXT_PUBLIC_AUTH_DISABLED === "true";
 
-  if (process.env.AUTH_DISABLED === "true") {
-    console.log("Auth désactivée : accès direct.");
-    return NextResponse.next();
+  if (isAuthDisabled) {
+    console.log("Mode développement activé. Suppression du cookie authToken.");
+    const response = NextResponse.next();
+    response.cookies.delete("authToken");
+    return response;
   }
-  
+
   const token = request.cookies.get("authToken")?.value;
 
-  //console.log("Token reçu dans le middleware :", token);
-
-  // Si aucun token, redirigez vers /login
   if (!token) {
+    console.log("Pas de token trouvé. Redirection vers /login.");
     if (request.nextUrl.pathname === "/login") {
       return NextResponse.next();
     }
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Vérifiez le token
   const user = await verifyToken(token);
 
-  //console.log("Utilisateur détecté dans le middleware :", user);
-
-  // Si le token est invalide ou l'utilisateur est null, redirigez vers /login
   if (!user) {
+    console.log("Utilisateur non valide. Redirection vers /login.");
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Gérer les permissions basées sur le rôle
   if (request.nextUrl.pathname.startsWith("/admin") && user.role !== "admin") {
+    console.log(
+      "Utilisateur non autorisé pour /admin. Redirection vers /login."
+    );
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -40,13 +40,15 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/conseiller") &&
     user.role !== "conseiller"
   ) {
+    console.log(
+      "Utilisateur non autorisé pour /conseiller. Redirection vers /login."
+    );
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Autoriser l'accès
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/conseiller/:path*", "/login"], // Appliquez le middleware uniquement sur ces chemins
+  matcher: ["/admin/:path*", "/conseiller/:path*", "/login"],
 };
