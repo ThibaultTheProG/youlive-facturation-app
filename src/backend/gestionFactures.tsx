@@ -69,8 +69,7 @@ async function createFactureCommission(
   VALUES ($1, $2, 'commission', $3, 'non payé')
   ON CONFLICT (relation_id, type, user_id)
   DO UPDATE SET
-    retrocession = EXCLUDED.retrocession,
-    statut_paiement = EXCLUDED.statut_paiement,
+    retrocession = EXCLUDED.retrocession
 `;
     await client.query(insertOrUpdateFactureQuery, [
       relationid,
@@ -177,8 +176,7 @@ WHERE id = $1;
           VALUES ($1, $2, 'recrutement', $3, 'non payé')
           ON CONFLICT (relation_id, type, user_id)
           DO UPDATE SET
-            retrocession = EXCLUDED.retrocession,
-            statut_paiement = EXCLUDED.statut_paiement,
+            retrocession = EXCLUDED.retrocession
         `;
         await client.query(insertParrainageQuery, [
           relationid,
@@ -218,7 +216,6 @@ export async function getFactures(userId: number) {
           p.numero_mandat, 
           c.date_signature, 
           f.statut_paiement,
-          f.url_fichier,
           f.numero,
           f.created_at
         FROM factures f

@@ -139,7 +139,7 @@ export default function TableauSuiviFactures() {
                 <TableCell>
                   {facture.conseiller.prenom} {facture.conseiller.nom}
                 </TableCell>
-                <TableCell>{facture.id}</TableCell>
+                <TableCell>{facture.created_at}</TableCell>
                 <TableCell>{facture.type}</TableCell>
                 <TableCell>{facture.retrocession.toLocaleString()} €</TableCell>
                 <TableCell>{facture.statut_paiement}</TableCell>
