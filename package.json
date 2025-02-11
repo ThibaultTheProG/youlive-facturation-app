@@ -32,7 +32,7 @@
     "pdfkit": "^0.16.0",
     "pg": "^8.13.1",
     "react": "^19.0.0",
-    "react-day-picker": "^8.10.1",
+    "react-day-picker": "^9.5.1",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",
     "swr": "^2.3.0",

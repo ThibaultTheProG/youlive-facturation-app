@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import InputCustom from "@/components/uiCustom/inputCustom";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/style.css"
 
 export default function Popin({
   factureId,
@@ -53,7 +54,9 @@ export default function Popin({
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
       <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-        <span className="text-lg font-semibold mb-4">Informations à renseigner</span>
+        <span className="text-lg font-semibold mb-4">
+          Informations à renseigner
+        </span>
         <form onSubmit={handleSubmit}>
           <div className="flex flex-col space-y-4 mt-4">
             {/* Champ Numéro */}
@@ -81,11 +84,15 @@ export default function Popin({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-white">
-                  <Calendar
+                  <DayPicker
                     mode="single"
                     selected={dateCreation || undefined}
                     onSelect={(date) => setDateCreation(date ?? null)}
-                    initialFocus
+                    footer={
+                      dateCreation
+                        ? `Selected: ${dateCreation?.toLocaleDateString()}`
+                        : "Pick a day."
+                    }
                   />
                 </PopoverContent>
               </Popover>
