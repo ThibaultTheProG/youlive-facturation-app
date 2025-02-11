@@ -2,7 +2,23 @@ import {
   getContactIdsFromRelations,
   insertContacts,
 } from "@/backend/gestionContacts";
-import { Contacts } from "@/lib/types";
+import { Contact, ContactApi } from "@/lib/types";
+
+function mapApiContact(apiContact: ContactApi): Contact {
+  return {
+    id: apiContact.id,
+    prenom: apiContact.firstname, // ✅ Conversion `firstname` → `prenom`
+    nom: apiContact.lastname,     // ✅ Conversion `lastname` → `nom`
+    email: apiContact.email,
+    mobile: apiContact.mobile || null, // ✅ Utilise `mobile_phone`
+    phone: apiContact.phone || null,    // ✅ Utilise `home_phone`
+    adresse: apiContact.address,  // ✅ Conversion `address` → `adresse`
+    ville: {
+      name: apiContact.city?.name || "",
+      zipcode: apiContact.city?.zipcode || "",
+    },
+  };
+}
 
 export async function GET() {
   try {
@@ -29,7 +45,6 @@ export async function GET() {
       }
     );
 
-    // Vérification de la réponse
     if (!response.ok) {
       return new Response(
         JSON.stringify({ error: "Échec de la récupération des contacts" }),
@@ -37,16 +52,17 @@ export async function GET() {
       );
     }
 
-    // Récupérer les contacts depuis la réponse API
     const brut = await response.json();
-    const contacts: Contacts[] = brut.contacts || [];
+    const contactsApi = brut.contacts || [];
+
+    // 🔄 Convertir les champs anglais → français avant insertion
+    const contactsMapped: Contact[] = contactsApi.map(mapApiContact);
 
     // Filtrer les contacts dont l'ID est présent dans la base de données
-    const filteredContacts = contacts.filter((contact) =>
+    const filteredContacts = contactsMapped.filter((contact) =>
       contactIds.includes(String(contact.id))
     );
 
-    // Vérification : Aucun contact filtré
     if (filteredContacts.length === 0) {
       return new Response(
         JSON.stringify({ message: "Aucun contact correspondant trouvé." }),
@@ -56,7 +72,6 @@ export async function GET() {
 
     await insertContacts(filteredContacts);
 
-    // Retourner les contacts filtrés
     return new Response(JSON.stringify({ data: filteredContacts }), {
       status: 200,
       headers: { "Content-Type": "application/json" },

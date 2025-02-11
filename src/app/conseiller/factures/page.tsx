@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "../../context/authContext";
-import TableauFactures from "@/components/conseiller/tableauFactures";
+import TableauFactures from "./tableauFactures";
 
 export default function MesFactures() {
   const { user, loading } = useAuth();
@@ -26,7 +26,7 @@ export default function MesFactures() {
 
   return (
     <div className="container mx-auto p-4 space-y-4">
-      <h1>Mes factures</h1>
+      <h1 className="text-2xl font-bold">Mes factures</h1>
       <TableauFactures user={user} />
     </div>
   );

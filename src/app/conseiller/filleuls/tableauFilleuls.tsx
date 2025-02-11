@@ -89,7 +89,7 @@ export default function TableauFilleuls({ user }: { user: User }) {
           <button 
             onClick={prevPage} 
             disabled={currentPage === 1} 
-            className={`px-4 py-2 border rounded ${currentPage === 1 ? "bg-gray-300 cursor-not-allowed" : "bg-orange-strong text-white hover:bg-orange-light"}`}
+            className={`px-4 py-2 border rounded ${currentPage === 1 ? "bg-gray-300 cursor-not-allowed" : "bg-orange-strong text-white hover:bg-orange-light cursor-pointer"}`}
           >
             Précédent
           </button>
@@ -99,7 +99,7 @@ export default function TableauFilleuls({ user }: { user: User }) {
           <button 
             onClick={nextPage} 
             disabled={currentPage === Math.ceil(filleuls.length / rowsPerPage)} 
-            className={`px-4 py-2 border rounded ${currentPage === Math.ceil(filleuls.length / rowsPerPage) ? "bg-gray-300 cursor-not-allowed" : "bg-orange-strong text-white hover:bg-orange-light"}`}
+            className={`px-4 py-2 border rounded ${currentPage === Math.ceil(filleuls.length / rowsPerPage) ? "bg-gray-300 cursor-not-allowed" : "bg-orange-strong text-white hover:bg-orange-light cursor-pointer"}`}
           >
             Suivant
           </button>

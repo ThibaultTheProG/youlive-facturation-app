@@ -1,7 +1,7 @@
 "use client";
 
 import { Lock } from "lucide-react";
-import InputPassword from "../uiCustom/inputPassword";
+import InputPassword from "@/components/uiCustom/inputPassword";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 

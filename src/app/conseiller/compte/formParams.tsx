@@ -42,12 +42,20 @@ export default function FormParams({ user }: { user: User }) {
   useEffect(() => {
     if (chiffreAffaires > 0 && localConseiller?.typecontrat) {
       setRetrocession(
-        calculRetrocession(localConseiller.typecontrat, chiffreAffaires)
+        calculRetrocession(
+          localConseiller.typecontrat,
+          chiffreAffaires,
+          localConseiller.auto_parrain
+        )
       );
     } else {
       setRetrocession(0); // Réinitialiser si une des conditions n'est pas remplie
     }
-  }, [chiffreAffaires, localConseiller?.typecontrat]);
+  }, [
+    chiffreAffaires,
+    localConseiller?.typecontrat,
+    localConseiller?.auto_parrain,
+  ]);
 
   const handleSubmit = async (formData: FormData) => {
     setErrorMessage("");
@@ -118,6 +126,14 @@ export default function FormParams({ user }: { user: User }) {
             value={localConseiller?.telephone ?? ""}
           />
           <InputCustom
+            disable={true}
+            name="mobile"
+            label="Mobile"
+            id="mobile"
+            type="mobile"
+            value={localConseiller?.mobile ?? ""}
+          />
+          <InputCustom
             disable={false}
             name="localisation"
             label="Localisation / Adresse"
@@ -130,11 +146,11 @@ export default function FormParams({ user }: { user: User }) {
             }
           />
         </div>
-        <div className="flex flex-row justify-between space-x-4">
+        <div className="flex flex-row space-x-4">
           <InputCustom
             disable={false}
             name="siren"
-            label="SIREN"
+            label="SIREN / RSAC / RCS"
             id="siren"
             type="number"
             value={localConseiller?.siren ?? ""}
@@ -145,14 +161,6 @@ export default function FormParams({ user }: { user: User }) {
             }
           />
           <div className="flex flex-col justify-start space-y-2">
-            <Label>Assujéti à la TVA</Label>
-            <RadioCustom
-              onChange={(value) => setAssujettiTVA(value)}
-              value={assujettiTVA}
-              name="assujetti_tva"
-            />
-          </div>
-          <div className="flex flex-col justify-start space-y-2">
             <InputCustom
               disable={true}
               name="type_contrat"
@@ -162,8 +170,6 @@ export default function FormParams({ user }: { user: User }) {
               value={localConseiller?.typecontrat ?? ""}
             />
           </div>
-        </div>
-        <div className="flex flex-row justify-between  space-x-4">
           <InputCustom
             disable={false}
             name="chiffre_affaire_annuel"
@@ -180,6 +186,15 @@ export default function FormParams({ user }: { user: User }) {
             id="retrocession"
             type="number"
             value={retrocession}
+          />
+        </div>
+
+        <div className="flex flex-col justify-start space-y-2">
+          <Label>Assujéti à la TVA</Label>
+          <RadioCustom
+            onChange={(value) => setAssujettiTVA(value)}
+            value={assujettiTVA}
+            name="assujetti_tva"
           />
         </div>
       </div>

@@ -16,7 +16,7 @@ export async function insertContrats(contrats: object) {
         price,
         price_net,
         commission,
-        updated_at,
+        contract_at,
         entries,
         contacts,
       } = contrat;
@@ -29,7 +29,7 @@ export async function insertContrats(contrats: object) {
         !price ||
         !price_net ||
         !commission ||
-        !updated_at
+        !contract_at
       ) {
         console.error(
           "Contrat invalide, certains champs requis sont manquants :",
@@ -45,15 +45,22 @@ export async function insertContrats(contrats: object) {
       const priceNumber = Number(price);
       const priceNetNumber = Number(price_net);
       const commissionNumber = Number(commission);
-      const updatedAtDate = new Date(updated_at);
+      const contractAt = new Date(contract_at);
 
       const queryContrat = `
-        INSERT INTO contrats 
-          (idcontratapimo, statut, property_id, price, price_net, honoraires, date_signature) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7) 
-        ON CONFLICT (idcontratapimo) DO NOTHING 
-        RETURNING id;
-      `;
+  INSERT INTO contrats 
+    (idcontratapimo, statut, property_id, price, price_net, honoraires, date_signature) 
+  VALUES ($1, $2, $3, $4, $5, $6, $7) 
+  ON CONFLICT (idcontratapimo) 
+  DO UPDATE SET
+    statut = EXCLUDED.statut,
+    property_id = EXCLUDED.property_id,
+    price = EXCLUDED.price,
+    price_net = EXCLUDED.price_net,
+    honoraires = EXCLUDED.honoraires,
+    date_signature = EXCLUDED.date_signature
+  RETURNING id;
+`;
 
       const resultContrat = await client.query(queryContrat, [
         idNumber,
@@ -62,14 +69,8 @@ export async function insertContrats(contrats: object) {
         priceNumber,
         priceNetNumber,
         commissionNumber,
-        updatedAtDate,
+        contractAt,
       ]);
-
-      // Si le contrat existe déjà, ignorer
-      if (resultContrat.rows.length === 0) {
-        console.log(`Contrat ${idNumber} déjà existant, insertion ignorée.`);
-        continue;
-      }
 
       const contratId = resultContrat.rows[0].id;
 
@@ -108,21 +109,43 @@ export async function insertContrats(contrats: object) {
           }
 
           const utilisateurId = resultUtilisateur.rows[0].id;
+          // Vérifier si le contrat appartient à l'année en cours
+          const currentYear = new Date().getFullYear();
+          const contractYear = contractAt.getFullYear();
 
-          const queryRelation = `
-            INSERT INTO relations_contrats 
-              (contrat_id, user_id, honoraires_agent, vat, vat_rate) 
-            VALUES ($1, $2, $3, $4, $5) 
-            ON CONFLICT (contrat_id, user_id) DO NOTHING;
-          `;
+          console.warn("Current year :", currentYear, "Contract Year :", contractYear);
 
-          await client.query(queryRelation, [
-            contratId,
-            utilisateurId,
-            amountNumber,
-            vatNumber,
-            vatRateNumber,
-          ]);
+          if (contractYear === currentYear) {
+            // Insérer la relation avec un ON CONFLICT pour éviter les doublons
+            const queryRelation = `
+    INSERT INTO relations_contrats (contrat_id, user_id, honoraires_agent, vat, vat_rate) 
+    VALUES ($1, $2, $3, $4, $5) 
+    ON CONFLICT (contrat_id, user_id) DO NOTHING
+    RETURNING user_id, honoraires_agent;
+  `;
+
+            const resultRelation = await client.query(queryRelation, [
+              contratId,
+              utilisateurId,
+              amountNumber,
+              vatNumber,
+              vatRateNumber,
+            ]);
+
+            // Si la relation a été insérée (donc nouvelle), on met à jour le chiffre d'affaires
+            if (resultRelation.rows.length > 0) {
+              const updateChiffreAffairesQuery = `
+      UPDATE utilisateurs 
+      SET chiffre_affaires = chiffre_affaires + $1 
+      WHERE id = $2;
+    `;
+
+              await client.query(updateChiffreAffairesQuery, [
+                amountNumber,
+                utilisateurId,
+              ]);
+            }
+          }
         }
       }
 
@@ -133,9 +156,9 @@ export async function insertContrats(contrats: object) {
 
           // Ne pas insérer les contacts avec le type 3 ou 4
           if (!contactId || !type || type === "3" || type === "4") {
-            console.warn(
+            /* console.warn(
               `Contact avec ID ${contactId} et type ${type} ignoré (type 3 ou 4 ou invalide).`
-            );
+            ); */
             continue;
           }
 

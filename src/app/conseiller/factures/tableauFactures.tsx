@@ -12,10 +12,12 @@ import {
 import { useEffect, useState } from "react";
 import { User, Facture } from "@/lib/types";
 import { getFactures } from "@/backend/gestionFactures";
+import Popin from "./popin";
 
 export default function TableauFactures({ user }: { user: User }) {
   const [facturesList, setFacturesList] = useState<Facture[] | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedFacture, setSelectedFacture] = useState<Facture | null>(null);
   const itemsPerPage = 10;
 
   // Calcul des données paginées
@@ -70,7 +72,7 @@ export default function TableauFactures({ user }: { user: User }) {
         <TableCaption>Tableau des dernières factures.</TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[100px]">ID BDD</TableHead>
+            <TableHead className="w-[100px]">Numéro</TableHead>
             <TableHead className="w-[100px]">Type de facture</TableHead>
             <TableHead>Honoraire Youlive HT</TableHead>
             <TableHead>Rétrocession HT</TableHead>
@@ -85,7 +87,9 @@ export default function TableauFactures({ user }: { user: User }) {
           {currentItems && currentItems.length > 0 ? (
             currentItems.map((facture, index) => (
               <TableRow key={index}>
-                <TableCell className="font-medium">{facture.id}</TableCell>
+                <TableCell className="font-medium">
+                  {facture.numero || "Non défini"}
+                </TableCell>
                 <TableCell className="font-medium">{facture.type}</TableCell>
                 <TableCell>{facture.honoraires_agent} €</TableCell>
                 <TableCell>{facture.retrocession} €</TableCell>
@@ -98,19 +102,20 @@ export default function TableauFactures({ user }: { user: User }) {
                     : "N/A"}
                 </TableCell>
                 <TableCell className="text-center">
-                  {facture.statut_dispo}
+                  {facture.statut_paiement}
                 </TableCell>
                 <TableCell className="text-center">
-                  <button className="px-4 py-2 rounded bg-orange-strong text-white hover:bg-orange-light hover:text-black">
-                    <a href={`/factures/${facture.id}/pdf`} target="_blank">
-                      Voir PDF
-                    </a>
+                  <button
+                    className="px-4 py-2 rounded bg-orange-strong text-white hover:bg-orange-light hover:text-black cursor-pointer"
+                    onClick={() => setSelectedFacture(facture)}
+                  >
+                    Voir PDF
                   </button>
                 </TableCell>
                 <TableCell className="text-center">
                   <button
                     className={
-                      "px-4 py-2 rounded bg-orange-strong text-white hover:bg-orange-light hover:text-black"
+                      "px-4 py-2 rounded bg-orange-strong text-white hover:bg-orange-light hover:text-black cursor-pointer"
                     }
                     onClick={() => sendFacture(facture.id)}
                   >
@@ -149,6 +154,15 @@ export default function TableauFactures({ user }: { user: User }) {
           Suivant
         </button>
       </div>
+
+      {selectedFacture && (
+        <Popin
+          factureId={selectedFacture.id}
+          n={selectedFacture.numero}
+          date={selectedFacture.created_at}
+          onClose={() => setSelectedFacture(null)} // Réinitialise l'état au clic sur fermer
+        />
+      )}
     </>
   );
 }

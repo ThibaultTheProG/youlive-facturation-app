@@ -44,7 +44,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <Link href={"/admin"}>
+                <Link href={"/conseiller"}>
                   <Image
                     width={100}
                     height={400}

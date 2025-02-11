@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PDFViewer } from "@react-pdf/renderer";
-import FactureCommission from "@/components/factures/FactureCommission";
-import FactureRecrutement from "@/components/factures/FactureRecrutement";
+import FactureCommission from "./FactureCommission";
+import FactureRecrutement from "./FactureRecrutement";
 import { FactureDetaillee } from "@/lib/types";
 
 export default function FacturePDFPage() {
   const params = useParams(); // ✅ Récupérer les paramètres dynamiques correctement
+  console.log("📄 Page PDF chargée avec params :", params);
   const router = useRouter();
   const [facture, setFacture] = useState<FactureDetaillee | null>(null);
 
@@ -17,7 +18,7 @@ export default function FacturePDFPage() {
 
     const fetchFacture = async () => {
       try {
-        const response = await fetch(`/factures/${params.id}`);
+        const response = await fetch(`/api/factures/${params.id}`);
         if (!response.ok) throw new Error("Facture introuvable");
 
         const data: FactureDetaillee = await response.json();
@@ -32,12 +33,16 @@ export default function FacturePDFPage() {
   }, [params?.id, router]); // ✅ Ajout de `params?.id` pour éviter l'erreur de Next.js
 
   if (!facture) return <p>Chargement...</p>;
-  
+
   console.log(facture);
 
   return (
     <PDFViewer style={{ width: "100%", height: "100vh" }}>
-      {facture.type === "commission" ? <FactureCommission facture={facture}/> : <FactureRecrutement facture={facture}/>}
+      {facture.type === "commission" ? (
+        <FactureCommission facture={facture} />
+      ) : (
+        <FactureRecrutement facture={facture} />
+      )}
     </PDFViewer>
   );
 }

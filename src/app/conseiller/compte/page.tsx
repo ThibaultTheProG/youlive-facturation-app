@@ -1,8 +1,8 @@
 "use client";
 
-import FormParams from "@/components/conseiller/formParams";
+import FormParams from "@/app/conseiller/compte/formParams";
 import { useAuth } from "../../context/authContext";
-import ChangeMDP from "@/components/conseiller/changeMdp";
+import ChangeMDP from "./changeMdp";
 
 export default function MonCompte() {
   const { user, loading } = useAuth();
@@ -28,12 +28,9 @@ export default function MonCompte() {
       <h1 className="text-2xl font-bold">Mon compte</h1>
       <div className="space-y-8">
         <section>
-          <h2 className="text-xl font-semibold mb-4">Mes informations</h2>
           <FormParams user={user} />
         </section>
-
         <section>
-          <h2 className="text-xl font-semibold mb-4">Changer mon mot de passe</h2>
           <ChangeMDP />
         </section>
       </div>

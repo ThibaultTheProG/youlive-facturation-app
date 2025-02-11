@@ -73,6 +73,21 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link
+                    href="/admin/inscription"
+                    className={`${
+                      pathname === "/admin/inscription"
+                        ? "text-orangeStrong"
+                        : ""
+                    }`}
+                  >
+                    <span>Assigner un mot de passe</span>
+                    <Settings />
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link
                     href="/admin/suiviFactures"
                     className={`${
                       pathname === "/admin/suiviFactures"

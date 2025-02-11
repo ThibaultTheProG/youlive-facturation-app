@@ -46,7 +46,7 @@ export default function FormInscription() {
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-100">
+    
       <Card className="w-full max-w-md p-6 shadow-lg">
         <CardHeader>
           <h1 className="text-2xl font-semibold text-center">
@@ -106,6 +106,6 @@ export default function FormInscription() {
           </p>
         </CardFooter>
       </Card>
-    </div>
+    
   );
 }

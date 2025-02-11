@@ -1,5 +1,5 @@
 import db from "@/lib/db";
-import { Contacts } from "@/lib/types";
+import { Contact } from "@/lib/types";
 
 export async function getContactIdsFromRelations() {
   const client = await db.connect();
@@ -15,7 +15,7 @@ export async function getContactIdsFromRelations() {
   }
 }
 
-export async function insertContacts(contacts: Contacts[]) {
+export async function insertContacts(contacts: Contact[]) {
   const client = await db.connect();
 
   if (!Array.isArray(contacts)) {
@@ -26,21 +26,21 @@ export async function insertContacts(contacts: Contacts[]) {
     for (const contact of contacts) {
       const {
         id: contactApimoId,
-        firstname,
-        lastname,
+        prenom,
+        nom,
         email,
         mobile,
         phone,
-        address,
-        city,
+        adresse,
+        ville,
       } = contact;
 
-      let ville;
+      let villeName;
       let cp;
 
-      if (city) {
-        ville = city.name;
-        cp = city.zipcode;
+      if (ville) {
+        villeName = ville.name;
+        cp = ville.zipcode;
       }
 
       if (!contactApimoId) {
@@ -75,12 +75,12 @@ export async function insertContacts(contacts: Contacts[]) {
 
       await client.query(query, [
         contactApimoId,
-        firstname || null,
-        lastname || null,
+        prenom || null,
+        nom || null,
         email || null,
         mobile || phone || null,
-        address || null,
-        ville || null,
+        adresse || null,
+        villeName || null,
         cp || null,
       ]);
     }

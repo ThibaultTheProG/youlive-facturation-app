@@ -1,7 +1,7 @@
 export const calculRetrocession = (
   typecontrat: string,
   chiffre_affaires: number,
-  autoParrain: string
+  autoParrain?: string
 ): number => {
   let retrocession = 0;
 

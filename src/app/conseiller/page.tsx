@@ -1,10 +1,14 @@
+import { redirect } from "next/navigation";
 
 
 
 export default function Conseiller() {
+
+  redirect("/conseiller/compte");
+
     return (
       <>
-      <p>Test</p>
+      <h1>Page Conseiller</h1>
       </>
     );
   }

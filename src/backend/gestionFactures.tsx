@@ -3,6 +3,8 @@
 import db from "../lib/db.js";
 import { PoolClient } from "pg";
 import { FactureDetaillee, RelationContrat } from "@/lib/types.js";
+import fs from "fs/promises";
+import path from "path";
 
 // Fonction principale
 export async function createFacture() {
@@ -63,14 +65,12 @@ async function createFactureCommission(
 
     // Insérer la facture de type "commission"
     const insertOrUpdateFactureQuery = `
-  INSERT INTO factures (relation_id, user_id, type, retrocession, statut_dispo, statut_paiement, created_at, updated_at)
-  VALUES ($1, $2, 'commission', $3, 'en attente', 'non payé', NOW(), NOW())
+  INSERT INTO factures (relation_id, user_id, type, retrocession, statut_paiement)
+  VALUES ($1, $2, 'commission', $3, 'non payé')
   ON CONFLICT (relation_id, type, user_id)
   DO UPDATE SET
     retrocession = EXCLUDED.retrocession,
-    statut_dispo = EXCLUDED.statut_dispo,
     statut_paiement = EXCLUDED.statut_paiement,
-    updated_at = NOW();
 `;
     await client.query(insertOrUpdateFactureQuery, [
       relationid,
@@ -112,9 +112,9 @@ WHERE id = $1;
     const chiffreAffaires = result.rows[0].chiffre_affaires;
 
     // Si CA >= 70 000€, ne pas générer de facture de parrainage
-    if (chiffreAffaires >= 70000) {
+    if (chiffreAffaires > 70000) {
       console.log(
-        `L'utilisateur ${user_id} a un chiffre d'affaires >= 70 000€. Aucune facture de parrainage générée.`
+        `L'utilisateur ${user_id} a un chiffre d'affaires > 70 000€. Aucune facture de parrainage générée.`
       );
       return;
     }
@@ -145,7 +145,25 @@ WHERE id = $1;
 
     for (const parrain of parrains.rows) {
       const { parrain_id, niveau } = parrain;
-      const percentage = niveau === 1 ? 6 : niveau === 2 ? 2 : 1;
+      // Vérifier le nombre de filleuls de niveau 1 dans la table utilisateurs
+      const checkFilleulsQuery = `
+    SELECT COUNT(*) AS nombre_filleuls
+    FROM utilisateurs
+    WHERE parrain_id = $1;
+  `;
+
+      const resultFilleuls = await client.query(checkFilleulsQuery, [
+        parrain_id,
+      ]);
+      const nombreFilleuls = parseInt(
+        resultFilleuls.rows[0].nombre_filleuls,
+        10
+      );
+
+      // Si le parrain a 5 filleuls ou plus de niveau 1, passer la rétrocession à 8% au lieu de 6%
+      const percentage =
+        niveau === 1 ? (nombreFilleuls >= 5 ? 8 : 6) : niveau === 2 ? 2 : 1;
+
       const retrocessionAmount = (
         honoraires_agent *
         (percentage / 100)
@@ -155,14 +173,12 @@ WHERE id = $1;
         await client.query("SAVEPOINT before_insert");
 
         const insertParrainageQuery = `
-          INSERT INTO factures (relation_id, user_id, type, retrocession, statut_dispo, statut_paiement, created_at, updated_at)
-          VALUES ($1, $2, 'parrainage', $3, 'en attente', 'non payé', NOW(), NOW())
+          INSERT INTO factures (relation_id, user_id, type, retrocession, statut_paiement)
+          VALUES ($1, $2, 'recrutement', $3, 'non payé')
           ON CONFLICT (relation_id, type, user_id)
           DO UPDATE SET
             retrocession = EXCLUDED.retrocession,
-            statut_dispo = EXCLUDED.statut_dispo,
             statut_paiement = EXCLUDED.statut_paiement,
-            updated_at = NOW();
         `;
         await client.query(insertParrainageQuery, [
           relationid,
@@ -191,6 +207,7 @@ WHERE id = $1;
 export async function getFactures(userId: number) {
   const client = await db.connect();
 
+
   try {
     const queryGetFactures = `
         SELECT
@@ -200,8 +217,10 @@ export async function getFactures(userId: number) {
           f.retrocession, 
           p.numero_mandat, 
           c.date_signature, 
-          f.statut_dispo,
-          f.url_fichier
+          f.statut_paiement,
+          f.url_fichier,
+          f.numero,
+          f.created_at
         FROM factures f
         JOIN relations_contrats r ON f.relation_id = r.id
         JOIN contrats c ON r.contrat_id = c.id
@@ -229,131 +248,42 @@ export async function getFactureById(
   factureId: number
 ): Promise<FactureDetaillee | null> {
   const client = await db.connect();
+
+  const sqlFilePath = path.join(process.cwd(), "src/query", "getFacturesById.sql");
+  const sqlQuery = await fs.readFile(sqlFilePath, "utf-8");
+
+
   try {
-    const query = `
-SELECT 
-    f.id,
-    f.user_id,
-    f.type,
-    r.honoraires_agent, -- ✅ Récupération des honoraires depuis relations_contrats
-    f.retrocession,
-    f.statut_dispo,
-    f.statut_paiement,
-    f.url_fichier,
-    f.created_at,
-    f.updated_at,
-    c.date_signature,
-    p.numero_mandat,
-    r.user_id,
-
-    -- Informations du conseiller (utilisateur)
-    u.id AS conseiller_id,
-    u.prenom AS conseiller_prenom,
-    u.nom AS conseiller_nom,
-    u.email AS conseiller_email,
-    u.telephone AS conseiller_telephone,
-    u.adresse AS conseiller_adresse,
-    u.siren AS conseiller_siren,
-    u.tva AS conseiller_tva,
-    u.chiffre_affaires AS conseiller_chiffre_affaires,
-    u.retrocession AS conseiller_retrocession,
-
-    -- Informations du contrat
-    c.id AS contrat_id,
-    c.statut AS contrat_statut,
-    c.price AS contrat_price,
-    c.price_net AS contrat_price_net,
-
-    -- Informations de la propriété
-    p.id AS propriete_id,
-    p.adresse AS propriete_adresse,
-
-    -- Informations du filleul (utilisateur associé à relations_contrats.user_id)
-    filleul.prenom AS filleul_prenom,
-    filleul.nom AS filleul_nom,
-
-    -- Agrégation des acheteurs sous format JSON
-    COALESCE(
-        json_agg(
-            DISTINCT CASE 
-                WHEN cc_acheteur.type = 1 THEN 
-                    jsonb_build_object(
-                        'prenom', acheteur.prenom,
-                        'nom', acheteur.nom,
-                        'email', acheteur.email,
-                        'mobile', acheteur.mobile,
-                        'adresse', acheteur.adresse,
-                        'ville', acheteur.ville,
-                        'cp', acheteur.cp
-                    )
-            END
-        ) FILTER (WHERE cc_acheteur.type = 1), '[]'
-    ) AS acheteurs,
-
-    -- Agrégation des propriétaires sous format JSON
-    COALESCE(
-        json_agg(
-            DISTINCT CASE 
-                WHEN cc_proprietaire.type = 2 THEN 
-                    jsonb_build_object(
-                        'prenom', proprietaire.prenom,
-                        'nom', proprietaire.nom,
-                        'email', proprietaire.email,
-                        'mobile', proprietaire.mobile,
-                        'adresse', proprietaire.adresse,
-                        'ville', proprietaire.ville,
-                        'cp', proprietaire.cp
-                    )
-            END
-        ) FILTER (WHERE cc_proprietaire.type = 2), '[]'
-    ) AS proprietaires
-
-FROM factures f
-JOIN relations_contrats r ON f.relation_id = r.id  -- ✅ Récupération des honoraires_agent
-JOIN utilisateurs u ON f.user_id = u.id
-JOIN contrats c ON r.contrat_id = c.id
-JOIN property p ON c.id = p.contrat_id
-
-LEFT JOIN utilisateurs filleul ON r.user_id = filleul.id
-
--- Jointure pour récupérer les acheteurs (type = 1)
-LEFT JOIN contacts_contrats cc_acheteur ON c.id = cc_acheteur.contrat_id AND cc_acheteur.type = 1
-LEFT JOIN contacts acheteur ON cc_acheteur.contact_id = acheteur.contact_apimo_id
-
--- Jointure pour récupérer les propriétaires (type = 2)
-LEFT JOIN contacts_contrats cc_proprietaire ON c.id = cc_proprietaire.contrat_id AND cc_proprietaire.type = 2
-LEFT JOIN contacts proprietaire ON cc_proprietaire.contact_id = proprietaire.contact_apimo_id
-
-WHERE f.id = $1
-GROUP BY 
-    f.id, u.id, c.id, p.id, r.honoraires_agent, r.user_id, filleul.prenom, filleul.nom;
-    `;
-
-    const result = await client.query(query, [factureId]);
+    
+    const result = await client.query(sqlQuery, [factureId]);
     if (result.rows.length === 0) return null;
 
     const row = result.rows[0];
 
+    console.log("Acheteurs :", row.acheteurs ?? []);
+    console.log("Propriétaires :", row.proprietaires ?? []);
+
     return {
       id: row.id,
       type: row.type,
-      honoraires_agent: row.honoraires_agent, // ✅ Correction ici pour prendre depuis relations_contrats
+      honoraires_agent: row.honoraires_agent,
       retrocession: row.retrocession,
-      statut_dispo: row.statut_dispo,
       statut_paiement: row.statut_paiement,
       url_fichier: row.url_fichier,
       created_at: row.created_at,
-      updated_at: row.updated_at,
       numero_mandat: row.numero_mandat,
       date_signature: row.date_signature,
+      numero: row.numero,
+      vat_rate: row.vat_rate,
 
       filleul: {
         id: row.user_id,
         prenom: row.filleul_prenom,
-        nom: row.filleul_nom
+        nom: row.filleul_nom,
       },
 
       conseiller: {
+        idapimo: row.conseiller_idapimo,
         id: row.conseiller_id,
         prenom: row.conseiller_prenom,
         nom: row.conseiller_nom,

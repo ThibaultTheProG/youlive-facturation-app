@@ -1,6 +1,6 @@
 import { AuthProvider } from "../context/authContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "../../components/conseiller/sidebarConseiller";
+import { AppSidebar } from "./sidebarConseiller";
 import "../globals.css";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";

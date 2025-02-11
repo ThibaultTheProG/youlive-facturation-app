@@ -1,6 +1,6 @@
 "use client"
 
-import TableauFilleuls from "@/components/conseiller/tableauFilleuls";
+import TableauFilleuls from "./tableauFilleuls";
 import { useAuth } from "../../context/authContext";
 
 export default function MesFilleulsPage() {
@@ -25,7 +25,7 @@ export default function MesFilleulsPage() {
       }
   return (
     <div className="container mx-auto p-4 space-y-4">
-      <h1>Mes filleuls</h1>
+      <h1 className="text-2xl font-bold">Mes filleuls</h1>
       <TableauFilleuls user={user}/>
     </div>
   );

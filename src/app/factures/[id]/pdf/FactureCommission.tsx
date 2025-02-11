@@ -47,6 +47,15 @@ export default function FactureCommission({
 }) {
   const user = facture.conseiller;
 
+  let amountTTC;
+
+  if (user.tva) {
+    amountTTC =
+      facture.retrocession + (facture.retrocession * facture.vat_rate) / 100;
+  }
+
+  console.log("Valeur brute de created_at :", facture.created_at);
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -87,11 +96,18 @@ export default function FactureCommission({
 
         {/* Date */}
         <Text style={{ textAlign: "right", marginTop: 10 }}>
-          Facture créée le : {new Date(facture.created_at).toLocaleDateString()}
+          Facture créée le :{" "}
+          {facture.created_at
+            ? new Date(facture.created_at).toLocaleDateString("fr-FR", {
+                timeZone: "Europe/Paris", // 🔄 Assurez que la conversion est correcte
+              })
+            : "Date inconnue"}
         </Text>
 
         {/* Titre */}
-        <Text style={styles.highlight}>FACTURE COMMISSION N°{facture.id}</Text>
+        <Text style={styles.highlight}>
+          FACTURE COMMISSION N°{facture.numero}
+        </Text>
 
         {/* Bloc DÉSIGNATION */}
         <View style={[styles.table, { marginTop: 10 }]}>
@@ -116,8 +132,8 @@ export default function FactureCommission({
               {facture.proprietaires.map((proprietaire, index) => (
                 <Text key={index} style={styles.textIndent}>
                   - {proprietaire.prenom} {proprietaire.nom} (
-                  {proprietaire.adresse}, {proprietaire.cp},{" "}
-                  {proprietaire.ville})
+                  {proprietaire.adresse}, {proprietaire.ville.zipcode},{" "}
+                  {proprietaire.ville.name})
                 </Text>
               ))}
             </View>
@@ -130,7 +146,7 @@ export default function FactureCommission({
               {facture.acheteurs.map((acheteur, index) => (
                 <Text key={index} style={styles.textIndent}>
                   - {acheteur.prenom} {acheteur.nom} ({acheteur.adresse},{" "}
-                  {acheteur.cp}, {acheteur.ville})
+                  {acheteur.ville.zipcode}, {acheteur.ville.name})
                 </Text>
               ))}
             </View>
@@ -163,7 +179,7 @@ export default function FactureCommission({
             <Text style={styles.tableCellTotal}>Honoraires Youlive HT</Text>
             <Text style={styles.tableCellTotal}>% Rétrocession</Text>
             <Text style={styles.tableCellTotal}>Rétrocession HT</Text>
-            {user.tva && <Text  style={styles.tableCellTotal}>TVA</Text>}
+            {user.tva && <Text style={styles.tableCellTotal}>TVA</Text>}
             <Text style={styles.tableCell}>Montant à régler TTC</Text>
           </View>
           <View style={styles.tableRow}>
@@ -174,19 +190,21 @@ export default function FactureCommission({
               {facture.conseiller.retrocession}%
             </Text>
             <Text style={styles.tableCellTotal}>{facture.retrocession} €</Text>
-            {user.tva && <Text  style={styles.tableCellTotal}>20 %</Text>}
-            <Text style={styles.tableCell}>{facture.retrocession} €</Text>
+            {user.tva && <Text style={styles.tableCellTotal}>20 %</Text>}
+            <Text style={styles.tableCell}>
+              {amountTTC || facture.retrocession} €
+            </Text>
           </View>
         </View>
 
         {/* Mode de paiement & TVA */}
         <Text style={{ marginTop: 10 }}>Mode de Règlement : Virement</Text>
 
-        {!user.tva ? 
+        {!user.tva ? (
           <Text style={{ fontSize: 10, marginTop: 10 }}>
             TVA non applicable - article 293 B du CGI
           </Text>
-        : null}
+        ) : null}
 
         {/* Mentions légales */}
         <Text style={styles.footer}>

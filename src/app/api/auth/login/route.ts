@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const { id, motDePasse: hashedPassword, role } = result.rows[0];
+      const { id, motDePasse: hashedPassword, role, name } = result.rows[0];
 
       const isValid = await comparePassword(password, hashedPassword);
 

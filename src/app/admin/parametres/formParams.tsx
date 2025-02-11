@@ -44,18 +44,20 @@ export default function FormParams() {
   // Synchroniser les champs lorsque `selectedConseiller` change
   useEffect(() => {
     if (selectedConseiller) {
-      const { typecontrat, chiffre_affaires, tva, parrain_id, auto_parrain} =
+      const { typecontrat, chiffre_affaires, tva, parrain_id, auto_parrain } =
         selectedConseiller;
 
       setSelectedTypeContrat(typecontrat || "");
       setChiffreAffaires(chiffre_affaires || 0);
       setAssujettiTVA(tva ? "oui" : "non");
-      setAutoParrain(auto_parrain);
-      setRetrocession(
-        chiffre_affaires && typecontrat
-          ? calculRetrocession(typecontrat, chiffre_affaires, auto_parrain)
-          : 0
-      );
+      if (auto_parrain) {
+        setAutoParrain(auto_parrain);
+        setRetrocession(
+          chiffre_affaires && typecontrat
+            ? calculRetrocession(typecontrat, chiffre_affaires, auto_parrain)
+            : 0
+        );
+      }
 
       // Mettre à jour le parrain sélectionné
       const parrain = localConseillers.find((c) => c.id === parrain_id);
@@ -106,7 +108,9 @@ export default function FormParams() {
   // Calculer la rétrocession à chaque changement de chiffre d'affaires ou de type de contrat
   useEffect(() => {
     if (chiffreAffaires >= 0 && selectedTypeContrat) {
-      setRetrocession(calculRetrocession(selectedTypeContrat, chiffreAffaires, autoParrain));
+      setRetrocession(
+        calculRetrocession(selectedTypeContrat, chiffreAffaires, autoParrain)
+      );
     } else {
       setRetrocession(0); // Réinitialiser si une des conditions n'est pas remplie
     }
@@ -241,6 +245,14 @@ export default function FormParams() {
             id="telephone"
             type="tel"
             value={selectedConseiller?.telephone || ""}
+          />
+          <InputCustom
+            disable={true}
+            name="mobile"
+            label="Mobile"
+            id="mobile"
+            type="tel"
+            value={selectedConseiller?.mobile || ""}
           />
           <InputCustom
             disable={false}

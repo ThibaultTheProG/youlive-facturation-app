@@ -12,18 +12,30 @@ export async function insertConseillers(conseillers: object) {
 
   try {
     for (const conseiller of conseillers) {
-      const { id, firstname, lastname, email, phone, city } = conseiller;
+      const { id, firstname, lastname, email, phone, mobile, city, partners } =
+        conseiller;
       const adresse = city?.name || null;
       const createdAt = new Date();
+      const siren = partners?.[0]?.reference;
 
       if (!firstname || !lastname) {
         continue; // Ignorer cet enregistrement
       }
       const query = `
-    INSERT INTO utilisateurs (idApimo, prenom, nom, email, telephone, adresse, role, created_at) 
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    ON CONFLICT (idApimo) DO NOTHING 
-    RETURNING *;
+    INSERT INTO utilisateurs (idApimo, prenom, nom, email, telephone, mobile, adresse, role, created_at, siren) 
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+ON CONFLICT (idApimo) 
+DO UPDATE SET 
+  prenom = EXCLUDED.prenom,
+  nom = EXCLUDED.nom,
+  email = EXCLUDED.email,
+  telephone = EXCLUDED.telephone,
+  mobile = EXCLUDED.mobile,
+  adresse = EXCLUDED.adresse,
+  role = EXCLUDED.role,
+  siren = EXCLUDED.siren,
+  updated_at = NOW()
+RETURNING *;
   `;
 
       await client.query(query, [
@@ -32,9 +44,11 @@ export async function insertConseillers(conseillers: object) {
         lastname || null,
         email || null,
         phone || null,
+        mobile || null,
         adresse,
         "conseiller",
         createdAt,
+        siren,
       ]);
     }
 

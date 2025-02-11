@@ -4,8 +4,9 @@ export interface Conseiller {
   id: number;
   email?: string;
   telephone?: string;
+  mobile?: string;
   adresse?: string;
-  idapimo?: number;
+  idapimo: number;
   tva?: boolean;
   typecontrat?: string;
   siren?: number;
@@ -13,7 +14,7 @@ export interface Conseiller {
   retrocession?: number;
   parrain_id?: number;
   auto_parrain?: string;
-  niveau:string;
+  niveau?:string;
 }
 
 export type SelectItem = {
@@ -72,20 +73,30 @@ export interface RelationContrat {
 }
 
 // Pour gérer les contacts
+export interface ContactApi {
+  id: number,
+  firstname: string,
+  lastname: string,
+  email: string,
+  mobile: string,
+  phone: string,
+  address: string,
+  city: Ville
+}
+
+
 export interface Contact {
   id?: number;
   prenom: string;
   nom: string;
   email: string;
-  mobile: string;
-  phone?:string;
+  mobile: string | null;
+  phone:string | null;
   adresse: string;
-  ville: string;
-  cp: string;
+  ville: Ville;
 }
 
-export interface City {
-  id: number;
+export interface Ville {
   name: string;
   zipcode: string;
 }
@@ -95,8 +106,8 @@ export interface Property {
   propertyId?: string;
   adresse: string;
   reference: string;
-  city?: City;  // ✅ Ajout de city avec le bon type
-  [key: string]: string | number | null | undefined | City;
+  city?: Ville;  // ✅ Ajout de city avec le bon type
+  [key: string]: string | number | null | undefined | Ville;
 }
 
 // Pour gérer les factures
@@ -105,13 +116,13 @@ export interface Facture {
   type: string;
   honoraires_agent: number;
   retrocession: number;
-  statut_dispo: string;
   statut_paiement: string;
   url_fichier: string | null;
   created_at: string;
-  updated_at: string;
   numero_mandat: number;
   date_signature: string;
+  numero: string;
+  vat_rate: number;
 }
 
 interface Filleul {

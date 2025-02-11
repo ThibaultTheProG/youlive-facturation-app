@@ -47,6 +47,14 @@ export default function FactureRecrutement({
 }) {
   const user = facture.conseiller;
 
+  let amountTTC;
+
+  if (user.tva){
+    amountTTC = facture.retrocession + (facture.retrocession * facture.vat_rate / 100);
+  }
+
+  const retrocession = (facture.retrocession / facture.honoraires_agent) * 100;
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -87,11 +95,11 @@ export default function FactureRecrutement({
 
         {/* Date */}
         <Text style={{ textAlign: "right", marginTop: 10 }}>
-          Facture créée le : {new Date(facture.created_at).toLocaleDateString()}
+          Facture créée le : {new Date(facture.created_at).toLocaleDateString("fr-FR", { timeZone: "UTC" })}
         </Text>
 
         {/* Titre */}
-        <Text style={styles.highlight}>FACTURE RECRUTEMENT N°{facture.id}</Text>
+        <Text style={styles.highlight}>FACTURE RECRUTEMENT N°{facture.numero}</Text>
 
         {/* Bloc DÉSIGNATION */}
         <View style={[styles.table, { marginTop: 10 }]}>
@@ -136,11 +144,11 @@ export default function FactureRecrutement({
               {facture.honoraires_agent} €
             </Text>
             <Text style={styles.tableCellTotal}>
-              {facture.conseiller.retrocession}%
+              {retrocession}%
             </Text>
             <Text style={styles.tableCellTotal}>{facture.retrocession} €</Text>
             {user.tva && <Text style={styles.tableCellTotal}>20 %</Text>}
-            <Text style={styles.tableCell}>{facture.retrocession} €</Text>
+            <Text style={styles.tableCell}>{amountTTC || facture.retrocession} €</Text>
           </View>
         </View>
 
