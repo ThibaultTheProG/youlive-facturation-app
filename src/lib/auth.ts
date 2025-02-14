@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import argon2 from "argon2";
+import { genSaltSync, hashSync, compareSync } from "bcryptjs";
 import { User } from "@/lib/types";
 
 // Définir la clé secrète utilisée pour signer et vérifier les tokens
@@ -46,7 +46,9 @@ export async function verifyToken(token: string): Promise<User | null> {
 
 // Hacher un mot de passe
 export async function hashPassword(password: string): Promise<string> {
-  return argon2.hash(password); // Hachage avec un salt de complexité 10
+  const salt = genSaltSync(10);
+  const hash = hashSync(password, salt)
+  return hash; // Hachage avec un salt de complexité 10
 }
 
 // Comparer un mot de passe avec son hash
@@ -54,5 +56,5 @@ export async function comparePassword(
   password: string,
   hash: string
 ): Promise<boolean> {
-  return argon2.verify(password, hash); // Comparaison du mot de passe et du hash
+  return compareSync(password, hash); // Comparaison du mot de passe et du hash
 }
