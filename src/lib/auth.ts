@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import { genSaltSync, hashSync, compareSync } from "bcryptjs";
+import { genSaltSync, hashSync, compareSync } from "bcrypt-ts";
 import { User } from "@/lib/types";
 
 // Définir la clé secrète utilisée pour signer et vérifier les tokens
