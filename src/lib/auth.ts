@@ -48,7 +48,7 @@ export async function verifyToken(token: string): Promise<User | null> {
 export async function hashPassword(password: string): Promise<string> {
   const salt = genSaltSync(10);
   const hash = hashSync(password, salt)
-  return hash; // Hachage avec un salt de complexité 10
+  return hash;
 }
 
 // Comparer un mot de passe avec son hash
@@ -56,5 +56,5 @@ export async function comparePassword(
   password: string,
   hash: string
 ): Promise<boolean> {
-  return compareSync(password, hash); // Comparaison du mot de passe et du hash
+  return compareSync(password, hash);
 }
