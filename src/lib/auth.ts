@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import bcrypt from "bcryptjs";
+import argon2 from "argon2";
 import { User } from "@/lib/types";
 
 // Définir la clé secrète utilisée pour signer et vérifier les tokens
@@ -46,7 +46,7 @@ export async function verifyToken(token: string): Promise<User | null> {
 
 // Hacher un mot de passe
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10); // Hachage avec un salt de complexité 10
+  return argon2.hash(password); // Hachage avec un salt de complexité 10
 }
 
 // Comparer un mot de passe avec son hash
@@ -54,5 +54,5 @@ export async function comparePassword(
   password: string,
   hash: string
 ): Promise<boolean> {
-  return bcrypt.compare(password, hash); // Comparaison du mot de passe et du hash
+  return argon2.verify(password, hash); // Comparaison du mot de passe et du hash
 }

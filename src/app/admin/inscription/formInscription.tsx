@@ -15,8 +15,8 @@ import { getConseillersBDD } from "@/backend/gestionConseillers";
 import { Conseiller, SelectItem } from "@/lib/types";
 
 export default function FormInscription() {
-  const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+/*   const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState(""); */
   const [localConseillers, setLocalConseillers] = useState<Conseiller[]>([]);
   const [selectedConseiller, setSelectedConseiller] =
     useState<Conseiller | null>(null);
@@ -87,14 +87,14 @@ export default function FormInscription() {
                 placeholder="Entrez le mot de passe"
               />
             </div>
-            {successMessage && (
+            {/* {successMessage && (
               <p className="text-sm text-green-600 text-center">
                 {successMessage}
               </p>
             )}
             {errorMessage && (
               <p className="text-sm text-red-600 text-center">{errorMessage}</p>
-            )}
+            )} */}
             <Button type="submit" className="w-full bg-orange-strong">
               Attribuer
             </Button>
