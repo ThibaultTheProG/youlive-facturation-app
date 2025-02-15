@@ -2,10 +2,7 @@ import pg from "pg";
 
 const { Pool } = pg;
 const db = new Pool({
-  connectionString:
-    process.env.NODE_ENV === "production"
-      ? process.env.DB_URL
-      : process.env.DB_URL_PREPROD, // Pooling activé
+  connectionString: process.env.DB_URL,
 });
 
 db.on("connect", () => console.log("Connecté au pool de base de données : ", process.env.NODE_ENV));
