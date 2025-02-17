@@ -5,7 +5,6 @@ SELECT
     r.honoraires_agent, -- ✅ Récupération des honoraires depuis relations_contrats
     f.retrocession,
     f.statut_paiement,
-    f.url_fichier,
     f.created_at,
     f.updated_at,
     f.numero,

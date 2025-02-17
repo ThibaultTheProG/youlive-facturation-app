@@ -120,25 +120,31 @@ WHERE id = $1;
 
     const getParrainsQuery = `
       WITH RECURSIVE parrains_cte AS (
-        SELECT id AS parrain_id, prenom, 1 AS niveau
-        FROM utilisateurs
-        WHERE id = $1
+  -- ✅ Récupérer les parrains directs, mais exclure les utilisateurs auto-parrainés
+  SELECT p.parrain_id, u.prenom, 1 AS niveau
+  FROM parrainages p
+  JOIN utilisateurs u ON u.id = p.parrain_id
+  WHERE p.filleul_id = $1
+  AND (SELECT auto_parrain FROM utilisateurs WHERE id = $1) != 'oui' -- ✅ Exclure les auto-parrainés
 
-        UNION ALL
+  UNION ALL
 
-        SELECT p.parrain_id, u.prenom, cte.niveau + 1 AS niveau
-        FROM parrainages p
-        JOIN utilisateurs u ON u.id = p.parrain_id
-        JOIN parrains_cte cte ON cte.parrain_id = p.filleul_id
-        WHERE cte.niveau < 3
-      )
-      SELECT parrain_id, niveau FROM parrains_cte;
+  -- ✅ Continuer la récursivité pour les niveaux supérieurs (jusqu'à 3)
+  SELECT p.parrain_id, u.prenom, cte.niveau + 1 AS niveau
+  FROM parrainages p
+  JOIN utilisateurs u ON u.id = p.parrain_id
+  JOIN parrains_cte cte ON cte.parrain_id = p.filleul_id
+  WHERE cte.niveau < 3
+)
+SELECT parrain_id, niveau FROM parrains_cte;
     `;
 
     const parrains = await client.query(getParrainsQuery, [user_id]);
 
     if (parrains.rows.length === 0) {
-      console.log("Aucun parrain trouvé pour l'utilisateur :", user_id);
+      console.log(
+        `Aucun parrain trouvé ou utilisateur ${user_id} est auto-parrainé.`
+      );
       return;
     }
 
@@ -205,7 +211,6 @@ WHERE id = $1;
 export async function getFactures(userId: number) {
   const client = await db.connect();
 
-
   try {
     const queryGetFactures = `
         SELECT
@@ -246,12 +251,14 @@ export async function getFactureById(
 ): Promise<FactureDetaillee | null> {
   const client = await db.connect();
 
-  const sqlFilePath = path.join(process.cwd(), "src/query", "getFacturesById.sql");
+  const sqlFilePath = path.join(
+    process.cwd(),
+    "src/query",
+    "getFacturesById.sql"
+  );
   const sqlQuery = await fs.readFile(sqlFilePath, "utf-8");
 
-
   try {
-    
     const result = await client.query(sqlQuery, [factureId]);
     if (result.rows.length === 0) return null;
 
@@ -266,7 +273,6 @@ export async function getFactureById(
       honoraires_agent: row.honoraires_agent,
       retrocession: row.retrocession,
       statut_paiement: row.statut_paiement,
-      url_fichier: row.url_fichier,
       created_at: row.created_at,
       numero_mandat: row.numero_mandat,
       date_signature: row.date_signature,

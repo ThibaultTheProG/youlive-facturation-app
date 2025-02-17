@@ -53,7 +53,7 @@ export default function FactureRecrutement({
     amountTTC = facture.retrocession + (facture.retrocession * facture.vat_rate / 100);
   }
 
-  const retrocession = (facture.retrocession / facture.honoraires_agent) * 100;
+  const retrocession = Math.round((facture.retrocession / facture.honoraires_agent) * 100);
 
   return (
     <Document>

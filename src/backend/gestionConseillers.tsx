@@ -31,7 +31,6 @@ DO UPDATE SET
   email = EXCLUDED.email,
   telephone = EXCLUDED.telephone,
   mobile = EXCLUDED.mobile,
-  adresse = EXCLUDED.adresse,
   role = EXCLUDED.role,
   siren = EXCLUDED.siren,
   updated_at = NOW()

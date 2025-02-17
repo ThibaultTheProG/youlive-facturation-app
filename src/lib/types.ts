@@ -117,7 +117,6 @@ export interface Facture {
   honoraires_agent: number;
   retrocession: number;
   statut_paiement: string;
-  url_fichier: string | null;
   created_at: string;
   numero_mandat: number;
   date_signature: string;

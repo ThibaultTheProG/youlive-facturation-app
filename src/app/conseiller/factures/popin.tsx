@@ -7,7 +7,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { DayPicker } from "react-day-picker";
-import "react-day-picker/style.css"
+import "react-day-picker/style.css";
 
 export default function Popin({
   factureId,
@@ -51,6 +51,8 @@ export default function Popin({
     }
   };
 
+  const currentYear = new Date().getFullYear();
+
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
       <div className="bg-white p-6 rounded-lg shadow-lg w-96">
@@ -90,9 +92,16 @@ export default function Popin({
                     onSelect={(date) => setDateCreation(date ?? null)}
                     footer={
                       dateCreation
-                        ? `Selected: ${dateCreation?.toLocaleDateString()}`
-                        : "Pick a day."
+                        ? `Sélectionné: ${dateCreation?.toLocaleDateString()}`
+                        : "Sélectionnez une date."
                     }
+                    classNames={{
+                      month:`p-4`,
+                      footer:`p-2`,
+                      chevron: `fill-orange-strong`,
+                      selected:`bg-orange-strong rounded-md`
+                    }}
+                    startMonth={new Date(currentYear, 0)} endMonth={new Date(currentYear, 11)}
                   />
                 </PopoverContent>
               </Popover>
