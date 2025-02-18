@@ -1,0 +1,8 @@
+{
+    "build": {
+      "env": {
+        "DATABASE_URL": "@DB_URL_NEON"
+      }
+    },
+    "postdeploy": "npx prisma migrate deploy"
+  }

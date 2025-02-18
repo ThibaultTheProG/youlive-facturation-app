@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URL")
+}
+
+model contacts {
+  id               Int       @id @default(autoincrement())
+  contact_apimo_id Int    @unique(map: "contact_apimo_id")
+  prenom           String?   @db.VarChar(255)
+  nom              String?   @db.VarChar(255)
+  email            String?   @db.VarChar(255)
+  mobile           String?   @db.VarChar(255)
+  adresse          String?   @db.VarChar(255)
+  ville            String?   @db.VarChar(255)
+  cp               String?   @db.VarChar(255)
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  updated_at       DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model contacts_contrats {
+  id         Int       @id @default(autoincrement())
+  contrat_id Int?
+  contact_id Int
+  type       Int
+  contrats   contrats? @relation(fields: [contrat_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([contrat_id, contact_id], map: "unique_contrat_id_contact_id")
+}
+
+model contrats {
+  id                 Int                  @id @default(autoincrement())
+  idcontratapimo     Int                  @unique(map: "unique_idcontratapimo")
+  statut             String?              @db.VarChar(120)
+  property_id        Int
+  price              Decimal              @db.Decimal(10, 2)
+  price_net          Decimal              @db.Decimal(10, 2)
+  honoraires         Decimal              @db.Decimal(10, 2)
+  created_at         DateTime?            @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamp(6)
+  date_signature     DateTime?            @db.Timestamp(6)
+  contacts_contrats  contacts_contrats[]
+  property           property?
+  relations_contrats relations_contrats[]
+}
+
+model factures {
+  id                 Int                 @id @default(autoincrement())
+  user_id            Int?
+  type               String?             @db.VarChar(50)
+  retrocession       Float?
+  statut_paiement    String?             @db.VarChar(50)
+  created_at         DateTime?           @db.Timestamp(6)
+  updated_at         DateTime?           @db.Timestamp(6)
+  relation_id        Int?
+  numero             String?             @db.VarChar(255)
+  relations_contrats relations_contrats? @relation(fields: [relation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_factures_relation_id")
+
+  @@unique([relation_id, type, user_id], map: "factures_unique_constraint")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model parrainages {
+  id             Int       @id @default(autoincrement())
+  filleul_id     Int
+  parrain_id     Int
+  niveau         Int       @db.SmallInt
+  created_at     DateTime? @default(now()) @db.Timestamp(6)
+  prenom_parrain String?   @db.Char(250)
+  prenom_filleul String?   @db.Char(250)
+
+  @@unique([filleul_id, parrain_id, niveau], map: "unique_parrainage")
+}
+
+model property {
+  id            Int       @id @default(autoincrement())
+  adresse       String?   @db.VarChar(120)
+  numero_mandat String?   @db.Char(200)
+  contrat_id    Int       @unique(map: "unique_id_contrat")
+  create_at     DateTime? @default(now()) @db.Timestamp(6)
+  update_at     DateTime? @default(now()) @db.Timestamp(6)
+  contrats      contrats  @relation(fields: [contrat_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_property_contrat_id")
+}
+
+model relations_contrats {
+  id               Int          @id(map: "contrats_utilisateurs_pkey") @default(autoincrement())
+  contrat_id       Int
+  user_id          Int
+  honoraires_agent Decimal?     @db.Decimal(10, 2)
+  vat              Decimal?     @db.Decimal(10, 2)
+  vat_rate         Decimal?     @db.Decimal(5, 2)
+  created_at       DateTime?    @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?    @default(now()) @db.Timestamp(6)
+  factures         factures[]
+  contrats         contrats     @relation(fields: [contrat_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_contrat")
+  utilisateurs     utilisateurs @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_utilisateur")
+
+  @@unique([contrat_id, user_id], map: "unique_contrat_user")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model utilisateurs {
+  id                 Int                  @id @default(autoincrement())
+  motDePasse         String?              @db.Char(60)
+  prenom             String?              @db.VarChar(50)
+  nom                String?              @db.VarChar(50)
+  email              String?              @db.VarChar(255)
+  telephone          String?              @db.VarChar(60)
+  adresse            String?              @db.VarChar(255)
+  role               String?              @db.VarChar(50)
+  created_at         DateTime?            @db.Timestamp(6)
+  updated_at         DateTime?            @db.Timestamp(6)
+  idapimo            Int                  @unique(map: "idapimo_unique")
+  tva                Boolean?
+  typecontrat        String?              @db.VarChar(100)
+  siren              String?              @db.VarChar(255)
+  chiffre_affaires   Decimal?             @db.Decimal(10, 2)
+  retrocession       Decimal?             @db.Decimal(5, 2)
+  parrain_id         Int?
+  auto_parrain       String?              @default("non") @db.VarChar(3)
+  mobile             String?              @db.VarChar(60)
+  relations_contrats relations_contrats[]
+  utilisateurs       utilisateurs?        @relation("utilisateursToutilisateurs", fields: [parrain_id], references: [id], map: "fk_parrain_id")
+  other_utilisateurs utilisateurs[]       @relation("utilisateursToutilisateurs")
+}
