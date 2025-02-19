@@ -8,11 +8,11 @@ function mapApiContact(apiContact: ContactApi): Contact {
   return {
     id: apiContact.id,
     prenom: apiContact.firstname, // ✅ Conversion `firstname` → `prenom`
-    nom: apiContact.lastname,     // ✅ Conversion `lastname` → `nom`
+    nom: apiContact.lastname, // ✅ Conversion `lastname` → `nom`
     email: apiContact.email,
     mobile: apiContact.mobile || null, // ✅ Utilise `mobile_phone`
-    phone: apiContact.phone || null,    // ✅ Utilise `home_phone`
-    adresse: apiContact.address,  // ✅ Conversion `address` → `adresse`
+    phone: apiContact.phone || null, // ✅ Utilise `home_phone`
+    adresse: apiContact.address, // ✅ Conversion `address` → `adresse`
     ville: {
       name: apiContact.city?.name || "",
       zipcode: apiContact.city?.zipcode || "",
@@ -60,8 +60,10 @@ export async function GET() {
 
     // Filtrer les contacts dont l'ID est présent dans la base de données
     const filteredContacts = contactsMapped.filter((contact) =>
-      contactIds.includes(String(contact.id))
+      contactIds.includes(contact.id)
     );
+
+    console.log(filteredContacts);
 
     if (filteredContacts.length === 0) {
       return new Response(
