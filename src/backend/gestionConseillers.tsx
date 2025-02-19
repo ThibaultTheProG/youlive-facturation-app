@@ -94,7 +94,10 @@ export async function updateConseillerBDD(
     type_contrat: formData.get("type_contrat"),
     chiffreAffaires: formData.get("chiffre_affaire_annuel"),
     retrocession: formData.get("retrocession"),
+    autoParrain: formData.get("auto_parrain")
   };
+
+  console.log(rawFormData);
 
   // Convertir les valeurs en types compatibles
   const tva =
@@ -124,8 +127,9 @@ export async function updateConseillerBDD(
       typecontrat = $4, 
       chiffre_affaires = $5, 
       retrocession = $6,
+      auto_parrain = $7,
       updated_at = NOW()
-    WHERE id = $7;
+    WHERE id = $8;
   `;
   } else {
     query = `
@@ -138,8 +142,9 @@ export async function updateConseillerBDD(
       chiffre_affaires = $5, 
       retrocession = $6,
       parrain_id = $7,
+      auto_parrain = $8,
       updated_at = NOW()
-    WHERE id = $8;
+    WHERE id = $9;
   `;
   }
 
@@ -152,6 +157,7 @@ export async function updateConseillerBDD(
         rawFormData.type_contrat,
         chiffreAffaires,
         retrocession,
+        rawFormData.autoParrain,
         id,
       ]);
     } else {
@@ -163,6 +169,7 @@ export async function updateConseillerBDD(
         chiffreAffaires,
         retrocession,
         parrain_id,
+        rawFormData.autoParrain,
         id,
       ]);
     }

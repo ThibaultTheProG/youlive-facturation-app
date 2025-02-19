@@ -190,7 +190,7 @@ export default function FormParams() {
   };
 
   return (
-    <form action={handleFormSubmit} className="space-y-4">
+    <form action={handleFormSubmit} className="space-y-8">
       <SelectCustom
         placeholder="Sélectionner un conseiller"
         selectLabel="Conseillers"
@@ -202,7 +202,7 @@ export default function FormParams() {
         } // Valeur actuelle sélectionnée
         onChange={handleSelectConseiller}
       />
-      <div className="flex flex-col space-y-4">
+      <div className="flex flex-col space-y-8">
         <div className="flex flex-row justify-start space-x-4">
           <InputCustom
             disable={true}
@@ -267,7 +267,7 @@ export default function FormParams() {
             }
           />
         </div>
-        <div className="flex flex-row justify-between space-x-4">
+        <div className="flex flex-row space-x-4">
           <InputCustom
             disable={false}
             name="siren"
@@ -290,6 +290,16 @@ export default function FormParams() {
             />
           </div>
           <div className="flex flex-col justify-start space-y-2">
+            <Label>Auto parrainé ?</Label>
+            <RadioCustom
+              onChange={(value) => setAutoParrain(value)}
+              value={autoParrain}
+              name="auto_parrain"
+            />
+          </div>
+        </div>
+        <div className="flex flex-row  space-x-4">
+          <div className="flex flex-col justify-start space-y-2">
             <Label>Type de contrat</Label>
             <SelectCustom
               placeholder="Sélectionner un type de contrat"
@@ -300,8 +310,6 @@ export default function FormParams() {
               onChange={(val) => setSelectedTypeContrat(val)}
             />
           </div>
-        </div>
-        <div className="flex flex-row justify-between  space-x-4">
           <InputCustom
             disable={false}
             name="chiffre_affaire_annuel"
@@ -311,14 +319,6 @@ export default function FormParams() {
             value={chiffreAffaires}
             onChange={(val) => setChiffreAffaires(Number(val))}
           />
-          <div className="flex flex-col justify-start space-y-2">
-            <Label>Auto parrainé ?</Label>
-            <RadioCustom
-              onChange={(value) => setAutoParrain(value)}
-              value={autoParrain}
-              name="auto_parrain"
-            />
-          </div>
           <InputCustom
             disable={true}
             name="retrocession"

@@ -117,22 +117,26 @@ export default function FormParams({ user }: { user: User }) {
             type="email"
             value={localConseiller?.email ?? ""}
           />
-          <InputCustom
-            disable={true}
-            name="telephone"
-            label="Téléphone"
-            id="telephone"
-            type="tel"
-            value={localConseiller?.telephone ?? ""}
-          />
-          <InputCustom
-            disable={true}
-            name="mobile"
-            label="Mobile"
-            id="mobile"
-            type="mobile"
-            value={localConseiller?.mobile ?? ""}
-          />
+          {localConseiller?.telephone && (
+            <InputCustom
+              disable={true}
+              name="telephone"
+              label="Téléphone"
+              id="telephone"
+              type="tel"
+              value={localConseiller?.telephone ?? ""}
+            />
+          )}
+          {localConseiller?.mobile && (
+            <InputCustom
+              disable={true}
+              name="mobile"
+              label="Mobile"
+              id="mobile"
+              type="mobile"
+              value={localConseiller?.mobile ?? ""}
+            />
+          )}
           <InputCustom
             disable={false}
             name="localisation"

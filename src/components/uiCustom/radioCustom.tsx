@@ -22,10 +22,6 @@ export default function RadioCustom({
         <RadioGroupItem value="non" id={`${name}-non`} />
         <Label htmlFor={`${name}-non`}>Non</Label>
       </div>
-      <div className="flex items-center space-x-2">
-        <RadioGroupItem value="not-set" id={`${name}-not-set`} />
-        <Label htmlFor={`${name}-not-set`}>Non renseigné</Label>
-      </div>
     </RadioGroup>
   );
 }
