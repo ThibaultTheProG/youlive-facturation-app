@@ -47,7 +47,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <Link href={"/admin"}>
                   <Image
-                    width={100}
+                    width={200}
                     height={400}
                     alt="Logo Youlive immobiler"
                     src={"/images/logo.svg"}
@@ -109,7 +109,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout}>
               <LogOut />
-              <span>Deconnexion</span>
+              <span className="cursor-pointer">Deconnexion</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

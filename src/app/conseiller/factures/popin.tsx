@@ -13,19 +13,21 @@ export default function Popin({
   factureId,
   n,
   date,
+  actionType,
   onClose,
+  onValidate, // Ajout de la prop pour valider l'envoi de la facture
 }: {
   factureId: number;
   n: string;
   date: string;
+  actionType: string | null;
   onClose: () => void;
+  onValidate: () => void;
 }) {
   const [numero, setNumero] = useState(n ?? "");
   const [dateCreation, setDateCreation] = useState<Date | null>(
-    date ? new Date(date) : null // 🔹 Convertir `string` en `Date`
+    date ? new Date(date) : null
   );
-
-  console.log(dateCreation);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,15 +39,20 @@ export default function Popin({
         body: JSON.stringify({
           numero,
           created_at: dateCreation?.toISOString(),
-        }), // 🔹 Convertir `Date` en `string` ISO
+        }),
       });
 
       if (!response.ok) {
         throw new Error("Erreur lors de la mise à jour de la facture");
       }
 
+      if (actionType === "envoyer") {
+        onValidate(); // Déclenche l'envoi de la facture
+      } else {
+        window.open(`/factures/${factureId}/pdf`, "_blank");
+      }
+
       onClose();
-      window.open(`/factures/${factureId}/pdf`, "_blank");
     } catch (error) {
       console.error("Erreur lors de l'enregistrement :", error);
     }
@@ -57,7 +64,7 @@ export default function Popin({
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
       <div className="bg-white p-6 rounded-lg shadow-lg w-96">
         <span className="text-lg font-semibold mb-4">
-          Informations à renseigner
+          {actionType === "voir" ? "Informations à renseigner" : "Envoyer la facture"}
         </span>
         <form onSubmit={handleSubmit}>
           <div className="flex flex-col space-y-4 mt-4">
@@ -74,9 +81,7 @@ export default function Popin({
 
             {/* Sélecteur de date */}
             <div className="flex flex-col sapce-y-8">
-              <span className="text-sm">
-                Selectionner une date pour votre facture :
-              </span>
+              <span className="text-sm">Sélectionner une date pour votre facture :</span>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start">
@@ -96,27 +101,24 @@ export default function Popin({
                         : "Sélectionnez une date."
                     }
                     classNames={{
-                      month:`p-4`,
-                      footer:`p-2`,
+                      month: `p-4`,
+                      footer: `p-2`,
                       chevron: `fill-orange-strong`,
-                      selected:`bg-orange-strong rounded-md`
+                      selected: `bg-orange-strong rounded-md`
                     }}
-                    startMonth={new Date(currentYear, 0)} endMonth={new Date(currentYear, 11)}
+                    startMonth={new Date(currentYear, 0)}
+                    endMonth={new Date(currentYear, 11)}
                   />
                 </PopoverContent>
               </Popover>
             </div>
 
             <div className="flex justify-end mt-4">
-              <Button
-                className="bg-gray-300 mr-2 cursor-pointer"
-                type="button"
-                onClick={onClose}
-              >
+              <Button className="bg-gray-300 mr-2 cursor-pointer" type="button" onClick={onClose}>
                 Annuler
               </Button>
               <Button className="bg-orange-strong cursor-pointer" type="submit">
-                Valider
+                {actionType === "voir" ? "Valider" : "Envoyer"}
               </Button>
             </div>
           </div>

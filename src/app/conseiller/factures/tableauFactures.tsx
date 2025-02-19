@@ -18,9 +18,9 @@ export default function TableauFactures({ user }: { user: User }) {
   const [facturesList, setFacturesList] = useState<Facture[] | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedFacture, setSelectedFacture] = useState<Facture | null>(null);
+  const [actionType, setActionType] = useState<"voir" | "envoyer" | null>(null);
   const itemsPerPage = 10;
 
-  // Calcul des données paginées
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   let currentItems;
@@ -33,18 +33,12 @@ export default function TableauFactures({ user }: { user: User }) {
   useEffect(() => {
     getFactures(user.id)
       .then((factures) => {
-        // Trier les factures par date de signature (les plus récentes en premier)
         const facturesTriees = factures.sort((a, b) => {
-          const dateA = new Date(a.date_signature).getTime();
-          const dateB = new Date(b.date_signature).getTime();
-          return dateB - dateA; // Tri décroissant
+          return new Date(b.date_signature).getTime() - new Date(a.date_signature).getTime();
         });
-
         setFacturesList(facturesTriees);
       })
-      .catch((error) => {
-        console.error("Impossible de récupérer les factures :", error);
-      });
+      .catch((error) => console.error("Impossible de récupérer les factures :", error));
   }, [user.id]);
 
   const sendFacture = async (factureId: number) => {
@@ -87,37 +81,33 @@ export default function TableauFactures({ user }: { user: User }) {
           {currentItems && currentItems.length > 0 ? (
             currentItems.map((facture, index) => (
               <TableRow key={index}>
-                <TableCell className="font-medium">
-                  {facture.numero || "Non défini"}
-                </TableCell>
+                <TableCell className="font-medium">{facture.numero || "Non défini"}</TableCell>
                 <TableCell className="font-medium">{facture.type}</TableCell>
                 <TableCell>{facture.honoraires_agent} €</TableCell>
                 <TableCell>{facture.retrocession} €</TableCell>
+                <TableCell className="text-center">{facture.numero_mandat || "N/A"}</TableCell>
                 <TableCell className="text-center">
-                  {facture.numero_mandat || "N/A"}
+                  {facture.date_signature ? new Date(facture.date_signature).toLocaleDateString() : "N/A"}
                 </TableCell>
-                <TableCell className="text-center">
-                  {facture.date_signature
-                    ? new Date(facture.date_signature).toLocaleDateString()
-                    : "N/A"}
-                </TableCell>
-                <TableCell className="text-center">
-                  {facture.statut_paiement}
-                </TableCell>
+                <TableCell className="text-center">{facture.statut_paiement}</TableCell>
                 <TableCell className="text-center">
                   <button
                     className="px-4 py-2 rounded bg-orange-strong text-white hover:bg-orange-light hover:text-black cursor-pointer"
-                    onClick={() => setSelectedFacture(facture)}
+                    onClick={() => {
+                      setSelectedFacture(facture);
+                      setActionType("voir");
+                    }}
                   >
                     Voir PDF
                   </button>
                 </TableCell>
                 <TableCell className="text-center">
                   <button
-                    className={
-                      "px-4 py-2 rounded bg-orange-strong text-white hover:bg-orange-light hover:text-black cursor-pointer"
-                    }
-                    onClick={() => sendFacture(facture.id)}
+                    className="px-4 py-2 rounded bg-orange-strong text-white hover:bg-orange-light hover:text-black cursor-pointer"
+                    onClick={() => {
+                      setSelectedFacture(facture);
+                      setActionType("envoyer");
+                    }}
                   >
                     Envoyer facture
                   </button>
@@ -134,7 +124,6 @@ export default function TableauFactures({ user }: { user: User }) {
         </TableBody>
       </Table>
 
-      {/* Pagination */}
       <div className="flex justify-center space-x-2 mt-4 items-center">
         <button
           disabled={currentPage === 1}
@@ -160,7 +149,18 @@ export default function TableauFactures({ user }: { user: User }) {
           factureId={selectedFacture.id}
           n={selectedFacture.numero}
           date={selectedFacture.created_at}
-          onClose={() => setSelectedFacture(null)} // Réinitialise l'état au clic sur fermer
+          actionType={actionType}
+          onValidate={() => {
+            if (actionType === "envoyer") {
+              sendFacture(selectedFacture.id);
+            }
+            setSelectedFacture(null);
+            setActionType(null);
+          }}
+          onClose={() => {
+            setSelectedFacture(null);
+            setActionType(null);
+          }}
         />
       )}
     </>
