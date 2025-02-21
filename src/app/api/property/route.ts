@@ -42,7 +42,9 @@ export async function GET() {
       .flat();
 
     // Insertion des propriétés dans la base
-    await insertProperties(allProperties);
+    insertProperties(allProperties)
+      .then(() => console.log("Propriétés insérées avec succès"))
+      .catch((err) => console.error("Erreur d'insertion :", err));
 
     // Retourner les données au client
     return new Response(JSON.stringify({ data: allProperties }), {

@@ -1,46 +1,45 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { hashPassword } from "@/lib/auth";
-import db from "@/lib/db";
-
-const passwordSchema = z.object({
-  conseillerId: z.string().min(1, "Veuillez sélectionner un conseiller."),
-  password: z
-    .string()
-    .min(6, "Le mot de passe doit contenir au moins 6 caractères."),
-});
+import { hashSync, genSaltSync } from "bcrypt-ts"; // Si tu utilises bcrypt pour hasher le mdp
+import db from "@/lib/db"; // Assure-toi que c'est la bonne connexion à la base de données
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData(); // Récupérer les données du formulaire
-    const body = Object.fromEntries(formData.entries()); // Convertir en objet
-    const { conseillerId, password } = passwordSchema.parse(body); // Validation avec Zod
+    const body = await request.json();
+    const { conseillerId, password } = body;
 
-    const hashedPassword = await hashPassword(password);
-
-    const query = `
-      UPDATE utilisateurs
-      SET "motDePasse" = $1
-      WHERE idapimo = $2;
-    `;
-
-    const client = await db.connect();
-
-    try {
-      await client.query(query, [hashedPassword, conseillerId]);
-    } finally {
-      client.release();
+    if (!conseillerId || !password) {
+      return NextResponse.json(
+        { error: "Tous les champs sont requis." },
+        { status: 400 }
+      );
     }
 
-    // Construire une URL absolue pour la redirection
-    const redirectUrl = new URL("/login", request.url);
+    // Hasher le mot de passe
+    const salt = genSaltSync(10);
+    const hashedPassword = hashSync(password.toString(), salt);
 
-    return NextResponse.redirect(redirectUrl.toString());
+    // Mettre à jour l'utilisateur dans la base de données
+    const result = await db.query(
+      `UPDATE utilisateurs SET "motDePasse" = $1 WHERE idapimo = $2 RETURNING id`,
+      [hashedPassword, conseillerId]
+    );
+
+    if (result.rowCount === 0) {
+      return NextResponse.json(
+        { error: "Utilisateur non trouvé." },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: "Mot de passe attribué avec succès !" },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Erreur lors de l'attribution du mot de passe :", error);
     return NextResponse.json(
-      { error: error instanceof z.ZodError ? error.errors : "Erreur serveur." },
-      { status: 400 }
+      { error: "Erreur interne du serveur." },
+      { status: 500 }
     );
   }
 }

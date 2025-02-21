@@ -30,6 +30,7 @@ export default function FormParams() {
   const [retrocession, setRetrocession] = useState<number>(0);
   const [parrainNiveau2, setParrainNiveau2] = useState<string>("Aucun");
   const [parrainNiveau3, setParrainNiveau3] = useState<string>("Aucun");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Récupérer les conseillers depuis la BDD
   useEffect(() => {
@@ -181,6 +182,9 @@ export default function FormParams() {
         (c: Conseiller) => c.id === Number(formData.get("id"))
       );
       setSelectedConseiller(updatedConseiller || null);
+      // ✅ Affichage du message de succès
+      setSuccessMessage("Les modifications ont bien été enregistrées !");
+      setTimeout(() => setSuccessMessage(null), 3000); // Masquer après 3 secondes
     } catch (error) {
       console.error(
         "Erreur lors de la mise à jour ou du rechargement :",
@@ -361,6 +365,9 @@ export default function FormParams() {
           />
         </div>
       </div>
+      {successMessage && (
+        <p className="text-green-600">{successMessage}</p>
+      )}
       <Button className="bg-orange-strong" type="submit">
         Valider
       </Button>
