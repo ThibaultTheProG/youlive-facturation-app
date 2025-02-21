@@ -139,18 +139,25 @@ export default function TableauSuiviFactures() {
                 <TableCell>
                   {facture.conseiller.prenom} {facture.conseiller.nom}
                 </TableCell>
-                <TableCell>{facture.created_at}</TableCell>
+                <TableCell>{facture.numero}</TableCell>
                 <TableCell>{facture.type}</TableCell>
                 <TableCell>{facture.retrocession.toLocaleString()} €</TableCell>
                 <TableCell>{facture.statut_paiement}</TableCell>
                 <TableCell>
                   {/* 🆙 Bouton pour mettre à jour le statut */}
-                  {facture.statut_paiement !== "payé" && (
+                  {facture.statut_paiement !== "payé" ? (
                     <Button
-                      className="bg-green-600 text-white hover:bg-green-700 cursor-pointer"
+                      className="bg-green-500 text-white hover:bg-green-700 cursor-pointer"
                       onClick={() => updateStatut(facture.id, "payé")}
                     >
                       Marquer comme payé
+                    </Button>
+                  ) : (
+                    <Button
+                      className="bg-red-500 text-white hover:bg-red-700 cursor-pointer"
+                      onClick={() => updateStatut(facture.id, "annulé")}
+                    >
+                      Annuler
                     </Button>
                   )}
                 </TableCell>

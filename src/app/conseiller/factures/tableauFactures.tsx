@@ -149,6 +149,8 @@ export default function TableauFactures({ user }: { user: User }) {
           factureId={selectedFacture.id}
           n={selectedFacture.numero}
           date={selectedFacture.created_at}
+          a={selectedFacture.apporteur}
+          amount={selectedFacture.apporteur_amount}
           actionType={actionType}
           onValidate={() => {
             if (actionType === "envoyer") {

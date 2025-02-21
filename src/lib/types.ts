@@ -122,6 +122,8 @@ export interface Facture {
   date_signature: string;
   numero: string;
   vat_rate: number;
+  apporteur: string;
+  apporteur_amount: number;
 }
 
 interface Filleul {

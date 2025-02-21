@@ -48,13 +48,26 @@ export default function FactureCommission({
   const user = facture.conseiller;
 
   let amountTTC;
+  let apporteurAmount;
+  let totalAmount;
 
-  if (user.tva) {
-    amountTTC =
-      facture.retrocession + (facture.retrocession * facture.vat_rate) / 100;
+  console.log(facture.apporteur_amount);
+
+  if (facture.apporteur === "oui") {
+    apporteurAmount = facture.apporteur_amount;
+    totalAmount = facture.retrocession - apporteurAmount;
+    if (user.tva) {
+      amountTTC = totalAmount + (totalAmount * facture.vat_rate) / 100;
+    } else {
+      amountTTC = totalAmount;
+    }
+  } else {
+    if (user.tva) {
+      amountTTC = facture.retrocession + (facture.retrocession * facture.vat_rate) / 100;
+    } else {
+      amountTTC = facture.retrocession;
+    }
   }
-
-  console.log("Valeur brute de created_at :", facture.created_at);
 
   return (
     <Document>
@@ -69,7 +82,9 @@ export default function FactureCommission({
               Adresse : {facture.conseiller.adresse}
             </Text>
             <Text style={styles.headerInfo}>
-              Tél : {facture.conseiller.telephone}
+              {facture.conseiller.telephone
+                ? `Tél : ${facture.conseiller.telephone}`
+                : `Mobile : ${facture.conseiller.mobile}`}
             </Text>
             <Text style={styles.headerInfo}>
               Mail : {facture.conseiller.email}
@@ -168,6 +183,12 @@ export default function FactureCommission({
           </View>
         </View>
 
+        {facture.apporteur && (
+          <Text style={{textAlign: "left", marginTop: 10}}>
+            Apporteur d&apos;affaire associé à la vente : {facture.apporteur}
+          </Text>
+        )}
+
         {/* Tableau des montants */}
         <View style={[styles.table, { marginTop: 15 }]}>
           <View
@@ -189,7 +210,9 @@ export default function FactureCommission({
             <Text style={styles.tableCellTotal}>
               {facture.conseiller.retrocession}%
             </Text>
-            <Text style={styles.tableCellTotal}>{facture.retrocession} €</Text>
+            <Text style={styles.tableCellTotal}>
+              {totalAmount || facture.retrocession} €
+            </Text>
             {user.tva && <Text style={styles.tableCellTotal}>20 %</Text>}
             <Text style={styles.tableCell}>
               {amountTTC || facture.retrocession} €

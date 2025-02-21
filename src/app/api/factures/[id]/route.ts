@@ -64,10 +64,14 @@ export async function PUT(request: Request) {
       );
     }
 
-    const { statut_paiement, numero, created_at } = await request.json();
+    const { statut_paiement, numero, created_at, apporteur, apporteur_amount } =
+      await request.json();
+
+    console.log(factureId, statut_paiement, numero, created_at, apporteur, apporteur_amount);
 
     // Vérifier les données à mettre à jour
-    if (!statut_paiement && !numero && !created_at) {
+    if (!numero && !created_at) {
+      console.error("Aucune donnée à mettre à jour");
       return NextResponse.json(
         { error: "Aucune donnée à mettre à jour" },
         { status: 400 }
@@ -95,6 +99,16 @@ export async function PUT(request: Request) {
       params.push(new Date(created_at).toISOString());
     }
 
+    if (apporteur) {
+      fieldsToUpdate.push(`apporteur = $${params.length + 1}`);
+      params.push(apporteur);
+    }
+
+    if (apporteur_amount) {
+      fieldsToUpdate.push(`apporteur_amount = $${params.length + 1}`);
+      params.push(apporteur_amount);
+    }
+
     // Ajouter l'ID de la facture pour la clause WHERE
     params.push(factureId);
 
@@ -102,7 +116,7 @@ export async function PUT(request: Request) {
   UPDATE factures 
   SET ${fieldsToUpdate.join(", ")}
   WHERE id = $${params.length}
-  RETURNING id, statut_paiement, numero, created_at;
+  RETURNING id, statut_paiement, numero, created_at; 
 `;
 
     const result = await db.query(query, params);

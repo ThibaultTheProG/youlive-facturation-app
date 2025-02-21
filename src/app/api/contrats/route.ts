@@ -1,8 +1,5 @@
-import {
-  insertContrats,
-} from "@/backend/gestionContrats";
+import { insertContrats } from "@/backend/gestionContrats";
 import { Contract } from "@/lib/types";
-
 
 export async function GET() {
   try {
@@ -34,7 +31,9 @@ export async function GET() {
       (contract) => contract.step === "4"
     );
     // Insérer les contrats et créer les relations
-    await insertContrats(filteredContracts);
+    insertContrats(filteredContracts)
+      .then(() => console.log("Contrats insérés avec succès"))
+      .catch((err) => console.error("Erreur d'insertion :", err));
 
     return new Response(JSON.stringify({ data: filteredContracts }), {
       status: 200,

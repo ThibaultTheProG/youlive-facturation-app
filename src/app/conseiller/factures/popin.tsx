@@ -6,14 +6,18 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
+import { Label } from "@/components/ui/label";
 
 export default function Popin({
   factureId,
   n,
   date,
   actionType,
+  a,
+  amount,
   onClose,
   onValidate, // Ajout de la prop pour valider l'envoi de la facture
 }: {
@@ -21,6 +25,8 @@ export default function Popin({
   n: string;
   date: string;
   actionType: string | null;
+  a: string;
+  amount: number;
   onClose: () => void;
   onValidate: () => void;
 }) {
@@ -28,6 +34,8 @@ export default function Popin({
   const [dateCreation, setDateCreation] = useState<Date | null>(
     date ? new Date(date) : null
   );
+  const [apporteur, setApporteur] = useState<string>(a ?? "non");
+  const [apporteurAmount, setApporteurAmount] = useState<number>(amount ?? 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +47,8 @@ export default function Popin({
         body: JSON.stringify({
           numero,
           created_at: dateCreation?.toISOString(),
+          apporteur,
+          apporteur_amount: apporteurAmount,
         }),
       });
 
@@ -64,10 +74,12 @@ export default function Popin({
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
       <div className="bg-white p-6 rounded-lg shadow-lg w-96">
         <span className="text-lg font-semibold mb-4">
-          {actionType === "voir" ? "Informations à renseigner" : "Envoyer la facture"}
+          {actionType === "voir"
+            ? "Informations à renseigner"
+            : "Envoyer la facture"}
         </span>
         <form onSubmit={handleSubmit}>
-          <div className="flex flex-col space-y-4 mt-4">
+          <div className="flex flex-col space-y-2 mt-4">
             {/* Champ Numéro */}
             <InputCustom
               disable={false}
@@ -81,7 +93,9 @@ export default function Popin({
 
             {/* Sélecteur de date */}
             <div className="flex flex-col sapce-y-8">
-              <span className="text-sm">Sélectionner une date pour votre facture :</span>
+              <span className="text-sm">
+                Sélectionner une date pour votre facture :
+              </span>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start">
@@ -104,7 +118,7 @@ export default function Popin({
                       month: `p-4`,
                       footer: `p-2`,
                       chevron: `fill-orange-strong`,
-                      selected: `bg-orange-strong rounded-md`
+                      selected: `bg-orange-strong rounded-md`,
                     }}
                     startMonth={new Date(currentYear, 0)}
                     endMonth={new Date(currentYear, 11)}
@@ -113,8 +127,41 @@ export default function Popin({
               </Popover>
             </div>
 
+            {/* Apporteur */}
+            <div className="flex flex-col space-y-2">
+              <span className="text-sm">{"Apporteur d'affaire ?"}</span>
+              <RadioGroup value={apporteur} onValueChange={setApporteur}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="oui" />
+                  <Label htmlFor="oui">Oui</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="non" />
+                  <Label htmlFor="non">Non</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {apporteur === "oui" && (
+              <div>
+                <InputCustom
+                  disable={false}
+                  name="apporteur_amount"
+                  label="Montant de l'apporteur"
+                  id="apporteur_amount"
+                type="number"
+                value={apporteurAmount}
+                  onChange={(val) => setApporteurAmount(Number(val))}
+                />
+              </div>
+            )}
+
             <div className="flex justify-end mt-4">
-              <Button className="bg-gray-300 mr-2 cursor-pointer" type="button" onClick={onClose}>
+              <Button
+                className="bg-gray-300 mr-2 cursor-pointer"
+                type="button"
+                onClick={onClose}
+              >
                 Annuler
               </Button>
               <Button className="bg-orange-strong cursor-pointer" type="submit">

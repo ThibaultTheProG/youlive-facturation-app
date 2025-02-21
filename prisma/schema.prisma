@@ -9,7 +9,7 @@ datasource db {
 
 model contacts {
   id               Int       @id @default(autoincrement())
-  contact_apimo_id Int    @unique(map: "contact_apimo_id")
+  contact_apimo_id Int       @unique(map: "contact_apimo_id")
   prenom           String?   @db.VarChar(255)
   nom              String?   @db.VarChar(255)
   email            String?   @db.VarChar(255)
@@ -57,6 +57,8 @@ model factures {
   updated_at         DateTime?           @db.Timestamp(6)
   relation_id        Int?
   numero             String?             @db.VarChar(255)
+  apporteur          String              @default("non")
+  apporteur_amount   Int?
   relations_contrats relations_contrats? @relation(fields: [relation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_factures_relation_id")
 
   @@unique([relation_id, type, user_id], map: "factures_unique_constraint")

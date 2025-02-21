@@ -49,11 +49,15 @@ export default function FactureRecrutement({
 
   let amountTTC;
 
-  if (user.tva){
-    amountTTC = facture.retrocession + (facture.retrocession * facture.vat_rate / 100);
+  if (user.tva) {
+    amountTTC = Math.round(
+      facture.retrocession + (facture.retrocession * facture.vat_rate) / 100
+    );
   }
 
-  const retrocession = Math.round((facture.retrocession / facture.honoraires_agent) * 100);
+  const retrocession = Math.round(
+    (facture.retrocession / facture.honoraires_agent) * 100
+  );
 
   return (
     <Document>
@@ -68,7 +72,9 @@ export default function FactureRecrutement({
               Adresse : {facture.conseiller.adresse}
             </Text>
             <Text style={styles.headerInfo}>
-              Tél : {facture.conseiller.telephone}
+              {facture.conseiller.telephone
+                ? `Tél : ${facture.conseiller.telephone}`
+                : `Mobile : ${facture.conseiller.mobile}`}
             </Text>
             <Text style={styles.headerInfo}>
               Mail : {facture.conseiller.email}
@@ -95,11 +101,16 @@ export default function FactureRecrutement({
 
         {/* Date */}
         <Text style={{ textAlign: "right", marginTop: 10 }}>
-          Facture créée le : {new Date(facture.created_at).toLocaleDateString("fr-FR", { timeZone: "UTC" })}
+          Facture créée le :{" "}
+          {new Date(facture.created_at).toLocaleDateString("fr-FR", {
+            timeZone: "UTC",
+          })}
         </Text>
 
         {/* Titre */}
-        <Text style={styles.highlight}>FACTURE RECRUTEMENT N°{facture.numero}</Text>
+        <Text style={styles.highlight}>
+          FACTURE RECRUTEMENT N°{facture.numero}
+        </Text>
 
         {/* Bloc DÉSIGNATION */}
         <View style={[styles.table, { marginTop: 10 }]}>
@@ -113,7 +124,8 @@ export default function FactureRecrutement({
           {/* Filleul */}
           <View style={styles.tableRow}>
             <Text style={styles.tableCell}>
-              Nom du collaborateur : {facture.filleul?.prenom} {facture.filleul?.nom}
+              Nom du collaborateur : {facture.filleul?.prenom}{" "}
+              {facture.filleul?.nom}
             </Text>
           </View>
 
@@ -143,12 +155,12 @@ export default function FactureRecrutement({
             <Text style={styles.tableCellTotal}>
               {facture.honoraires_agent} €
             </Text>
-            <Text style={styles.tableCellTotal}>
-              {retrocession}%
-            </Text>
+            <Text style={styles.tableCellTotal}>{retrocession}%</Text>
             <Text style={styles.tableCellTotal}>{facture.retrocession} €</Text>
             {user.tva && <Text style={styles.tableCellTotal}>20 %</Text>}
-            <Text style={styles.tableCell}>{amountTTC || facture.retrocession} €</Text>
+            <Text style={styles.tableCell}>
+              {amountTTC || Math.round(facture.retrocession)} €
+            </Text>
           </View>
         </View>
 

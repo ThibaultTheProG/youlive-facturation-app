@@ -11,6 +11,7 @@ export async function GET() {
         f.retrocession,
         f.statut_paiement,
         f.created_at,
+        f.numero,
         u.prenom,
         u.nom
       FROM factures f

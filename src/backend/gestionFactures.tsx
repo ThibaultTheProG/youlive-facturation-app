@@ -222,7 +222,9 @@ export async function getFactures(userId: number) {
           c.date_signature, 
           f.statut_paiement,
           f.numero,
-          f.created_at
+          f.created_at,
+          f.apporteur,
+          f.apporteur_amount
         FROM factures f
         JOIN relations_contrats r ON f.relation_id = r.id
         JOIN contrats c ON r.contrat_id = c.id
@@ -278,6 +280,8 @@ export async function getFactureById(
       date_signature: row.date_signature,
       numero: row.numero,
       vat_rate: row.vat_rate,
+      apporteur: row.apporteur,
+      apporteur_amount: row.apporteur_amount,
 
       filleul: {
         id: row.user_id,
@@ -293,6 +297,7 @@ export async function getFactureById(
         email: row.conseiller_email,
         telephone: row.conseiller_telephone,
         adresse: row.conseiller_adresse,
+        mobile: row.conseiller_mobile,
         siren: row.conseiller_siren,
         tva: row.conseiller_tva,
         chiffre_affaires: row.conseiller_chiffre_affaires,
