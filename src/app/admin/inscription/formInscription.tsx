@@ -36,7 +36,7 @@ export default function FormInscription() {
   const conseillersNoms: SelectItem[] = localConseillers.map((conseiller) => ({
     key: conseiller.idapimo,
     name: `${conseiller.prenom} ${conseiller.nom}`,
-  }));
+  })).sort((a, b) => a.name.localeCompare(b.name));
 
   // Gérer la sélection du conseiller
   const handleSelectConseiller = async (val: string) => {

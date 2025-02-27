@@ -368,7 +368,7 @@ export default function FormParams() {
       {successMessage && (
         <p className="text-green-600">{successMessage}</p>
       )}
-      <Button className="bg-orange-strong" type="submit">
+      <Button className="bg-orange-strong cursor-pointer" type="submit">
         Valider
       </Button>
     </form>
