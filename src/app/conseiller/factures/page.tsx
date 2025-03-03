@@ -6,8 +6,6 @@ import TableauFactures from "./tableauFactures";
 export default function MesFactures() {
   const { user, loading } = useAuth();
 
-  console.log("Utilisateur dans MesFactures :", user);
-
   if (loading) {
     return (
       <div className="container mx-auto p-4">

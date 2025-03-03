@@ -47,25 +47,31 @@ export default function FactureCommission({
 }) {
   const user = facture.conseiller;
 
-  let amountTTC;
-  let apporteurAmount;
-  let totalAmount;
+  let amountTTC: number = 0;
+  let apporteurAmount: number = 0;
+  let totalAmount: number = 0;
+
+  // Fonction pour formater les nombres avec 2 décimales
+  const formatNumber = (num: number): string => {
+    return num.toFixed(2);
+  };
 
   console.log(facture.apporteur_amount);
 
   if (facture.apporteur === "oui") {
-    apporteurAmount = facture.apporteur_amount;
-    totalAmount = facture.retrocession - apporteurAmount;
+    apporteurAmount = Number(facture.apporteur_amount) || 0;
+    totalAmount = Number(facture.retrocession) - apporteurAmount;
     if (user.tva) {
-      amountTTC = totalAmount + (totalAmount * facture.vat_rate) / 100;
+      amountTTC = totalAmount + (totalAmount * Number(facture.vat_rate)) / 100;
     } else {
       amountTTC = totalAmount;
     }
   } else {
+    const retrocession = Number(facture.retrocession) || 0;
     if (user.tva) {
-      amountTTC = facture.retrocession + (facture.retrocession * facture.vat_rate) / 100;
+      amountTTC = retrocession + (retrocession * Number(facture.vat_rate)) / 100;
     } else {
-      amountTTC = facture.retrocession;
+      amountTTC = retrocession;
     }
   }
 
@@ -205,17 +211,17 @@ export default function FactureCommission({
           </View>
           <View style={styles.tableRow}>
             <Text style={styles.tableCellTotal}>
-              {facture.honoraires_agent} €
+              {formatNumber(Number(facture.honoraires_agent))} €
             </Text>
             <Text style={styles.tableCellTotal}>
               {facture.conseiller.retrocession}%
             </Text>
             <Text style={styles.tableCellTotal}>
-              {totalAmount || facture.retrocession} €
+              {formatNumber(totalAmount || Number(facture.retrocession))} €
             </Text>
             {user.tva && <Text style={styles.tableCellTotal}>20 %</Text>}
             <Text style={styles.tableCell}>
-              {amountTTC || facture.retrocession} €
+              {formatNumber(amountTTC || Number(facture.retrocession))} €
             </Text>
           </View>
         </View>

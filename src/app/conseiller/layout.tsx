@@ -30,7 +30,6 @@ export default async function ConseillerLayout({
     }
   }
 
-  console.log("Utilisateur dans ConseillerLayout :", user);
 
   return (
     <AuthProvider initialUser={user}>

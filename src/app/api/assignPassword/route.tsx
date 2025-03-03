@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { hashSync, genSaltSync } from "bcrypt-ts"; // Si tu utilises bcrypt pour hasher le mdp
-import db from "@/lib/db"; // Assure-toi que c'est la bonne connexion à la base de données
+import prisma from "@/lib/db"; // Assure-toi que c'est la bonne connexion à la base de données
+import { Prisma } from "@prisma/client";
 
 export async function POST(request: Request) {
   try {
@@ -18,13 +19,17 @@ export async function POST(request: Request) {
     const salt = genSaltSync(10);
     const hashedPassword = hashSync(password.toString(), salt);
 
-    // Mettre à jour l'utilisateur dans la base de données
-    const result = await db.query(
-      `UPDATE utilisateurs SET "motDePasse" = $1 WHERE idapimo = $2 RETURNING id`,
-      [hashedPassword, conseillerId]
-    );
+    // Mettre à jour l'utilisateur avec Prisma
+    const updatedUser = await prisma.utilisateurs.update({
+      where: {
+        idapimo: conseillerId
+      },
+      data: {
+        motDePasse: hashedPassword
+      }
+    });
 
-    if (result.rowCount === 0) {
+    if (!updatedUser) {
       return NextResponse.json(
         { error: "Utilisateur non trouvé." },
         { status: 404 }
@@ -37,6 +42,14 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("Erreur lors de l'attribution du mot de passe :", error);
+    
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return NextResponse.json(
+        { error: "Utilisateur non trouvé." },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Erreur interne du serveur." },
       { status: 500 }

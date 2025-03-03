@@ -35,6 +35,8 @@ export async function GET() {
       .then(() => console.log("Contrats insérés avec succès"))
       .catch((err) => console.error("Erreur d'insertion :", err));
 
+      console.log(filteredContracts);
+
     return new Response(JSON.stringify({ data: filteredContracts }), {
       status: 200,
       headers: { "Content-Type": "application/json" },

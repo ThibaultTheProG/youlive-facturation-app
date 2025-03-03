@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { hashPassword } from "@/lib/auth";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
-import db from "@/lib/db";
+import prisma from "@/lib/db";
 
 export async function POST(request: Request) {
   try {
@@ -36,18 +36,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const client = await db.connect();
-
-    try {
-      const query = `
-        UPDATE utilisateurs
-        SET "motDePasse" = $1
-        WHERE id = $2;
-      `;
-      await client.query(query, [hashedPassword, user.id]);
-    } finally {
-      client.release();
-    }
+    await prisma.utilisateurs.update({
+      where: {
+        id: user.id
+      },
+      data: {
+        motDePasse: hashedPassword
+      }
+    });
 
     return NextResponse.json({ message: "Mot de passe mis à jour avec succès." });
   } catch (error) {

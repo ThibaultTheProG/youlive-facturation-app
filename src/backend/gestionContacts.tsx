@@ -1,23 +1,24 @@
-import db from "@/lib/db";
+"use server";
+
+import prisma from "@/lib/db";
 import { Contact } from "@/lib/types";
 
 export async function getContactIdsFromRelations() {
-  const client = await db.connect();
   try {
-    const query = `SELECT DISTINCT contact_id FROM contacts_contrats;`;
-    const result = await client.query(query);
-    return result.rows.map((row) => row.contact_id);
+    const contacts = await prisma.contacts_contrats.findMany({
+      distinct: ['contact_id'],
+      select: {
+        contact_id: true
+      }
+    });
+    return contacts.map((row) => row.contact_id);
   } catch (error) {
     console.error("Erreur lors de la récupération des contact IDs :", error);
     throw error;
-  } finally {
-    client.release();
   }
 }
 
 export async function insertContacts(contacts: Contact[]) {
-  const client = await db.connect();
-
   if (!Array.isArray(contacts)) {
     throw new Error("Les données des contacts ne sont pas valides.");
   }
@@ -35,13 +36,8 @@ export async function insertContacts(contacts: Contact[]) {
         ville,
       } = contact;
 
-      let villeName;
-      let cp;
-
-      if (ville) {
-        villeName = ville.name;
-        cp = ville.zipcode;
-      }
+      const villeName = ville?.name;
+      const cp = ville?.zipcode;
 
       if (!contactApimoId) {
         console.warn(
@@ -51,44 +47,36 @@ export async function insertContacts(contacts: Contact[]) {
         continue;
       }
 
-      const query = `
-          INSERT INTO contacts (
-            contact_apimo_id,
-            prenom,
-            nom,
-            email,
-            mobile,
-            adresse,
-            ville,
-            cp
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          ON CONFLICT (contact_apimo_id) DO UPDATE SET
-            prenom = EXCLUDED.prenom,
-            nom = EXCLUDED.nom,
-            email = EXCLUDED.email,
-            mobile = EXCLUDED.mobile,
-            adresse = EXCLUDED.adresse,
-            ville = EXCLUDED.ville,
-            cp = EXCLUDED.cp,
-            updated_at = NOW();
-        `;
-
-      await client.query(query, [
-        contactApimoId,
-        prenom || null,
-        nom || null,
-        email || null,
-        mobile || phone || null,
-        adresse || null,
-        villeName || null,
-        cp || null,
-      ]);
+      await prisma.contacts.upsert({
+        where: {
+          contact_apimo_id: contactApimoId
+        },
+        update: {
+          prenom: prenom || null,
+          nom: nom || null,
+          email: email || null,
+          mobile: mobile || phone || null,
+          adresse: adresse || null,
+          ville: villeName || null,
+          cp: cp || null,
+          updated_at: new Date()
+        },
+        create: {
+          contact_apimo_id: contactApimoId,
+          prenom: prenom || null,
+          nom: nom || null,
+          email: email || null,
+          mobile: mobile || phone || null,
+          adresse: adresse || null,
+          ville: villeName || null,
+          cp: cp || null
+        }
+      });
     }
 
-    console.log("Contacts insérés ou mis à jour avec succès.");
+    console.log("✅ Contacts insérés ou mis à jour avec succès.");
   } catch (error) {
-    console.error("Erreur lors de l'insertion des contacts :", error);
-  } finally {
-    client.release();
+    console.error("❌ Erreur lors de l'insertion des contacts :", error);
+    throw error;
   }
 }

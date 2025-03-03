@@ -6,8 +6,6 @@ import { useAuth } from "../../context/authContext";
 export default function MesFilleulsPage() {
       const { user, loading } = useAuth();
     
-      console.log("Utilisateur dans MesFilleuls :", user);
-    
       if (loading) {
         return (
           <div className="container mx-auto p-4">

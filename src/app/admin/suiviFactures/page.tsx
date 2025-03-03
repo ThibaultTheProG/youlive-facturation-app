@@ -22,7 +22,6 @@ export default function SuiviFactures() {
     );
   }
 
-  console.log("Utilisateur dans les paramètres Admin :", user);
   return (
     <>
       <TableauSuiviFactures />

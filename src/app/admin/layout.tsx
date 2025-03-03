@@ -32,7 +32,6 @@ export default async function Layout({
     }
   }
 
-  console.log("Utilisateur dans ConseillerLayout :", user);
   return (
     <AuthProvider initialUser={user}>
       <SidebarProvider>

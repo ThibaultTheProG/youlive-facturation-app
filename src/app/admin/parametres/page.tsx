@@ -23,7 +23,6 @@ export default function Parametres() {
       );
     }
   
-    console.log("Utilisateur dans les paramètres Admin :", user);
   return (
     <div className="container mx-auto p-4 space-y-4">
       <h1>Paramètres des conseillers</h1>

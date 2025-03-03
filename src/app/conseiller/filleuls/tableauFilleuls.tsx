@@ -10,10 +10,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Conseiller, User } from "@/lib/types";
+import { User } from "@/lib/types";
+
+interface Filleul {
+  id: number;
+  prenom: string;
+  nom: string;
+  chiffre_affaires: number;
+  niveau: string;
+}
 
 export default function TableauFilleuls({ user }: { user: User }) {
-  const [filleuls, setFilleuls] = useState<Conseiller[]>([]);
+  const [filleuls, setFilleuls] = useState<Filleul[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Pagination

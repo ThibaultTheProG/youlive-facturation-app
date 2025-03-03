@@ -33,9 +33,20 @@ export default function TableauFactures({ user }: { user: User }) {
   useEffect(() => {
     getFactures(user.id)
       .then((factures) => {
-        const facturesTriees = factures.sort((a, b) => {
-          return new Date(b.date_signature).getTime() - new Date(a.date_signature).getTime();
-        });
+        const facturesTriees = factures
+          .map(facture => {
+            const factureFormatted = {
+              ...facture,
+              date_signature: facture.date_signature || new Date().toISOString(),
+              numero_mandat: facture.numero_mandat,
+              vat_rate: 0,
+              created_at: facture.created_at ? new Date(facture.created_at).toISOString() : new Date().toISOString()
+            };
+            return factureFormatted as unknown as Facture;
+          })
+          .sort((a, b) => {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
         setFacturesList(facturesTriees);
       })
       .catch((error) => console.error("Impossible de récupérer les factures :", error));
@@ -83,8 +94,8 @@ export default function TableauFactures({ user }: { user: User }) {
               <TableRow key={index}>
                 <TableCell className="font-medium">{facture.numero || "Non défini"}</TableCell>
                 <TableCell className="font-medium">{facture.type}</TableCell>
-                <TableCell>{facture.honoraires_agent} €</TableCell>
-                <TableCell>{facture.retrocession} €</TableCell>
+                <TableCell>{parseFloat(facture.honoraires_agent).toFixed(2)} €</TableCell>
+                <TableCell>{parseFloat(facture.retrocession).toFixed(2)} €</TableCell>
                 <TableCell className="text-center">{facture.numero_mandat || "N/A"}</TableCell>
                 <TableCell className="text-center">
                   {facture.date_signature ? new Date(facture.date_signature).toLocaleDateString() : "N/A"}

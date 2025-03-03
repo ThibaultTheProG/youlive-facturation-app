@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import prisma from "@/lib/db";
 
 export async function GET(req: Request) {
-  const client = await db.connect(); // 🔗 Connexion à la BDD
-
   try {
     // Récupérer l'ID du conseiller depuis l'URL
     const url = new URL(req.url);
@@ -17,35 +15,58 @@ export async function GET(req: Request) {
       );
     }
 
-    // 🔍 Requête SQL optimisée pour trouver les filleuls via la table "utilisateurs" et "parrainages"
-    const query = `
-      SELECT DISTINCT 
-    u.id, 
-    u.prenom, 
-    u.nom, 
-    u.chiffre_affaires, 
-    COALESCE(p.niveau, 1) AS niveau -- Niveau = 1 pour les filleuls directs, sinon prendre la valeur de parrainages
-FROM utilisateurs u
-LEFT JOIN parrainages p ON u.id = p.filleul_id AND p.parrain_id = $1
-WHERE u.parrain_id = $1 OR p.parrain_id = $1;
-    `;
+    // Récupérer tous les parrainages où le conseiller apparaît
+    const parrainages = await prisma.parrainages.findMany({
+      where: {
+        OR: [
+          { niveau1: conseillerId },
+          { niveau2: conseillerId },
+          { niveau3: conseillerId }
+        ]
+      },
+      select: {
+        niveau1: true,
+        niveau2: true,
+        niveau3: true,
+        user: {
+          select: {
+            id: true,
+            prenom: true,
+            nom: true,
+            chiffre_affaires: true
+          }
+        }
+      }
+    });
 
-    const result = await client.query(query, [conseillerId]);
+    // Transformer les résultats en déterminant le niveau pour chaque filleul
+    const filleulsFormattes = parrainages.map(parrainage => {
+      let niveau = "";
+      if (parrainage.niveau1 === conseillerId) niveau = "Niveau 1";
+      else if (parrainage.niveau2 === conseillerId) niveau = "Niveau 2";
+      else if (parrainage.niveau3 === conseillerId) niveau = "Niveau 3";
+
+      return {
+        id: parrainage.user.id,
+        prenom: parrainage.user.prenom,
+        nom: parrainage.user.nom,
+        chiffre_affaires: Number(parrainage.user.chiffre_affaires || 0),
+        niveau: niveau
+      };
+    });
 
     // 🔍 Debugging pour voir les résultats en console
     console.log(
       `✅ Filleuls trouvés pour le conseiller ${conseillerId} :`,
-      result.rows
+      filleulsFormattes
     );
 
-    return NextResponse.json(result.rows, { status: 200 });
+    return NextResponse.json(filleulsFormattes, { status: 200 });
   } catch (error) {
     console.error("❌ Erreur lors de la récupération des filleuls :", error);
     return NextResponse.json(
       { error: "Erreur interne du serveur." },
       { status: 500 }
     );
-  } finally {
-    client.release(); // 🔗 Toujours libérer la connexion après usage
   }
 }

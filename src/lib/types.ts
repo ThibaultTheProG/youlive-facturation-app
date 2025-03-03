@@ -114,11 +114,11 @@ export interface Property {
 export interface Facture {
   id: number;
   type: string;
-  honoraires_agent: number;
-  retrocession: number;
+  honoraires_agent: string;
+  retrocession: string;
   statut_paiement: string;
   created_at: string;
-  numero_mandat: number;
+  numero_mandat: string;
   date_signature: string;
   numero: string;
   vat_rate: number;

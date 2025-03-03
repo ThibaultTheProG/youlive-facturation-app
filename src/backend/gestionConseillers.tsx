@@ -1,78 +1,93 @@
 "use server";
 
-import db from "../lib/db.js";
+import prisma from "../lib/db";
 import { Conseiller } from "@/lib/types";
 
-export async function insertConseillers(conseillers: object) {
+type ConseillerInput = {
+  id: number;
+  firstname: string;
+  lastname: string;
+  email?: string;
+  phone?: string;
+  mobile?: string;
+  city?: { name: string };
+  partners?: Array<{ reference: string }>;
+};
+
+export async function insertConseillers(conseillers: ConseillerInput[]) {
   if (!Array.isArray(conseillers)) {
     throw new Error("Les données conseillers ne sont pas valides.");
   }
 
-  const client = await db.connect();
-
   try {
     for (const conseiller of conseillers) {
-      const { id, firstname, lastname, email, phone, mobile, city, partners } =
-        conseiller;
+      const { id, firstname, lastname, email, phone, mobile, city, partners } = conseiller;
       const adresse = city?.name || null;
-      const createdAt = new Date();
       const siren = partners?.[0]?.reference;
+      const idToNumber = Number(id);
 
-      if (!firstname || !lastname) {
-        continue; // Ignorer cet enregistrement
-      }
-      const query = `
-    INSERT INTO utilisateurs (idApimo, prenom, nom, email, telephone, mobile, adresse, role, created_at, siren) 
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-ON CONFLICT (idApimo) 
-DO UPDATE SET 
-  prenom = EXCLUDED.prenom,
-  nom = EXCLUDED.nom,
-  email = EXCLUDED.email,
-  telephone = EXCLUDED.telephone,
-  mobile = EXCLUDED.mobile,
-  role = EXCLUDED.role,
-  siren = EXCLUDED.siren,
-  updated_at = NOW()
-RETURNING *;
-  `;
+      if (!firstname || !lastname) continue;
 
-      await client.query(query, [
-        id,
-        firstname || null,
-        lastname || null,
-        email || null,
-        phone || null,
-        mobile || null,
-        adresse,
-        "conseiller",
-        createdAt,
-        siren,
-      ]);
+      await prisma.utilisateurs.upsert({
+        where: {
+          idapimo: idToNumber
+        },
+        update: {
+          prenom: firstname,
+          nom: lastname,
+          email: email || null,
+          telephone: phone || null,
+          mobile: mobile || null,
+          adresse: adresse,
+          siren: siren || null,
+          updated_at: new Date()
+        },
+        create: {
+          idapimo: idToNumber,
+          prenom: firstname,
+          nom: lastname,
+          email: email || null,
+          telephone: phone || null,
+          mobile: mobile || null,
+          adresse: adresse,
+          role: "conseiller",
+          siren: siren || null,
+          created_at: new Date()
+        }
+      });
     }
 
     console.log("Conseillers insérés avec succès");
   } catch (error) {
     console.error("Erreur lors de l'insertion des conseillers", error);
-  } finally {
-    client.release();
+    throw error;
   }
 }
 
 export async function getConseillersBDD(): Promise<Conseiller[]> {
-  const client = await db.connect();
-
   try {
-    const result = await client.query("SELECT * FROM utilisateurs");
-    return result.rows as Conseiller[]; // Conversion explicite en type Conseiller
+    console.log("Début de getConseillersBDD");
+    const conseillers = await prisma.utilisateurs.findMany();
+    console.log("Données brutes de la BDD:", conseillers);
+
+    if (!conseillers || conseillers.length === 0) {
+      console.log("Aucun conseiller trouvé dans la BDD");
+      return [];
+    }
+
+    const mappedConseillers = conseillers.map(c => ({
+      ...c,
+      siren: c.siren ? parseInt(c.siren) : undefined,
+      chiffre_affaires: c.chiffre_affaires ? Number(c.chiffre_affaires) : 0,
+      retrocession: c.retrocession ? Number(c.retrocession) : 0
+    })) as unknown as Conseiller[];
+
+    console.log("Conseillers après mapping:", mappedConseillers);
+    return mappedConseillers;
   } catch (error) {
-    console.error(
-      "Impossible de récupérer les conseillers depuis la BDD",
-      error
-    );
-    return []; // Retourner un tableau vide en cas d'erreur
-  } finally {
-    client.release();
+    console.error("Erreur détaillée lors de la récupération des conseillers:", error);
+    console.error("Stack trace:", (error as Error).stack);
+    return [];
   }
 }
 
@@ -81,228 +96,134 @@ export async function updateConseillerBDD(
   id: number,
   parrain_id?: number | null
 ) {
-  const client = await db.connect();
-
   const rawFormData = {
     nom: formData.get("nom"),
     prenom: formData.get("prenom"),
     email: formData.get("email"),
     telephone: formData.get("telephone"),
     localisation: formData.get("localisation"),
-    siren: formData.get("siren"),
     tva: formData.get("assujetti_tva"),
     type_contrat: formData.get("type_contrat"),
-    chiffreAffaires: formData.get("chiffre_affaire_annuel"),
     retrocession: formData.get("retrocession"),
     autoParrain: formData.get("auto_parrain")
   };
 
-  console.log(rawFormData);
-
-  // Convertir les valeurs en types compatibles
-  const tva =
-    rawFormData.tva === "oui" ? true : rawFormData.tva === "non" ? false : null;
-  const siren =
-    rawFormData.siren && rawFormData.siren !== ""
-      ? Number(rawFormData.siren)
-      : null;
-  const chiffreAffaires =
-    rawFormData.chiffreAffaires && rawFormData.chiffreAffaires !== ""
-      ? Number(rawFormData.chiffreAffaires)
-      : null;
-  const retrocession =
-    rawFormData.retrocession && rawFormData.retrocession !== ""
-      ? Number(rawFormData.retrocession)
-      : null;
-
-  let query;
-
-  if (!parrain_id) {
-    query = `
-    UPDATE utilisateurs
-    SET 
-      adresse = $1, 
-      siren = $2, 
-      tva = $3, 
-      typecontrat = $4, 
-      chiffre_affaires = $5, 
-      retrocession = $6,
-      auto_parrain = $7,
-      updated_at = NOW()
-    WHERE id = $8;
-  `;
-  } else {
-    query = `
-    UPDATE utilisateurs
-    SET 
-      adresse = $1, 
-      siren = $2, 
-      tva = $3, 
-      typecontrat = $4, 
-      chiffre_affaires = $5, 
-      retrocession = $6,
-      parrain_id = $7,
-      auto_parrain = $8,
-      updated_at = NOW()
-    WHERE id = $9;
-  `;
-  }
-
   try {
-    if (!parrain_id) {
-      await client.query(query, [
-        rawFormData.localisation,
-        siren,
-        tva,
-        rawFormData.type_contrat,
-        chiffreAffaires,
-        retrocession,
-        rawFormData.autoParrain,
-        id,
-      ]);
-    } else {
-      await client.query(query, [
-        rawFormData.localisation,
-        siren,
-        tva,
-        rawFormData.type_contrat,
-        chiffreAffaires,
-        retrocession,
-        parrain_id,
-        rawFormData.autoParrain,
-        id,
-      ]);
+    // Mise à jour des informations du conseiller
+    await prisma.utilisateurs.update({
+      where: { id },
+      data: {
+        adresse: rawFormData.localisation?.toString() || null,
+        tva: rawFormData.tva === "oui",
+        typecontrat: rawFormData.type_contrat?.toString() || null,
+        retrocession: rawFormData.retrocession ? parseFloat(rawFormData.retrocession.toString()) : null,
+        auto_parrain: rawFormData.autoParrain?.toString() || "non",
+        updated_at: new Date()
+      }
+    });
+
+    // Si un parrain est spécifié, mettre à jour ou créer le parrainage
+    if (parrain_id) {
+      const existingParrainage = await prisma.parrainages.findFirst({
+        where: { user_id: id }
+      });
+
+      if (existingParrainage) {
+        await prisma.parrainages.update({
+          where: { id: existingParrainage.id },
+          data: { niveau1: parrain_id }
+        });
+      } else {
+        await prisma.parrainages.create({
+          data: {
+            user_id: id,
+            niveau1: parrain_id
+          }
+        });
+      }
     }
 
     console.log("Conseiller mis à jour avec succès.");
   } catch (error) {
-    console.error(
-      "Impossible de modifier les informations associées au conseiller",
-      error
-    );
-  } finally {
-    client.release();
+    console.error("Impossible de modifier les informations associées au conseiller", error);
+    throw error;
   }
 }
 
-export async function getParrainLevel(
-  idConseiller: number,
-  niveau: number
-): Promise<string> {
-  const client = await db.connect();
-
-  const query = `SELECT prenom_parrain FROM parrainages WHERE filleul_id = $1 AND niveau = $2`;
-
+export async function getParrainLevel(idConseiller: number, niveau: number): Promise<{id: number | null, nom: string}> {
   try {
-    const result = await client.query(query, [idConseiller, niveau]);
-
-    if (result.rows.length > 0) {
-      return result.rows[0].prenom_parrain; // Retourne le prénom du parrain
-    } else {
-      return "Aucun"; // Si aucun résultat trouvé
-    }
-  } catch (error) {
-    console.error(
-      `Impossible de récupérer le parrain de niveau ${niveau} :`,
-      error
-    );
-    return "Aucun";
-  } finally {
-    client.release();
-  }
-}
-
-export async function handleParrainages(
-  selectedParrain: string,
-  parrainId: number
-) {
-  const client = await db.connect();
-
-  try {
-    console.log(
-      `Gestion des relations pour le parrain sélectionné ${selectedParrain} et son filleul avec l'id ${parrainId}`
-    );
-
-    // Récupérer les filleuls directs (niveau 1) du parrain sélectionné
-    const getFilleuls = `
-      SELECT id, prenom
-      FROM utilisateurs
-      WHERE parrain_id = $1;
-    `;
-    const filleuls = await client.query(getFilleuls, [parrainId]);
-
-    console.log("Filleuls de premier niveau :", filleuls.rows);
-
-    // Gestion 1 er niveau
-    if (filleuls.rows[0]) {
-      console.log("Lancement de la boucle sur les filleuls de premier niveau");
-      for (const filleul of filleuls.rows) {
-        const getFilleuls = `
-        SELECT id, prenom
-        FROM utilisateurs
-        WHERE parrain_id = $1;
-      `;
-        const filleuls = await client.query(getFilleuls, [filleul.id]);
-
-        console.log("Filleuls de deuxième niveau :", filleuls.rows);
-
-        // Gestion 2 ème niveau
-        if (filleuls.rows[0]) {
-          console.log(
-            "Lancement de la boucle sur les filleuls de deuxième niveau"
-          );
-          for (const filleul of filleuls.rows) {
-            const insertRelation2 = `INSERT INTO parrainages (prenom_filleul, filleul_id, prenom_parrain, parrain_id, niveau)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (filleul_id, parrain_id, niveau) DO NOTHING;`;
-
-            client.query(insertRelation2, [
-              filleul.prenom,
-              filleul.id,
-              selectedParrain,
-              parrainId,
-              2,
-            ]);
-
-            const getFilleuls = `
-        SELECT id, prenom
-        FROM utilisateurs
-        WHERE parrain_id = $1;
-      `;
-            const filleuls = await client.query(getFilleuls, [filleul.id]);
-
-            console.log("Filleuls de troisième niveau :", filleuls.rows);
-            // Gestion 3 ème niveau
-            if (filleuls.rows[0]) {
-              console.log(
-                "Lancement de la boucle sur les filleuls de troisième niveau"
-              );
-              for (const filleul of filleuls.rows) {
-                const insertRelation2 = `INSERT INTO parrainages (prenom_filleul, filleul_id, prenom_parrain, parrain_id, niveau)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (filleul_id, parrain_id, niveau) DO NOTHING;`;
-
-                client.query(insertRelation2, [
-                  filleul.prenom,
-                  filleul.id,
-                  selectedParrain,
-                  parrainId,
-                  3,
-                ]);
-
-                console.log("Fin de la logique de parrainage.");
-              }
-            }
-          }
-        }
+    const parrainage = await prisma.parrainages.findFirst({
+      where: {
+        user_id: idConseiller
       }
+    });
+
+    if (!parrainage) return { id: null, nom: "Aucun" };
+
+    let parrainId: number | null = null;
+    
+    switch(niveau) {
+      case 1:
+        parrainId = parrainage.niveau1;
+        break;
+      case 2:
+        parrainId = parrainage.niveau2;
+        break;
+      case 3:
+        parrainId = parrainage.niveau3;
+        break;
+    }
+
+    if (!parrainId) return { id: null, nom: "Aucun" };
+
+    const parrain = await prisma.utilisateurs.findUnique({
+      where: { id: parrainId }
+    });
+
+    return {
+      id: parrainId,
+      nom: parrain ? `${parrain.prenom} ${parrain.nom}` : "Aucun"
+    };
+  } catch (error) {
+    console.error(`Impossible de récupérer le parrain de niveau ${niveau} :`, error);
+    return { id: null, nom: "Aucun" };
+  }
+}
+
+interface ParrainageData {
+  user_id: number;
+  niveau1: number | null;
+  niveau2: number | null;
+  niveau3: number | null;
+}
+
+export async function handleParrainages(data: ParrainageData) {
+  try {
+    const existingParrainage = await prisma.parrainages.findFirst({
+      where: { user_id: data.user_id }
+    });
+
+    if (existingParrainage) {
+      return await prisma.parrainages.update({
+        where: { id: existingParrainage.id },
+        data: {
+          niveau1: data.niveau1,
+          niveau2: data.niveau2,
+          niveau3: data.niveau3
+        }
+      });
+    } else {
+      return await prisma.parrainages.create({
+        data: {
+          user_id: data.user_id,
+          niveau1: data.niveau1,
+          niveau2: data.niveau2,
+          niveau3: data.niveau3
+        }
+      });
     }
   } catch (error) {
-    console.error(
-      "Erreur lors de la gestion des relations de parrainage :",
-      error
-    );
-  } finally {
-    client.release();
+    console.error("Erreur lors de la gestion des parrainages :", error);
+    throw error;
   }
 }

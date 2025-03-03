@@ -66,15 +66,16 @@ model factures {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model parrainages {
-  id             Int       @id @default(autoincrement())
-  filleul_id     Int
-  parrain_id     Int
-  niveau         Int       @db.SmallInt
-  created_at     DateTime? @default(now()) @db.Timestamp(6)
-  prenom_parrain String?   @db.Char(250)
-  prenom_filleul String?   @db.Char(250)
+  id         Int       @id @default(autoincrement())
+  niveau1    Int?
+  niveau2    Int?
+  niveau3    Int?
+  user_id    Int
+  created_at DateTime? @default(now()) @db.Timestamp(6)
 
-  @@unique([filleul_id, parrain_id, niveau], map: "unique_parrainage")
+  user utilisateurs @relation(fields: [user_id], references: [id])
+
+  @@unique([niveau1, niveau2, niveau3], map: "unique_parrainage")
 }
 
 model property {
@@ -121,10 +122,8 @@ model utilisateurs {
   siren              String?              @db.VarChar(255)
   chiffre_affaires   Decimal?             @db.Decimal(10, 2)
   retrocession       Decimal?             @db.Decimal(5, 2)
-  parrain_id         Int?
   auto_parrain       String?              @default("non") @db.VarChar(3)
   mobile             String?              @db.VarChar(60)
   relations_contrats relations_contrats[]
-  utilisateurs       utilisateurs?        @relation("utilisateursToutilisateurs", fields: [parrain_id], references: [id], map: "fk_parrain_id")
-  other_utilisateurs utilisateurs[]       @relation("utilisateursToutilisateurs")
+  parrainages        parrainages[]
 }

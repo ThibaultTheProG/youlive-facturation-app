@@ -1,9 +1,9 @@
-import db from "../lib/db.js";
+"use server";
+
+import prisma from "../lib/db";
 import { Property } from "@/lib/types";
 
 export default async function insertProperties(properties: Property[]) {
-  const client = await db.connect();
-
   if (!Array.isArray(properties)) {
     throw new Error("Les données de propriétés ne sont pas valides.");
   }
@@ -16,34 +16,42 @@ export default async function insertProperties(properties: Property[]) {
       const idNumber = Number(id);
       const ville = city?.name ?? "";
       const cp = city?.zipcode ?? "";
+      const referenceString = String(reference); // Conversion en chaîne de caractères
 
       // ✅ Concaténer l'adresse complète
       const fullAddress = `${address}, ${cp} ${ville}`.trim();
 
       // ✅ Vérification de l'existence du contrat
-      const checkQuery = `SELECT id FROM contrats WHERE property_id = $1 LIMIT 1;`;
-      const checkResult = await client.query(checkQuery, [idNumber]);
+      const contrat = await prisma.contrats.findFirst({
+        where: {
+          property_id: idNumber
+        },
+        select: {
+          id: true
+        }
+      });
 
-      if (checkResult.rows.length > 0) {
-        const idContrat = checkResult.rows[0].id; // ID du contrat
-
+      if (contrat) {
         // ✅ Insertion ou mise à jour de la propriété avec l'adresse complète
-        const query = `
-          INSERT INTO property (adresse, numero_mandat, contrat_id) 
-          VALUES ($1, $2, $3)
-          ON CONFLICT (contrat_id) 
-          DO UPDATE SET 
-            adresse = EXCLUDED.adresse,
-            numero_mandat = EXCLUDED.numero_mandat;
-        `;
-
-        await client.query(query, [fullAddress, reference, idContrat]);
+        await prisma.property.upsert({
+          where: {
+            contrat_id: contrat.id
+          },
+          update: {
+            adresse: fullAddress,
+            numero_mandat: referenceString
+          },
+          create: {
+            adresse: fullAddress,
+            numero_mandat: referenceString,
+            contrat_id: contrat.id
+          }
+        });
       }
     }
     console.log("✅ Propriétés insérées ou mises à jour avec succès");
   } catch (error) {
     console.error("❌ Erreur lors de l'insertion des propriétés :", error);
-  } finally {
-    client.release();
+    throw error;
   }
 }

@@ -14,11 +14,20 @@ import {
   getParrainLevel,
 } from "@/backend/gestionConseillers";
 import { calculRetrocession } from "@/utils/calculs";
+import PopoverCustom from "@/components/uiCustom/popoverCustom";
 
 export default function FormParams() {
   const [localConseillers, setLocalConseillers] = useState<Conseiller[]>([]);
   const [selectedParrain, setSelectedParrain] = useState<string>("Aucun");
   const [selectedParrainId, setSelectedParrainId] = useState<number | null>(
+    null
+  );
+  const [selectedParrain2, setSelectedParrain2] = useState<string>("Aucun");
+  const [selectedParrain2Id, setSelectedParrain2Id] = useState<number | null>(
+    null
+  );
+  const [selectedParrain3, setSelectedParrain3] = useState<string>("Aucun");
+  const [selectedParrain3Id, setSelectedParrain3Id] = useState<number | null>(
     null
   );
   const [assujettiTVA, setAssujettiTVA] = useState<string>("non");
@@ -28,15 +37,17 @@ export default function FormParams() {
   const [selectedTypeContrat, setSelectedTypeContrat] = useState<string>("");
   const [chiffreAffaires, setChiffreAffaires] = useState<number>(0);
   const [retrocession, setRetrocession] = useState<number>(0);
-  const [parrainNiveau2, setParrainNiveau2] = useState<string>("Aucun");
-  const [parrainNiveau3, setParrainNiveau3] = useState<string>("Aucun");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [openConseiller, setOpenConseiller] = useState(false);
+  const [openParrain1, setOpenParrain1] = useState(false);
+  const [openParrain2, setOpenParrain2] = useState(false);
+  const [openParrain3, setOpenParrain3] = useState(false);
 
   // Récupérer les conseillers depuis la BDD
   useEffect(() => {
     const fetchConseillers = async () => {
       const data = await getConseillersBDD();
-      setLocalConseillers(data);
+      setLocalConseillers(data || []);
     };
 
     fetchConseillers();
@@ -45,8 +56,10 @@ export default function FormParams() {
   // Synchroniser les champs lorsque `selectedConseiller` change
   useEffect(() => {
     if (selectedConseiller) {
-      const { typecontrat, chiffre_affaires, tva, parrain_id, auto_parrain } =
+      const { typecontrat, chiffre_affaires, tva, auto_parrain } =
         selectedConseiller;
+
+      console.log(selectedConseiller);
 
       setSelectedTypeContrat(typecontrat || "");
       setChiffreAffaires(chiffre_affaires || 0);
@@ -60,39 +73,57 @@ export default function FormParams() {
         );
       }
 
-      // Mettre à jour le parrain sélectionné
-      const parrain = localConseillers.find((c) => c.id === parrain_id);
-      setSelectedParrain(
-        parrain ? `${parrain.prenom} ${parrain.nom}` : "Aucun"
-      );
-      setSelectedParrainId(parrain?.id || null);
-
       if (selectedConseiller?.id) {
+        // Récupérer le parrain de niveau 1
+        getParrainLevel(selectedConseiller.id, 1)
+          .then(({ id, nom }) => {
+            setSelectedParrain(nom);
+            setSelectedParrainId(id);
+          })
+          .catch((error) => {
+            console.error(
+              "Erreur lors de la récupération du parrain de niveau 1 :",
+              error
+            );
+            setSelectedParrain("Aucun");
+            setSelectedParrainId(null);
+          });
+
         // Récupérer le parrain de niveau 2
         getParrainLevel(selectedConseiller.id, 2)
-          .then((parrain) => setParrainNiveau2(parrain))
+          .then(({ id, nom }) => {
+            setSelectedParrain2(nom);
+            setSelectedParrain2Id(id);
+          })
           .catch((error) => {
             console.error(
               "Erreur lors de la récupération du parrain de niveau 2 :",
               error
             );
-            setParrainNiveau2("Aucun");
+            setSelectedParrain2("Aucun");
+            setSelectedParrain2Id(null);
           });
 
         // Récupérer le parrain de niveau 3
         getParrainLevel(selectedConseiller.id, 3)
-          .then((parrain) => setParrainNiveau3(parrain))
+          .then(({ id, nom }) => {
+            setSelectedParrain3(nom);
+            setSelectedParrain3Id(id);
+          })
           .catch((error) => {
             console.error(
               "Erreur lors de la récupération du parrain de niveau 3 :",
               error
             );
-            setParrainNiveau3("Aucun");
+            setSelectedParrain3("Aucun");
+            setSelectedParrain3Id(null);
           });
       } else {
         // Réinitialiser les valeurs si aucun conseiller n'est sélectionné
-        setParrainNiveau2("Aucun");
-        setParrainNiveau3("Aucun");
+        setSelectedParrain2("Aucun");
+        setSelectedParrain2Id(null);
+        setSelectedParrain3("Aucun");
+        setSelectedParrain3Id(null);
       }
     } else {
       // Réinitialiser les valeurs si aucun conseiller sélectionné
@@ -118,19 +149,19 @@ export default function FormParams() {
   }, [chiffreAffaires, selectedTypeContrat, autoParrain]);
 
   // Générer le tableau des conseillers et classer par ordre alphabétique
-  const conseillersNoms: SelectItem[] = localConseillers
+  const conseillersNoms: SelectItem[] = (localConseillers || [])
     .map((conseiller) => ({
       key: conseiller.id,
-      name: `${conseiller.prenom} ${conseiller.nom}`,
+      name: `${conseiller.prenom.trim()} ${conseiller.nom.trim()}`,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // Exclure le conseiller sélectionné de la liste des parrains et classer par ordre alphabétique
-  const parrains: { key: number; name: string }[] = localConseillers
+  const parrains: SelectItem[] = (localConseillers || [])
     .filter((c) => c.id !== selectedConseiller?.id)
     .map((c) => ({
       key: c.id!,
-      name: `${c.prenom} ${c.nom}`,
+      name: `${c.prenom.trim()} ${c.nom.trim()}`,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -138,7 +169,7 @@ export default function FormParams() {
   const handleSelectParrain = async (val: string) => {
     setSelectedParrain(val);
     const parrain = localConseillers.find(
-      (c) => `${c.prenom} ${c.nom}` === val
+      (c) => `${c.prenom.trim()} ${c.nom.trim()}` === val
     );
     setSelectedParrainId(parrain?.id || null);
   };
@@ -146,9 +177,27 @@ export default function FormParams() {
   // Gérer la sélection du conseiller
   const handleSelectConseiller = async (val: string) => {
     const conseiller = localConseillers.find(
-      (c) => `${c.prenom} ${c.nom}` === val
+      (c) => `${c.prenom.trim()} ${c.nom.trim()}` === val
     );
     setSelectedConseiller(conseiller || null);
+  };
+
+  // Gérer la sélection du parrain niveau 2
+  const handleSelectParrain2 = async (val: string) => {
+    setSelectedParrain2(val);
+    const parrain = localConseillers.find(
+      (c) => `${c.prenom.trim()} ${c.nom.trim()}` === val
+    );
+    setSelectedParrain2Id(parrain?.id || null);
+  };
+
+  // Gérer la sélection du parrain niveau 3
+  const handleSelectParrain3 = async (val: string) => {
+    setSelectedParrain3(val);
+    const parrain = localConseillers.find(
+      (c) => `${c.prenom.trim()} ${c.nom.trim()}` === val
+    );
+    setSelectedParrain3Id(parrain?.id || null);
   };
 
   // Recharger les conseillers après soumission
@@ -161,17 +210,18 @@ export default function FormParams() {
         selectedParrainId
       );
 
-      // Gérer les parrainages de niveau 2 et 3 pour le parrain sélectionné
-      if (selectedParrainId) {
-        await handleParrainages(selectedParrain, selectedParrainId); // Utiliser selectedParrainId comme conseillerId
-      }
+      // Créer ou mettre à jour les parrainages
+      if (selectedConseiller?.id) {
+        const parrainageData = {
+          user_id: selectedConseiller.id,
+          niveau1: selectedParrainId,
+          niveau2: selectedParrain2Id,
+          niveau3: selectedParrain3Id,
+        };
 
-      console.log(
-        "Parrain : ",
-        selectedParrain,
-        "id du parrain :",
-        selectedParrainId
-      );
+        // Gérer les parrainages pour tous les niveaux
+        await handleParrainages(parrainageData);
+      }
 
       // Recharger les conseillers après mise à jour
       const updatedConseillers: Conseiller[] = await getConseillersBDD();
@@ -182,6 +232,7 @@ export default function FormParams() {
         (c: Conseiller) => c.id === Number(formData.get("id"))
       );
       setSelectedConseiller(updatedConseiller || null);
+
       // ✅ Affichage du message de succès
       setSuccessMessage("Les modifications ont bien été enregistrées !");
       setTimeout(() => setSuccessMessage(null), 3000); // Masquer après 3 secondes
@@ -195,17 +246,24 @@ export default function FormParams() {
 
   return (
     <form action={handleFormSubmit} className="space-y-8">
-      <SelectCustom
-        placeholder="Sélectionner un conseiller"
-        selectLabel="Conseillers"
-        options={conseillersNoms} // Utilisation de "options" au lieu de "value"
-        value={
-          selectedConseiller
-            ? `${selectedConseiller.prenom} ${selectedConseiller.nom}`
-            : ""
-        } // Valeur actuelle sélectionnée
-        onChange={handleSelectConseiller}
-      />
+      <div className="flex flex-col space-y-2">
+        <Label>Sélectionner un conseiller</Label>
+        <PopoverCustom
+          open={openConseiller}
+          onOpenChange={setOpenConseiller}
+          options={conseillersNoms}
+          value={
+            selectedConseiller
+              ? `${selectedConseiller.prenom.trim()} ${selectedConseiller.nom.trim()}`
+              : ""
+          }
+          onSelect={handleSelectConseiller}
+          placeholder="Sélectionner un conseiller..."
+          searchPlaceholder="Rechercher un conseiller..."
+          emptyMessage="Aucun conseiller trouvé."
+          selectedId={selectedConseiller?.id}
+        />
+      </div>
       <div className="flex flex-col space-y-8">
         <div className="flex flex-row justify-start space-x-4">
           <InputCustom
@@ -273,7 +331,7 @@ export default function FormParams() {
         </div>
         <div className="flex flex-row space-x-4">
           <InputCustom
-            disable={false}
+            disable={true}
             name="siren"
             label="SIREN"
             id="siren"
@@ -315,7 +373,7 @@ export default function FormParams() {
             />
           </div>
           <InputCustom
-            disable={false}
+            disable={true}
             name="chiffre_affaire_annuel"
             label="Chiffre d'affaire annuel"
             id="chiffre_affaire_annuel"
@@ -332,42 +390,59 @@ export default function FormParams() {
             value={retrocession}
           />
         </div>
-        <div className="flex flex-row justify-center items-end space-x-4">
-          <SelectCustom
-            placeholder="Sélectionner un parrain"
-            selectLabel="Parrains"
-            options={parrains} // Exclut le conseiller lui-même
-            value={selectedParrain}
-            name="parrain"
-            onChange={handleSelectParrain}
-          />
+        <div className="flex flex-col space-y-4">
+          <h2 className="text-lg font-bold">
+            Sélectionner les parrains du conseiller
+          </h2>
+          <div className="flex flex-row items-end space-x-4">
+            <div className="flex flex-col space-y-2">
+              <Label>Parrain niveau 1</Label>
+              <PopoverCustom
+                open={openParrain1}
+                onOpenChange={setOpenParrain1}
+                options={parrains}
+                value={selectedParrain}
+                onSelect={handleSelectParrain}
+                placeholder="Sélectionner un parrain..."
+                searchPlaceholder="Rechercher un parrain..."
+                emptyMessage="Aucun parrain trouvé."
+                selectedId={selectedParrainId}
+              />
+            </div>
 
-          <InputCustom
-            disable={true}
-            label="Parrain de niveau 1"
-            id="parrain1"
-            type="text"
-            value={selectedParrain || "Aucun"} // Affiche le parrain sélectionné ou "Aucun"
-          />
-          <InputCustom
-            disable={true}
-            label="Parrain de niveau 2"
-            id="parrain2"
-            type="text"
-            value={parrainNiveau2} // Utilise l'état pour la valeur
-          />
-          <InputCustom
-            disable={true}
-            label="Parrain de niveau 3"
-            id="parrain3"
-            type="text"
-            value={parrainNiveau3} // Utilise l'état pour la valeur
-          />
+            <div className="flex flex-col space-y-2">
+              <Label>Parrain niveau 2</Label>
+              <PopoverCustom
+                open={openParrain2}
+                onOpenChange={setOpenParrain2}
+                options={parrains}
+                value={selectedParrain2}
+                onSelect={handleSelectParrain2}
+                placeholder="Sélectionner un parrain..."
+                searchPlaceholder="Rechercher un parrain..."
+                emptyMessage="Aucun parrain trouvé."
+                selectedId={selectedParrain2Id}
+              />
+            </div>
+
+            <div className="flex flex-col space-y-2">
+              <Label>Parrain niveau 3</Label>
+              <PopoverCustom
+                open={openParrain3}
+                onOpenChange={setOpenParrain3}
+                options={parrains}
+                value={selectedParrain3}
+                onSelect={handleSelectParrain3}
+                placeholder="Sélectionner un parrain..."
+                searchPlaceholder="Rechercher un parrain..."
+                emptyMessage="Aucun parrain trouvé."
+                selectedId={selectedParrain3Id}
+              />
+            </div>
+          </div>
         </div>
       </div>
-      {successMessage && (
-        <p className="text-green-600">{successMessage}</p>
-      )}
+      {successMessage && <p className="text-green-600">{successMessage}</p>}
       <Button className="bg-orange-strong cursor-pointer" type="submit">
         Valider
       </Button>

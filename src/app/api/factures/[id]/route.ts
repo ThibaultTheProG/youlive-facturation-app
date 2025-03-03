@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getFactureById } from "@/backend/gestionFactures";
-import db from "@/lib/db";
+import prisma from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: Request) {
   try {
@@ -76,65 +77,48 @@ export async function PUT(request: Request) {
       );
     }
 
-    // Construire dynamiquement la requête SQL en fonction des champs fournis
-    const fieldsToUpdate: string[] = ["updated_at = NOW()"];
-    const params: Array<string | number> = [];
+    // Construire l'objet de mise à jour pour Prisma
+    const updateData: Prisma.facturesUpdateInput = {
+      updated_at: new Date(),
+    };
 
-    if (statut_paiement) {
-      fieldsToUpdate.push(`statut_paiement = $${params.length + 1}`);
-      params.push(statut_paiement);
-    }
+    if (statut_paiement) updateData.statut_paiement = statut_paiement;
+    if (numero) updateData.numero = numero;
+    if (created_at) updateData.created_at = new Date(created_at);
+    if (apporteur) updateData.apporteur = apporteur;
+    if (apporteur_amount) updateData.apporteur_amount = apporteur_amount;
 
-    if (numero) {
-      fieldsToUpdate.push(`numero = $${params.length + 1}`);
-      params.push(numero);
-    }
+    const result = await prisma.factures.update({
+      where: {
+        id: factureId,
+      },
+      data: updateData,
+      select: {
+        id: true,
+        statut_paiement: true,
+        numero: true,
+        created_at: true,
+      },
+    });
 
-    if (created_at) {
-      fieldsToUpdate.push(
-        `created_at = $${params.length + 1} AT TIME ZONE 'Europe/Paris'`
-      );
-      params.push(new Date(created_at).toISOString());
-    }
-
-    if (apporteur) {
-      fieldsToUpdate.push(`apporteur = $${params.length + 1}`);
-      params.push(apporteur);
-    }
-
-    if (apporteur_amount) {
-      fieldsToUpdate.push(`apporteur_amount = $${params.length + 1}`);
-      params.push(apporteur_amount);
-    }
-
-    // Ajouter l'ID de la facture pour la clause WHERE
-    params.push(factureId);
-
-    const query = `
-  UPDATE factures 
-  SET ${fieldsToUpdate.join(", ")}
-  WHERE id = $${params.length}
-  RETURNING id, statut_paiement, numero, created_at; 
-`;
-
-    const result = await db.query(query, params);
-
-    if (result.rowCount === 0) {
+    return NextResponse.json(
+      {
+        message: "Mise à jour effectuée avec succès",
+        updatedData: result,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour de la facture :", error);
+    
+    // Gestion spécifique de l'erreur Prisma pour facture non trouvée
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       return NextResponse.json(
         { error: "Facture introuvable ou non mise à jour" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(
-      {
-        message: "Mise à jour effectuée avec succès",
-        updatedData: result.rows[0],
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Erreur lors de la mise à jour de la facture :", error);
     return NextResponse.json(
       { error: "Erreur interne du serveur" },
       { status: 500 }

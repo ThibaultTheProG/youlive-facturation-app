@@ -1,330 +1,316 @@
 "use server";
 
-import db from "../lib/db.js";
-import { PoolClient } from "pg";
+import prisma from "../lib/db";
 import { FactureDetaillee, RelationContrat } from "@/lib/types.js";
-import fs from "fs/promises";
-import path from "path";
+import { PrismaClient } from "@prisma/client";
+
+type PrismaTransaction = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
 
 // Fonction principale
 export async function createFacture() {
-  const client: PoolClient = await db.connect();
   try {
-    await client.query("BEGIN"); // Démarrer une transaction
+    // Utiliser une transaction Prisma
+    await prisma.$transaction(async (tx) => {
+      // 1. Récupérer les contrats avec leurs relations
+      const contrats = await tx.relations_contrats.findMany({
+        select: {
+          id: true,
+          honoraires_agent: true,
+          user_id: true,
+          contrats: {
+            select: {
+              id: true
+            }
+          },
+          utilisateurs: {
+            select: {
+              retrocession: true
+            }
+          }
+        }
+      });
 
-    // 1. Récupérer les contrats
-    const getContratsQuery = `
-      SELECT c.id AS contrat_id, r.honoraires_agent, r.id as relationid, r.user_id, u.retrocession, u.parrain_id
-      FROM relations_contrats r
-      JOIN contrats c ON r.contrat_id = c.id
-      JOIN utilisateurs u ON r.user_id = u.id;
-    `;
-    const contrats = await client.query(getContratsQuery);
+      // 2. Créer les factures pour chaque contrat
+      for (const contrat of contrats) {
+        const relationContrat: RelationContrat = {
+          honoraires_agent: Number(contrat.honoraires_agent),
+          user_id: contrat.user_id,
+          retrocession: Number(contrat.utilisateurs.retrocession),
+          relationId: contrat.id,
+          relationid: contrat.id
+        };
 
-    // 2. Créer les factures pour chaque contrat
-    for (const contrat of contrats.rows) {
-      await createFactureCommission(contrat, client);
-      await createFactureParrainage(contrat, client);
-    }
+        await createFactureCommission(relationContrat, tx);
+        await createFactureParrainage(relationContrat, tx);
+      }
+    });
 
-    await client.query("COMMIT"); // Valider la transaction
-    console.log("Factures créées avec succès.");
+    console.log("✅ Factures créées avec succès.");
   } catch (error) {
-    await client.query("ROLLBACK"); // Annuler en cas d'erreur
-    console.error("Erreur lors de la création des factures :", error);
-  } finally {
-    client.release();
+    console.error("❌ Erreur lors de la création des factures :", error);
+    throw error;
   }
 }
 
 // Sous-fonction pour créer une facture de type "commission"
 async function createFactureCommission(
   contrat: RelationContrat,
-  client: PoolClient
+  prisma: PrismaTransaction
 ) {
+  const { relationid, user_id, honoraires_agent, retrocession } = contrat;
+
+  // Vérification du taux de rétrocession
+  if (!retrocession || retrocession < 60) {
+    console.log(`⚠️ Pas de facture générée pour l'utilisateur ${user_id} : taux de rétrocession ${retrocession}% < 60%`);
+    return;
+  }
+
+  const retrocessionAmount = honoraires_agent * (retrocession / 100);
+
   try {
-    const { honoraires_agent, user_id, retrocession, relationid } = contrat;
+    // Créer la facture
+    await prisma.factures.upsert({
+      where: {
+        relation_id_type_user_id: {
+          relation_id: relationid,
+          type: 'commission',
+          user_id: user_id
+        }
+      },
+      update: {
+        retrocession: retrocessionAmount
+      },
+      create: {
+        relation_id: relationid,
+        user_id: user_id,
+        type: 'commission',
+        retrocession: retrocessionAmount,
+        statut_paiement: 'non payé'
+      }
+    });
 
-    console.log("Honoraire agent : ", honoraires_agent);
-    console.log("Relation ID =", relationid);
-    console.log("Retrocession :", retrocession);
+    // Mettre à jour le chiffre d'affaires de l'utilisateur
+    const user = await prisma.utilisateurs.findUnique({
+      where: { id: user_id },
+      select: { chiffre_affaires: true }
+    });
 
-    // Ne pas générer la facture si la rétrocession est strictement inférieure à 60
-    if (retrocession < 60) {
-      console.log(
-        `Facture de commission non créée pour l'utilisateur ${user_id} car la rétrocession (${retrocession}) est inférieure à 60.`
-      );
-      return; // Arrêter l'exécution
-    }
+    const currentCA = Number(user?.chiffre_affaires || 0);
+    const newCA = currentCA + retrocessionAmount;
 
-    // Calculer le montant de rétrocession
-    const retrocessionAmount = (
-      honoraires_agent *
-      (retrocession / 100)
-    ).toFixed(2);
+    await prisma.utilisateurs.update({
+      where: { id: user_id },
+      data: {
+        chiffre_affaires: newCA
+      }
+    });
 
-    // Insérer la facture de type "commission"
-    const insertOrUpdateFactureQuery = `
-  INSERT INTO factures (relation_id, user_id, type, retrocession, statut_paiement)
-  VALUES ($1, $2, 'commission', $3, 'non payé')
-  ON CONFLICT (relation_id, type, user_id)
-  DO UPDATE SET
-    retrocession = EXCLUDED.retrocession
-`;
-    await client.query(insertOrUpdateFactureQuery, [
-      relationid,
-      user_id,
-      retrocessionAmount,
-    ]);
-
-    console.log(`Facture commission créée pour l'utilisateur ${user_id}`);
+    console.log(`✅ Facture commission créée pour l'utilisateur ${user_id}`);
+    console.log(`✅ Chiffre d'affaires mis à jour : ${currentCA} -> ${newCA}`);
   } catch (error) {
-    console.error(
-      "Erreur lors de la création de la facture de type commission :",
-      error
-    );
+    console.error("❌ Erreur lors de la création de la facture commission :", error);
+    throw error;
   }
 }
 
 // Sous-fonction pour créer des factures de type "parrainage"
 async function createFactureParrainage(
   contrat: RelationContrat,
-  client: PoolClient
+  prisma: PrismaTransaction
 ) {
+  const { relationid, user_id, honoraires_agent } = contrat;
+
   try {
-    const { honoraires_agent, user_id, relationid } = contrat;
+    // Vérifier le chiffre d'affaires
+    const utilisateur = await prisma.utilisateurs.findUnique({
+      where: { id: user_id },
+      select: { chiffre_affaires: true }
+    });
 
-    // Vérifier le chiffre d'affaires de l'utilisateur
-    const checkChiffreAffairesQuery = `
-SELECT chiffre_affaires
-FROM utilisateurs
-WHERE id = $1;
-`;
-
-    const result = await client.query(checkChiffreAffairesQuery, [user_id]);
-
-    if (result.rows.length === 0) {
-      console.log("Utilisateur non trouvé :", user_id);
+    if (!utilisateur || !utilisateur.chiffre_affaires) {
+      console.log("❌ Utilisateur non trouvé ou pas de chiffre d'affaires :", user_id);
       return;
     }
-
-    const chiffreAffaires = result.rows[0].chiffre_affaires;
 
     // Si CA >= 70 000€, ne pas générer de facture de parrainage
-    if (chiffreAffaires > 70000) {
-      console.log(
-        `L'utilisateur ${user_id} a un chiffre d'affaires > 70 000€. Aucune facture de parrainage générée.`
-      );
+    if (Number(utilisateur.chiffre_affaires) >= 70000) {
+      console.log(`CA >= 70 000€ pour l'utilisateur ${user_id}, pas de facture de parrainage.`);
       return;
     }
 
-    const getParrainsQuery = `
-      WITH RECURSIVE parrains_cte AS (
-  -- ✅ Récupérer les parrains directs, mais exclure les utilisateurs auto-parrainés
-  SELECT p.parrain_id, u.prenom, 1 AS niveau
-  FROM parrainages p
-  JOIN utilisateurs u ON u.id = p.parrain_id
-  WHERE p.filleul_id = $1
-  AND (SELECT auto_parrain FROM utilisateurs WHERE id = $1) != 'oui' -- ✅ Exclure les auto-parrainés
+    // Récupérer les parrains
+    const parrainages = await prisma.parrainages.findMany({
+      where: {
+        user_id: user_id
+      },
+      select: {
+        niveau1: true,
+        niveau2: true,
+        niveau3: true
+      }
+    });
 
-  UNION ALL
-
-  -- ✅ Continuer la récursivité pour les niveaux supérieurs (jusqu'à 3)
-  SELECT p.parrain_id, u.prenom, cte.niveau + 1 AS niveau
-  FROM parrainages p
-  JOIN utilisateurs u ON u.id = p.parrain_id
-  JOIN parrains_cte cte ON cte.parrain_id = p.filleul_id
-  WHERE cte.niveau < 3
-)
-SELECT parrain_id, niveau FROM parrains_cte;
-    `;
-
-    const parrains = await client.query(getParrainsQuery, [user_id]);
-
-    if (parrains.rows.length === 0) {
-      console.log(
-        `Aucun parrain trouvé ou utilisateur ${user_id} est auto-parrainé.`
-      );
+    if (parrainages.length === 0) {
+      console.log(`❌ Aucun parrain trouvé pour l'utilisateur ${user_id}`);
       return;
     }
 
-    for (const parrain of parrains.rows) {
-      const { parrain_id, niveau } = parrain;
-      // Vérifier le nombre de filleuls de niveau 1 dans la table utilisateurs
-      const checkFilleulsQuery = `
-    SELECT COUNT(*) AS nombre_filleuls
-    FROM utilisateurs
-    WHERE parrain_id = $1;
-  `;
+    // Traiter chaque niveau de parrainage
+    for (const parrainage of parrainages) {
+      const niveaux = [
+        { id: parrainage.niveau1, percentage: 6 },
+        { id: parrainage.niveau2, percentage: 2 },
+        { id: parrainage.niveau3, percentage: 1 }
+      ];
 
-      const resultFilleuls = await client.query(checkFilleulsQuery, [
-        parrain_id,
-      ]);
-      const nombreFilleuls = parseInt(
-        resultFilleuls.rows[0].nombre_filleuls,
-        10
-      );
+      for (const { id: parrainId, percentage } of niveaux) {
+        if (!parrainId) continue;
 
-      // Si le parrain a 5 filleuls ou plus de niveau 1, passer la rétrocession à 8% au lieu de 6%
-      const percentage =
-        niveau === 1 ? (nombreFilleuls >= 5 ? 8 : 6) : niveau === 2 ? 2 : 1;
+        const retrocessionAmount = (honoraires_agent * percentage) / 100;
 
-      const retrocessionAmount = (
-        honoraires_agent *
-        (percentage / 100)
-      ).toFixed(2);
+        await prisma.factures.upsert({
+          where: {
+            relation_id_type_user_id: {
+              relation_id: relationid,
+              type: 'recrutement',
+              user_id: parrainId
+            }
+          },
+          update: {
+            retrocession: retrocessionAmount
+          },
+          create: {
+            relation_id: relationid,
+            user_id: parrainId,
+            type: 'recrutement',
+            retrocession: retrocessionAmount,
+            statut_paiement: 'non payé'
+          }
+        });
 
-      try {
-        await client.query("SAVEPOINT before_insert");
-
-        const insertParrainageQuery = `
-          INSERT INTO factures (relation_id, user_id, type, retrocession, statut_paiement)
-          VALUES ($1, $2, 'recrutement', $3, 'non payé')
-          ON CONFLICT (relation_id, type, user_id)
-          DO UPDATE SET
-            retrocession = EXCLUDED.retrocession
-        `;
-        await client.query(insertParrainageQuery, [
-          relationid,
-          parrain_id,
-          retrocessionAmount,
-        ]);
-
-        await client.query("RELEASE SAVEPOINT before_insert");
-        console.log(
-          `Facture parrainage créée/mise à jour pour le parrain ${parrain_id} (niveau ${niveau}).`
-        );
-      } catch (error) {
-        console.error("Erreur lors de l'insertion ou mise à jour :", error);
-        await client.query("ROLLBACK TO SAVEPOINT before_insert");
+        console.log(`✅ Facture parrainage créée pour le parrain ${parrainId} (${percentage}%)`);
       }
     }
   } catch (error) {
-    console.error(
-      "Erreur lors de la création des factures de type parrainage :",
-      error
-    );
+    console.error("❌ Erreur lors de la création des factures de parrainage :", error);
+    throw error;
   }
 }
 
 // Récupérer les factures qui sont dans la BDD
 export async function getFactures(userId: number) {
-  const client = await db.connect();
+  const result = await prisma.factures.findMany({
+    where: {
+      user_id: userId
+    },
+    select: {
+      id: true,
+      type: true,
+      retrocession: true,
+      statut_paiement: true,
+      created_at: true,
+      numero: true,
+      apporteur: true,
+      apporteur_amount: true,
+      relations_contrats: {
+        select: {
+          honoraires_agent: true,
+          contrats: {
+            select: {
+              date_signature: true,
+              property: {
+                select: {
+                  numero_mandat: true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  });
 
-  try {
-    const queryGetFactures = `
-        SELECT
-          f.id,
-          f.type, 
-          r.honoraires_agent, 
-          f.retrocession, 
-          p.numero_mandat, 
-          c.date_signature, 
-          f.statut_paiement,
-          f.numero,
-          f.created_at,
-          f.apporteur,
-          f.apporteur_amount
-        FROM factures f
-        JOIN relations_contrats r ON f.relation_id = r.id
-        JOIN contrats c ON r.contrat_id = c.id
-        JOIN property p ON c.id = p.contrat_id
-        WHERE f.user_id = $1;
-      `;
-
-    const result = await client.query(queryGetFactures, [userId]);
-
-    return result.rows;
-  } catch (error) {
-    console.error(
-      `Erreur lors de la récupération des factures pour user_id ${userId} :`,
-      error
-    );
-    throw error; // Relancer l'erreur pour la gestion ultérieure
-  } finally {
-    // Libérer le client après exécution
-    client.release();
-  }
+  return result.map(({ relations_contrats, retrocession, ...rest }) => ({
+    ...rest,
+    honoraires_agent: relations_contrats?.honoraires_agent?.toString() || "0",
+    retrocession: retrocession?.toString() || "0",
+    numero_mandat: relations_contrats?.contrats?.property?.numero_mandat || "",
+    date_signature: relations_contrats?.contrats?.date_signature?.toISOString() || null
+  }));
 }
 
 // Récupérer une facture depuis son ID
 export async function getFactureById(
   factureId: number
 ): Promise<FactureDetaillee | null> {
-  const client = await db.connect();
+  const result = await prisma.factures.findUnique({
+    where: {
+      id: factureId
+    },
+    include: {
+      relations_contrats: {
+        include: {
+          contrats: {
+            include: {
+              property: true
+            }
+          },
+          utilisateurs: true
+        }
+      }
+    }
+  });
 
-  const sqlFilePath = path.join(
-    process.cwd(),
-    "src/query",
-    "getFacturesById.sql"
-  );
-  const sqlQuery = await fs.readFile(sqlFilePath, "utf-8");
+  if (!result) return null;
 
-  try {
-    const result = await client.query(sqlQuery, [factureId]);
-    if (result.rows.length === 0) return null;
+  return {
+    id: result.id,
+    type: result.type || '',
+    honoraires_agent: result.relations_contrats?.honoraires_agent?.toString() || "0",
+    retrocession: result.retrocession?.toString() || "0",
+    statut_paiement: result.statut_paiement || '',
+    created_at: result.created_at?.toISOString() || '',
+    numero_mandat: result.relations_contrats?.contrats?.property?.numero_mandat || '',
+    date_signature: result.relations_contrats?.contrats?.date_signature?.toISOString() || '',
+    numero: result.numero || '',
+    vat_rate: 20, // Valeur par défaut si non définie
+    apporteur: result.apporteur,
+    apporteur_amount: result.apporteur_amount || 0,
 
-    const row = result.rows[0];
+    conseiller: {
+      idapimo: result.relations_contrats?.utilisateurs?.idapimo || 0,
+      id: result.relations_contrats?.utilisateurs?.id || 0,
+      prenom: result.relations_contrats?.utilisateurs?.prenom || '',
+      nom: result.relations_contrats?.utilisateurs?.nom || '',
+      email: result.relations_contrats?.utilisateurs?.email || '',
+      telephone: result.relations_contrats?.utilisateurs?.telephone || '',
+      adresse: result.relations_contrats?.utilisateurs?.adresse || '',
+      mobile: result.relations_contrats?.utilisateurs?.mobile || '',
+      siren: Number(result.relations_contrats?.utilisateurs?.siren || 0),
+      tva: result.relations_contrats?.utilisateurs?.tva || false,
+      chiffre_affaires: Number(result.relations_contrats?.utilisateurs?.chiffre_affaires || 0),
+      retrocession: Number(result.relations_contrats?.utilisateurs?.retrocession || 0)
+    },
 
-    console.log("Acheteurs :", row.acheteurs ?? []);
-    console.log("Propriétaires :", row.proprietaires ?? []);
+    contrat: {
+      id: result.relations_contrats?.contrats?.id.toString() || '',
+      step: 'completed',
+      price: result.relations_contrats?.contrats?.price?.toString() || '0',
+      price_net: result.relations_contrats?.contrats?.price_net?.toString() || '0',
+      commission: result.relations_contrats?.contrats?.honoraires?.toString() || '0',
+      date_signature: result.relations_contrats?.contrats?.date_signature?.toISOString() || ''
+    },
 
-    return {
-      id: row.id,
-      type: row.type,
-      honoraires_agent: row.honoraires_agent,
-      retrocession: row.retrocession,
-      statut_paiement: row.statut_paiement,
-      created_at: row.created_at,
-      numero_mandat: row.numero_mandat,
-      date_signature: row.date_signature,
-      numero: row.numero,
-      vat_rate: row.vat_rate,
-      apporteur: row.apporteur,
-      apporteur_amount: row.apporteur_amount,
+    propriete: {
+      id: result.relations_contrats?.contrats?.property?.id.toString() || '',
+      adresse: result.relations_contrats?.contrats?.property?.adresse || '',
+      reference: result.relations_contrats?.contrats?.property?.numero_mandat || ''
+    },
 
-      filleul: {
-        id: row.user_id,
-        prenom: row.filleul_prenom,
-        nom: row.filleul_nom,
-      },
-
-      conseiller: {
-        idapimo: row.conseiller_idapimo,
-        id: row.conseiller_id,
-        prenom: row.conseiller_prenom,
-        nom: row.conseiller_nom,
-        email: row.conseiller_email,
-        telephone: row.conseiller_telephone,
-        adresse: row.conseiller_adresse,
-        mobile: row.conseiller_mobile,
-        siren: row.conseiller_siren,
-        tva: row.conseiller_tva,
-        chiffre_affaires: row.conseiller_chiffre_affaires,
-        retrocession: row.conseiller_retrocession,
-      },
-
-      contrat: {
-        id: row.contrat_id,
-        step: row.contrat_step,
-        price: row.contrat_price,
-        price_net: row.contrat_price_net,
-        commission: row.contrat_commission,
-        date_signature: row.date_signature,
-      },
-
-      propriete: {
-        id: row.propriete_id,
-        adresse: row.propriete_adresse,
-        reference: row.propriete_reference,
-      },
-      acheteurs: row.acheteurs ?? [],
-      proprietaires: row.proprietaires ?? [],
-    };
-  } catch (error) {
-    console.error("Erreur lors de la récupération de la facture :", error);
-    return null;
-  } finally {
-    client.release();
-  }
+    acheteurs: [],
+    proprietaires: []
+  };
 }
