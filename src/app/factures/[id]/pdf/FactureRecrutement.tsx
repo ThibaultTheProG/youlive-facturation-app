@@ -47,17 +47,22 @@ export default function FactureRecrutement({
 }) {
   const user = facture.conseiller;
 
-  let amountTTC;
+  // Fonction pour formater les nombres avec 2 décimales
+  const formatNumber = (num: number): string => {
+    return num.toFixed(2);
+  };
 
+  let amountTTC: number = 0;
+  const retrocession = Number(facture.retrocession) || 0;
+  const honorairesAgent = Number(facture.honoraires_agent) || 0;
+  
   if (user.tva) {
-    amountTTC = Math.round(
-      facture.retrocession + (facture.retrocession * facture.vat_rate) / 100
-    );
+    amountTTC = retrocession + (retrocession * Number(facture.vat_rate)) / 100;
+  } else {
+    amountTTC = retrocession;
   }
 
-  const retrocession = Math.round(
-    (facture.retrocession / facture.honoraires_agent) * 100
-  );
+  const retrocessionPercentage = Math.round((retrocession / honorairesAgent) * 100);
 
   return (
     <Document>
@@ -102,9 +107,11 @@ export default function FactureRecrutement({
         {/* Date */}
         <Text style={{ textAlign: "right", marginTop: 10 }}>
           Facture créée le :{" "}
-          {new Date(facture.created_at).toLocaleDateString("fr-FR", {
-            timeZone: "UTC",
-          })}
+          {facture.created_at
+            ? new Date(facture.created_at).toLocaleDateString("fr-FR", {
+                timeZone: "Europe/Paris",
+              })
+            : "Date inconnue"}
         </Text>
 
         {/* Titre */}
@@ -139,12 +146,7 @@ export default function FactureRecrutement({
 
         {/* Tableau des montants */}
         <View style={[styles.table, { marginTop: 15 }]}>
-          <View
-            style={[
-              styles.tableRow,
-              { backgroundColor: "#f28c1e", color: "#fff" },
-            ]}
-          >
+          <View style={[styles.tableRow, { backgroundColor: "#f28c1e", color: "#fff" }]}>
             <Text style={styles.tableCellTotal}>Honoraires Youlive HT</Text>
             <Text style={styles.tableCellTotal}>% Rétrocession</Text>
             <Text style={styles.tableCellTotal}>Rétrocession HT</Text>
@@ -153,13 +155,15 @@ export default function FactureRecrutement({
           </View>
           <View style={styles.tableRow}>
             <Text style={styles.tableCellTotal}>
-              {facture.honoraires_agent} €
+              {formatNumber(honorairesAgent)} €
             </Text>
-            <Text style={styles.tableCellTotal}>{retrocession}%</Text>
-            <Text style={styles.tableCellTotal}>{facture.retrocession} €</Text>
+            <Text style={styles.tableCellTotal}>{retrocessionPercentage}%</Text>
+            <Text style={styles.tableCellTotal}>
+              {formatNumber(retrocession)} €
+            </Text>
             {user.tva && <Text style={styles.tableCellTotal}>20 %</Text>}
             <Text style={styles.tableCell}>
-              {amountTTC || Math.round(facture.retrocession)} €
+              {formatNumber(amountTTC)} €
             </Text>
           </View>
         </View>
@@ -167,11 +171,11 @@ export default function FactureRecrutement({
         {/* Mode de paiement & TVA */}
         <Text style={{ marginTop: 10 }}>Mode de Règlement : Virement</Text>
 
-        {!user.tva ? (
+        {!user.tva && (
           <Text style={{ fontSize: 10, marginTop: 10 }}>
             TVA non applicable - article 293 B du CGI
           </Text>
-        ) : null}
+        )}
 
         {/* Mentions légales */}
         <Text style={styles.footer}>

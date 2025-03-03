@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword } from "@/lib/password";
 import prisma from "@/lib/db"; // Assure-toi que c'est la bonne connexion à la base de données
 import { Prisma } from "@prisma/client";
 

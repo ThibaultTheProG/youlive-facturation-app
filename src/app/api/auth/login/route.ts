@@ -1,4 +1,5 @@
-import { comparePassword, generateToken } from "@/lib/auth";
+import { generateToken } from "@/lib/auth";
+import { comparePassword } from "@/lib/password";
 import prisma from "@/lib/db";
 import { NextResponse } from "next/server";
 

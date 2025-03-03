@@ -1,5 +1,4 @@
 import { SignJWT, jwtVerify } from "jose";
-import bcryptjs from 'bcryptjs';
 
 // Définir les types
 export interface JWTPayload {
@@ -31,27 +30,9 @@ export async function generateToken(user: JWTPayload): Promise<string> {
 export async function verifyToken(token: string): Promise<User | null> {
   try {
     const { payload } = await jwtVerify(token, SECRET_KEY) as { payload: JWTPayload };
-
-    console.log("Payload décodé :", payload);
-
     return payload;
   } catch (error) {
     console.error("Erreur lors de la vérification du token :", error);
     return null; // Retourne null si le token est invalide
   }
-}
-
-// Hacher un mot de passe
-export async function hashPassword(password: string): Promise<string> {
-  const salt = bcryptjs.genSaltSync(10);
-  const hash = bcryptjs.hashSync(password, salt);
-  return hash;
-}
-
-// Comparer un mot de passe avec son hash
-export async function comparePassword(
-  password: string,
-  hash: string
-): Promise<boolean> {
-  return bcryptjs.compareSync(password, hash);
 }
