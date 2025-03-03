@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/auth";
+import { config } from '../middleware.config';
+
+export { config };
 
 export async function middleware(request: NextRequest) {
   const isAuthDisabled = process.env.NEXT_PUBLIC_AUTH_DISABLED === "true";
@@ -48,7 +51,3 @@ export async function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
-
-export const config = {
-  matcher: ["/admin/:path*", "/conseiller/:path*", "/login"],
-};
