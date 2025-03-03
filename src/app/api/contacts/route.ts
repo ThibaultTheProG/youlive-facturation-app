@@ -60,7 +60,7 @@ export async function GET() {
 
     // Filtrer les contacts dont l'ID est présent dans la base de données
     const filteredContacts = contactsMapped.filter((contact) =>
-      contactIds.includes(contact.id)
+      contact.id !== undefined && contactIds.includes(contact.id)
     );
 
     console.log(filteredContacts);
