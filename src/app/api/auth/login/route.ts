@@ -1,5 +1,5 @@
 import { comparePassword, generateToken } from "@/lib/auth";
-import db from "@/lib/db";
+import prisma from "@/lib/db";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -13,53 +13,59 @@ export async function POST(request: Request) {
       );
     }
 
-    const client = await db.connect();
-
-    try {
-      const query = `
-        SELECT id, "motDePasse", "role" FROM utilisateurs WHERE email = $1;
-      `;
-      const result = await client.query(query, [email]);
-
-      if (result.rowCount === 0) {
-        return NextResponse.json(
-          { error: "Utilisateur non trouvé" },
-          { status: 404 }
-        );
+    // Rechercher l'utilisateur avec Prisma
+    const user = await prisma.utilisateurs.findFirst({
+      where: { 
+        email,
+        motDePasse: { not: null },
+        role: { not: null }
+      },
+      select: {
+        id: true,
+        motDePasse: true,
+        role: true,
+        nom: true,
+        prenom: true
       }
+    });
 
-      const { id, motDePasse: hashedPassword, role, name } = result.rows[0];
-
-      const isValid = await comparePassword(password, hashedPassword);
-
-      if (!isValid) {
-        return NextResponse.json(
-          { error: "Mot de passe incorrect" },
-          { status: 401 }
-        );
-      }
-
-      // Générer un token JWT
-      const token = await generateToken({ id, role, name, email });
-     
-
-      // Stocker le token dans un cookie sécurisé
-      const response = NextResponse.json({
-        message: "Connexion réussie",
-        role,
-      });
-
-      response.cookies.set("authToken", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: 60 * 60, // 1 heure
-      });
-
-      return response;
-    } finally {
-      client.release();
+    if (!user) {
+      return NextResponse.json(
+        { error: "Utilisateur non trouvé" },
+        { status: 404 }
+      );
     }
+
+    const { id, motDePasse: hashedPassword, role } = user;
+    const name = `${user.prenom} ${user.nom}`.trim();
+
+    const isValid = await comparePassword(password, hashedPassword as string);
+
+    if (!isValid) {
+      return NextResponse.json(
+        { error: "Mot de passe incorrect" },
+        { status: 401 }
+      );
+    }
+
+    // Générer un token JWT
+    const token = await generateToken({ id, role: role as "admin" | "conseiller", name, email });
+   
+
+    // Stocker le token dans un cookie sécurisé
+    const response = NextResponse.json({
+      message: "Connexion réussie",
+      role,
+    });
+
+    response.cookies.set("authToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60, // 1 heure
+    });
+
+    return response;
   } catch (error) {
     console.error("Erreur serveur :", error);
     return NextResponse.json(
