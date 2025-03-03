@@ -4,6 +4,8 @@ import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import prisma from "@/lib/db";
 
+export const runtime = 'nodejs';
+
 export async function POST(request: Request) {
   try {
     const { password } = await request.json();

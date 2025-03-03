@@ -2,6 +2,9 @@ import { cookies } from "next/headers"; // Pour accéder aux cookies
 import { NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 
+
+export const runtime = 'nodejs';
+
 export async function GET() {
   try {
     // Accéder aux cookies

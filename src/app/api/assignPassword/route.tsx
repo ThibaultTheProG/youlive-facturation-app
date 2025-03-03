@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { hashSync, genSaltSync } from "bcrypt-ts"; // Si tu utilises bcrypt pour hasher le mdp
+import { hashPassword } from "@/lib/auth";
 import prisma from "@/lib/db"; // Assure-toi que c'est la bonne connexion à la base de données
 import { Prisma } from "@prisma/client";
+
+export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   try {
@@ -15,9 +17,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hasher le mot de passe
-    const salt = genSaltSync(10);
-    const hashedPassword = hashSync(password.toString(), salt);
+    // Hasher le mot de passe avec notre fonction auth.ts
+    const hashedPassword = await hashPassword(password.toString());
 
     // Mettre à jour l'utilisateur avec Prisma
     const updatedUser = await prisma.utilisateurs.update({
