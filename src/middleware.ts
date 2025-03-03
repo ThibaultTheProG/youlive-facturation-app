@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/auth";
 
-export const runtime = 'nodejs';
-
 export async function middleware(request: NextRequest) {
   const isAuthDisabled = process.env.NEXT_PUBLIC_AUTH_DISABLED === "true";
 
