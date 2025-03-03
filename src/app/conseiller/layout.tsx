@@ -5,6 +5,8 @@ import "../globals.css";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 
+export const runtime = 'nodejs';
+
 export default async function ConseillerLayout({
   children,
 }: {

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { hashPassword } from "@/lib/auth";
-import { verifyToken } from "@/lib/auth";
+import { hashPassword, verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import prisma from "@/lib/db";
 

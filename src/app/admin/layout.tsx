@@ -5,6 +5,8 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { AuthProvider } from "../context/authContext";
 
+export const runtime = 'nodejs';
+
 export default async function Layout({
   children,
 }: {

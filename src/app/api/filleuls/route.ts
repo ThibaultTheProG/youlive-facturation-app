@@ -19,15 +19,12 @@ export async function GET(req: Request) {
     const parrainages = await prisma.parrainages.findMany({
       where: {
         OR: [
-          { niveau1: { equals: conseillerId } },
-          { niveau2: { equals: conseillerId } },
-          { niveau3: { equals: conseillerId } }
+          { niveau1: conseillerId },
+          { niveau2: conseillerId },
+          { niveau3: conseillerId }
         ]
       },
-      select: {
-        niveau1: true,
-        niveau2: true,
-        niveau3: true,
+      include: {
         user: {
           select: {
             id: true,
