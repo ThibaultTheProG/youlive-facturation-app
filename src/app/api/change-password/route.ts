@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { hashPassword, verifyToken } from "@/lib/auth";
+import { verifyToken } from "@/lib/auth";
+import { hashPassword } from "@/lib/password";
 import { cookies } from "next/headers";
 import prisma from "@/lib/db";
 
@@ -15,8 +16,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    const hashedPassword = await hashPassword(password);
 
     const cookieStore = await cookies();
     const token = cookieStore.get("authToken")?.value;
@@ -36,6 +35,8 @@ export async function POST(request: Request) {
         { status: 401 }
       );
     }
+
+    const hashedPassword = await hashPassword(password);
 
     await prisma.utilisateurs.update({
       where: {
