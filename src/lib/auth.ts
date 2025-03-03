@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import { genSaltSync, hashSync, compareSync } from "bcrypt-ts";
+import bcryptjs from 'bcryptjs';
 
 // Définir les types
 export interface JWTPayload {
@@ -43,8 +43,8 @@ export async function verifyToken(token: string): Promise<User | null> {
 
 // Hacher un mot de passe
 export async function hashPassword(password: string): Promise<string> {
-  const salt = genSaltSync(10);
-  const hash = hashSync(password, salt)
+  const salt = bcryptjs.genSaltSync(10);
+  const hash = bcryptjs.hashSync(password, salt);
   return hash;
 }
 
@@ -53,5 +53,5 @@ export async function comparePassword(
   password: string,
   hash: string
 ): Promise<boolean> {
-  return compareSync(password, hash);
+  return bcryptjs.compareSync(password, hash);
 }
