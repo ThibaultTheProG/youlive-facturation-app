@@ -54,6 +54,7 @@ export interface Contract {
   vat?: string;
   vat_rate?: string;
   entries?: Entries[];
+  contract_at?: string;
   date_signature: string;
 }
 
