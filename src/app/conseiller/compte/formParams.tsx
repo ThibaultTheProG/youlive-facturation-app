@@ -7,75 +7,93 @@ import RadioCustom from "@/components/uiCustom/radioCustom";
 import { Button } from "@/components/ui/button";
 import { Conseiller, User } from "@/lib/types";
 import getConseillerBDD from "@/backend/gestionConseiller";
-import { updateConseillerBDD } from "@/backend/gestionConseillers";
-//import { set } from "zod";
+import { toast } from "react-hot-toast";
 import { calculRetrocession } from "@/utils/calculs";
 
 export default function FormParams({ user }: { user: User }) {
-  const [localConseiller, setLocalConseiller] = useState<Conseiller | null>(
-    null
-  );
-  const [assujettiTVA, setAssujettiTVA] = useState("non");
+  const [conseiller, setConseiller] = useState<Conseiller | null>(null);
+  const [assujettiTVA, setAssujettiTVA] = useState<string>("non");
+  const [autoParrain, setAutoParrain] = useState<string>("non");
+  const [selectedTypeContrat, setSelectedTypeContrat] = useState<string>("");
   const [chiffreAffaires, setChiffreAffaires] = useState<number>(0);
   const [retrocession, setRetrocession] = useState<number>(0);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Récupération des informations du conseiller
+  // Récupérer les informations du conseiller
   useEffect(() => {
     const fetchConseillers = async () => {
-      if (!user || !user.id) {
-        console.error("Utilisateur invalide :", user);
-        return;
-      }
       const data = await getConseillerBDD({ id: user.id });
-      setLocalConseiller(data as Conseiller);
-      setAssujettiTVA(data?.tva ? "oui" : "non");
-      setChiffreAffaires(data?.chiffre_affaires ?? 0);
-      setRetrocession(data?.retrocession ?? 0);
+      setConseiller(data as Conseiller);
+      if (data) {
+        setAssujettiTVA(data.tva ? "oui" : "non");
+        setAutoParrain(data.auto_parrain || "non");
+        setSelectedTypeContrat(data.typecontrat || "");
+        setChiffreAffaires(data.chiffre_affaires || 0);
+      }
     };
-    fetchConseillers();
-  }, [user]);
 
-  // Calculer la rétrocession à chaque changement de chiffre d'affaires
+    fetchConseillers();
+  }, [user.id]);
+
+  // Calculer la rétrocession à chaque changement de chiffre d'affaires ou de type de contrat
   useEffect(() => {
-    if (chiffreAffaires > 0 && localConseiller?.typecontrat) {
+    if (chiffreAffaires >= 0 && selectedTypeContrat) {
       setRetrocession(
-        calculRetrocession(
-          localConseiller.typecontrat,
-          chiffreAffaires,
-          localConseiller.auto_parrain
-        )
+        calculRetrocession(selectedTypeContrat, chiffreAffaires, autoParrain)
       );
     } else {
       setRetrocession(0); // Réinitialiser si une des conditions n'est pas remplie
     }
-  }, [
-    chiffreAffaires,
-    localConseiller?.typecontrat,
-    localConseiller?.auto_parrain,
-  ]);
+  }, [chiffreAffaires, selectedTypeContrat, autoParrain]);
 
   const handleSubmit = async (formData: FormData) => {
-    setErrorMessage("");
-    setSuccessMessage("");
-
+    setIsSubmitting(true);
     try {
-      setLoading(true);
-      await updateConseillerBDD(formData, user.id);
-      const updatedConseiller = await getConseillerBDD({ id: user.id });
-      setLocalConseiller(updatedConseiller as Conseiller);
-      console.log("Conseiller mis à jour avec succès.");
-      setSuccessMessage("Conseiller mis à jour avec succès.");
+      // Préparation des données pour l'API
+      const conseillerData = {
+        id: user.id,
+        prenom: conseiller?.prenom,
+        nom: conseiller?.nom,
+        email: conseiller?.email,
+        telephone: conseiller?.telephone,
+        adresse: formData.get("localisation")?.toString() || conseiller?.adresse || null,
+        siren: conseiller?.siren?.toString() || null,
+        tva: formData.get("tva") === "oui",
+        typecontrat: formData.get("type_contrat")?.toString() || null,
+        chiffre_affaires: chiffreAffaires,
+        retrocession: retrocession,
+        auto_parrain: formData.get("auto_parrain")?.toString() || "non",
+      };
+      
+      console.log("Données envoyées à l'API:", conseillerData);
+      
+      // Appel à l'API
+      const response = await fetch("/api/conseillers/update", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(conseillerData),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la mise à jour");
+      }
+
+      // Recharger les données du conseiller
+      const updatedData = await getConseillerBDD({ id: user.id });
+      setConseiller(updatedData as Conseiller);
+      
+      // ✅ Affichage du message de succès
+      setSuccessMessage("Les modifications ont bien été enregistrées !");
+      setTimeout(() => setSuccessMessage(null), 3000); // Masquer après 3 secondes
     } catch (error) {
-      console.error(
-        "Erreur lors de la mise à jour ou du rechargement :",
-        error
-      );
-      setErrorMessage("Erreur lors de la mise à jour ou du rechargement.");
+      console.error("Erreur lors de la mise à jour :", error);
+      toast.error("Une erreur est survenue lors de la mise à jour");
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -89,7 +107,7 @@ export default function FormParams({ user }: { user: User }) {
             label="Nom"
             id="nom"
             type="text"
-            value={localConseiller?.nom ?? ""}
+            value={conseiller?.nom ?? ""}
           />
           <InputCustom
             disable={true}
@@ -97,7 +115,7 @@ export default function FormParams({ user }: { user: User }) {
             label="Prénom"
             id="prenom"
             type="text"
-            value={localConseiller?.prenom ?? ""}
+            value={conseiller?.prenom ?? ""}
           />
           <InputCustom
             disable={true}
@@ -105,7 +123,7 @@ export default function FormParams({ user }: { user: User }) {
             label="ID Apimo"
             id="id_apimo"
             type="number"
-            value={localConseiller?.idapimo ?? ""}
+            value={conseiller?.idapimo ?? ""}
           />
         </div>
         <div className="flex flex-row justify-start space-x-4">
@@ -115,26 +133,26 @@ export default function FormParams({ user }: { user: User }) {
             label="Email"
             id="email"
             type="email"
-            value={localConseiller?.email ?? ""}
+            value={conseiller?.email ?? ""}
           />
-          {localConseiller?.telephone && (
+          {conseiller?.telephone && (
             <InputCustom
               disable={true}
               name="telephone"
               label="Téléphone"
               id="telephone"
               type="tel"
-              value={localConseiller?.telephone ?? ""}
+              value={conseiller?.telephone ?? ""}
             />
           )}
-          {localConseiller?.mobile && (
+          {conseiller?.mobile && (
             <InputCustom
               disable={true}
               name="mobile"
               label="Mobile"
               id="mobile"
               type="mobile"
-              value={localConseiller?.mobile ?? ""}
+              value={conseiller?.mobile ?? ""}
             />
           )}
           <InputCustom
@@ -142,9 +160,9 @@ export default function FormParams({ user }: { user: User }) {
             name="localisation"
             label="Localisation / Adresse"
             id="localisation"
-            value={localConseiller?.adresse ?? ""}
+            value={conseiller?.adresse ?? ""}
             onChange={(val) =>
-              setLocalConseiller((prev) =>
+              setConseiller((prev) =>
                 prev ? { ...prev, adresse: String(val) } : prev
               )
             }
@@ -157,9 +175,9 @@ export default function FormParams({ user }: { user: User }) {
             label="SIREN / RSAC / RCS"
             id="siren"
             type="number"
-            value={localConseiller?.siren ?? ""}
+            value={conseiller?.siren ?? ""}
             onChange={(val) =>
-              setLocalConseiller((prev) =>
+              setConseiller((prev) =>
                 prev ? { ...prev, siren: Number(val) } : prev
               )
             }
@@ -171,7 +189,8 @@ export default function FormParams({ user }: { user: User }) {
               label="Type de contrat"
               id="type_contrat"
               type="text"
-              value={localConseiller?.typecontrat ?? ""}
+              value={selectedTypeContrat}
+              onChange={(val) => setSelectedTypeContrat(String(val))}
             />
           </div>
           <InputCustom
@@ -198,14 +217,21 @@ export default function FormParams({ user }: { user: User }) {
           <RadioCustom
             onChange={(value) => setAssujettiTVA(value)}
             value={assujettiTVA}
-            name="assujetti_tva"
+            name="tva"
+          />
+        </div>
+        <div className="flex flex-col justify-start space-y-2">
+          <Label>Auto parrain</Label>
+          <RadioCustom
+            onChange={(value) => setAutoParrain(value)}
+            value={autoParrain}
+            name="auto_parrain"
           />
         </div>
       </div>
-      {errorMessage && <p className="text-red-600">{errorMessage}</p>}
       {successMessage && <p className="text-green-600">{successMessage}</p>}
-      <Button className="bg-orange-strong" type="submit" disabled={loading}>
-        {loading ? "Chargement..." : "Valider"}
+      <Button className="bg-orange-strong" type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Chargement..." : "Valider"}
       </Button>
     </form>
   );
