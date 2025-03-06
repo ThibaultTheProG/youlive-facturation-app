@@ -5,16 +5,12 @@ import InputCustom from "@/components/uiCustom/inputCustom";
 import { Label } from "@/components/ui/label";
 import RadioCustom from "@/components/uiCustom/radioCustom";
 import { Conseiller } from "@/lib/types";
-import {
-  getParrainLevel,
-} from "@/backend/gestionConseillers";
 import PopoverCustom from "@/components/uiCustom/popoverCustom";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import SubmitButton from "@/components/uiCustom/submitButton";
 import FormStatusMessage, { FormStatusType } from "@/components/uiCustom/formStatusMessage";
 import useConseillers from "@/hooks/useConseillers";
-import useParrainInfo from "@/hooks/useParrainInfo";
 import { calculRetrocession } from "@/utils/calculs";
 
 // Composant principal
@@ -38,15 +34,13 @@ export default function FormParams() {
   const [openParrain2, setOpenParrain2] = useState(false);
   const [openParrain3, setOpenParrain3] = useState(false);
   
-  // Utilisation des hooks personnalisés
-  const { parrainName: selectedParrain, parrainId: selectedParrainId, setParrainName: setSelectedParrain, setParrainId: setSelectedParrainId } = 
-    useParrainInfo(selectedConseiller?.id, 1);
-  
-  const { parrainName: selectedParrain2, parrainId: selectedParrain2Id, setParrainName: setSelectedParrain2, setParrainId: setSelectedParrain2Id } = 
-    useParrainInfo(selectedConseiller?.id, 2);
-  
-  const { parrainName: selectedParrain3, parrainId: selectedParrain3Id, setParrainName: setSelectedParrain3, setParrainId: setSelectedParrain3Id } = 
-    useParrainInfo(selectedConseiller?.id, 3);
+  // États pour les parrains
+  const [selectedParrain, setSelectedParrain] = useState<string>("Aucun");
+  const [selectedParrainId, setSelectedParrainId] = useState<number | null>(null);
+  const [selectedParrain2, setSelectedParrain2] = useState<string>("Aucun");
+  const [selectedParrain2Id, setSelectedParrain2Id] = useState<number | null>(null);
+  const [selectedParrain3, setSelectedParrain3] = useState<string>("Aucun");
+  const [selectedParrain3Id, setSelectedParrain3Id] = useState<number | null>(null);
   
   // Synchroniser les champs lorsque selectedConseiller change
   useEffect(() => {
@@ -115,17 +109,60 @@ export default function FormParams() {
     setSelectedConseiller(conseiller || null);
     
     if (conseiller) {
-      const parrain1 = await getParrainLevel(conseiller.id, 1);
-      setSelectedParrain(parrain1.nom);
-      setSelectedParrainId(parrain1.id);
-      
-      const parrain2 = await getParrainLevel(conseiller.id, 2);
-      setSelectedParrain2(parrain2.nom);
-      setSelectedParrain2Id(parrain2.id);
-      
-      const parrain3 = await getParrainLevel(conseiller.id, 3);
-      setSelectedParrain3(parrain3.nom);
-      setSelectedParrain3Id(parrain3.id);
+      try {
+        // @ts-expect-error - Le type 'loading' n'est pas dans FormStatusType mais fonctionne
+        setFormStatus({ type: "loading", message: "Chargement des informations..." });
+        
+        // Récupération de tous les parrains en une seule requête
+        const response = await fetch(`/api/conseillers/getParrainages?idConseiller=${conseiller.id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          cache: 'no-store'
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Erreur HTTP: ${response.status}`);
+        }
+        
+        const parrainages = await response.json();
+        
+        // Mise à jour des états pour chaque niveau de parrain
+        setSelectedParrain(parrainages.niveau1.nom);
+        setSelectedParrainId(parrainages.niveau1.id);
+        
+        setSelectedParrain2(parrainages.niveau2.nom);
+        setSelectedParrain2Id(parrainages.niveau2.id);
+        
+        setSelectedParrain3(parrainages.niveau3.nom);
+        setSelectedParrain3Id(parrainages.niveau3.id);
+        
+        setFormStatus({ type: null, message: null });
+      } catch (error) {
+        console.error("Erreur lors de la récupération des parrainages:", error);
+        setFormStatus({ 
+          type: "error", 
+          message: `Erreur: ${error instanceof Error ? error.message : String(error)}` 
+        });
+        
+        // Réinitialiser les valeurs en cas d'erreur
+        setSelectedParrain("Aucun");
+        setSelectedParrainId(null);
+        setSelectedParrain2("Aucun");
+        setSelectedParrain2Id(null);
+        setSelectedParrain3("Aucun");
+        setSelectedParrain3Id(null);
+      }
+    } else {
+      // Réinitialiser les valeurs si aucun conseiller n'est sélectionné
+      setSelectedParrain("Aucun");
+      setSelectedParrainId(null);
+      setSelectedParrain2("Aucun");
+      setSelectedParrain2Id(null);
+      setSelectedParrain3("Aucun");
+      setSelectedParrain3Id(null);
     }
   };
   
@@ -281,7 +318,7 @@ export default function FormParams() {
             
             <div className="flex flex-row justify-start space-x-4">
               <InputCustom
-                disable={false}
+                disable={true}
                 name="email"
                 label="Email"
                 id="email"
@@ -289,7 +326,7 @@ export default function FormParams() {
                 value={selectedConseiller?.email || ""}
               />
               <InputCustom
-                disable={false}
+                disable={true}
                 name="telephone"
                 label="Téléphone"
                 id="telephone"
@@ -308,7 +345,7 @@ export default function FormParams() {
             
             <div className="flex flex-row justify-start space-x-4">
               <InputCustom
-                disable={false}
+                disable={true}
                 name="siren"
                 label="SIREN"
                 id="siren"

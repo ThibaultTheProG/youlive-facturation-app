@@ -49,7 +49,6 @@ export async function GET() {
           nom: lastname,
           email: email || null,
           telephone: mobile || phone || null,
-          adresse,
           siren: siren || null,
         },
         create: {
