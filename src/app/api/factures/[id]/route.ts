@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getFactureById } from "@/backend/gestionFactures";
 import prisma from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { FactureDetaillee } from "@/lib/types";
 
 export async function GET(request: Request) {
   try {
@@ -25,14 +25,80 @@ export async function GET(request: Request) {
       );
     }
 
-    const facture = await getFactureById(factureId);
+    // Récupération de la facture directement dans la route
+    const result = await prisma.factures.findUnique({
+      where: {
+        id: factureId
+      },
+      include: {
+        relations_contrats: {
+          include: {
+            contrats: {
+              include: {
+                property: true
+              }
+            },
+            utilisateurs: true
+          }
+        }
+      }
+    });
 
-    if (!facture) {
+    if (!result) {
       return NextResponse.json(
         { error: "Facture introuvable" },
         { status: 404 }
       );
     }
+
+    // Transformation des données pour le format FactureDetaillee
+    const facture: FactureDetaillee = {
+      id: result.id,
+      type: result.type || '',
+      honoraires_agent: result.relations_contrats?.honoraires_agent?.toString() || "0",
+      retrocession: result.retrocession?.toString() || "0",
+      statut_paiement: result.statut_paiement || '',
+      created_at: result.created_at?.toISOString() || '',
+      numero_mandat: result.relations_contrats?.contrats?.property?.numero_mandat || '',
+      date_signature: result.relations_contrats?.contrats?.date_signature?.toISOString() || '',
+      numero: result.numero || '',
+      vat_rate: 20, // Valeur par défaut si non définie
+      apporteur: result.apporteur,
+      apporteur_amount: result.apporteur_amount || 0,
+
+      conseiller: {
+        idapimo: result.relations_contrats?.utilisateurs?.idapimo || 0,
+        id: result.relations_contrats?.utilisateurs?.id || 0,
+        prenom: result.relations_contrats?.utilisateurs?.prenom || '',
+        nom: result.relations_contrats?.utilisateurs?.nom || '',
+        email: result.relations_contrats?.utilisateurs?.email || '',
+        telephone: result.relations_contrats?.utilisateurs?.telephone || '',
+        adresse: result.relations_contrats?.utilisateurs?.adresse || '',
+        mobile: result.relations_contrats?.utilisateurs?.mobile || '',
+        siren: Number(result.relations_contrats?.utilisateurs?.siren || 0),
+        tva: result.relations_contrats?.utilisateurs?.tva || false,
+        chiffre_affaires: Number(result.relations_contrats?.utilisateurs?.chiffre_affaires || 0),
+        retrocession: Number(result.relations_contrats?.utilisateurs?.retrocession || 0)
+      },
+
+      contrat: {
+        id: result.relations_contrats?.contrats?.id.toString() || '',
+        step: 'completed',
+        price: result.relations_contrats?.contrats?.price?.toString() || '0',
+        price_net: result.relations_contrats?.contrats?.price_net?.toString() || '0',
+        commission: result.relations_contrats?.contrats?.honoraires?.toString() || '0',
+        date_signature: result.relations_contrats?.contrats?.date_signature?.toISOString() || ''
+      },
+
+      propriete: {
+        id: result.relations_contrats?.contrats?.property?.id.toString() || '',
+        adresse: result.relations_contrats?.contrats?.property?.adresse || '',
+        reference: result.relations_contrats?.contrats?.property?.numero_mandat || ''
+      },
+
+      acheteurs: [],
+      proprietaires: []
+    };
 
     return NextResponse.json(facture);
   } catch (error) {

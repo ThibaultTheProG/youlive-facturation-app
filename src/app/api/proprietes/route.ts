@@ -1,4 +1,4 @@
-import insertProperties from "@/backend/gestionProperty";
+import prisma from "@/lib/db";
 import { Property } from "@/lib/types";
 
 export async function GET() {
@@ -42,9 +42,52 @@ export async function GET() {
       .flat();
 
     // Insertion des propriétés dans la base
-    insertProperties(allProperties)
-      .then(() => console.log("Propriétés insérées avec succès"))
-      .catch((err) => console.error("Erreur d'insertion :", err));
+    try {
+      for (const property of allProperties) {
+        const { id, address, reference, city } = property;
+
+        // Conversion des valeurs
+        const idNumber = Number(id);
+        const ville = city?.name ?? "";
+        const cp = city?.zipcode ?? "";
+        const referenceString = String(reference);
+
+        // Concaténer l'adresse complète
+        const fullAddress = `${address}, ${cp} ${ville}`.trim();
+
+        // Vérification de l'existence du contrat
+        const contrat = await prisma.contrats.findFirst({
+          where: {
+            property_id: idNumber
+          },
+          select: {
+            id: true
+          }
+        });
+
+        if (contrat) {
+          // Insertion ou mise à jour de la propriété avec l'adresse complète
+          await prisma.property.upsert({
+            where: {
+              contrat_id: contrat.id
+            },
+            update: {
+              adresse: fullAddress,
+              numero_mandat: referenceString
+            },
+            create: {
+              adresse: fullAddress,
+              numero_mandat: referenceString,
+              contrat_id: contrat.id
+            }
+          });
+        }
+      }
+      console.log("✅ Propriétés insérées ou mises à jour avec succès");
+    } catch (error) {
+      console.error("❌ Erreur lors de l'insertion des propriétés :", error);
+      throw error;
+    }
 
     // Retourner les données au client
     return new Response(JSON.stringify({ data: allProperties }), {

@@ -1,7 +1,4 @@
-import {
-  getContactIdsFromRelations,
-  insertContacts,
-} from "@/backend/gestionContacts";
+import prisma from "@/lib/db";
 import { Contact, ContactApi } from "@/lib/types";
 
 function mapApiContact(apiContact: ContactApi): Contact {
@@ -23,7 +20,22 @@ function mapApiContact(apiContact: ContactApi): Contact {
 export async function GET() {
   try {
     // Récupérer les IDs de contacts depuis la base de données
-    const contactIds = await getContactIdsFromRelations();
+    let contactIds: number[] = [];
+    try {
+      const contacts = await prisma.contacts_contrats.findMany({
+        distinct: ['contact_id'],
+        select: {
+          contact_id: true
+        }
+      });
+      contactIds = contacts.map((row) => row.contact_id);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des contact IDs :", error);
+      return new Response(
+        JSON.stringify({ error: "Erreur lors de la récupération des contact IDs" }),
+        { status: 500 }
+      );
+    }
 
     if (!contactIds || contactIds.length === 0) {
       return new Response(
@@ -72,7 +84,63 @@ export async function GET() {
       );
     }
 
-    await insertContacts(filteredContacts);
+    // Insertion des contacts directement dans la base de données
+    try {
+      for (const contact of filteredContacts) {
+        const {
+          id: contactApimoId,
+          prenom,
+          nom,
+          email,
+          mobile,
+          phone,
+          adresse,
+          ville,
+        } = contact;
+
+        const villeName = ville?.name;
+        const cp = ville?.zipcode;
+
+        if (!contactApimoId) {
+          console.warn(
+            "Contact invalide : contact_apimo_id manquant. Contact ignoré.",
+            contact
+          );
+          continue;
+        }
+
+        await prisma.contacts.upsert({
+          where: {
+            contact_apimo_id: contactApimoId
+          },
+          update: {
+            prenom: prenom || null,
+            nom: nom || null,
+            email: email || null,
+            mobile: mobile || phone || null,
+            adresse: adresse || null,
+            ville: villeName || null,
+            cp: cp || null,
+            updated_at: new Date()
+          },
+          create: {
+            contact_apimo_id: contactApimoId,
+            prenom: prenom || null,
+            nom: nom || null,
+            email: email || null,
+            mobile: mobile || phone || null,
+            adresse: adresse || null,
+            ville: villeName || null,
+            cp: cp || null
+          }
+        });
+      }
+
+      console.log("✅ Contacts insérés ou mis à jour avec succès.");
+    } catch (error) {
+      console.error("❌ Erreur lors de l'insertion des contacts :", error);
+      throw error;
+    }
 
     return new Response(JSON.stringify({ data: filteredContacts }), {
       status: 200,
