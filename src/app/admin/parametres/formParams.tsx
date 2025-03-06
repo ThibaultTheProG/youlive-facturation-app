@@ -89,16 +89,22 @@ export default function FormParams() {
     [localConseillers]
   );
   
-  const parrains = useMemo(() => 
-    (localConseillers || [])
+  const parrains = useMemo(() => {
+    // Créer une option "Aucun" avec une clé spéciale
+    const aucunOption = { key: -1, name: "Aucun" };
+    
+    // Filtrer et mapper les conseillers
+    const parrainsList = (localConseillers || [])
       .filter((c: Conseiller) => c.id !== selectedConseiller?.id)
       .map((c: Conseiller) => ({
         key: c.id!,
         name: `${c.prenom.trim()} ${c.nom.trim()}`,
       }))
-      .sort((a: SelectItemWithKey, b: SelectItemWithKey) => a.name.localeCompare(b.name)),
-    [localConseillers, selectedConseiller]
-  );
+      .sort((a: SelectItemWithKey, b: SelectItemWithKey) => a.name.localeCompare(b.name));
+    
+    // Ajouter l'option "Aucun" au début de la liste
+    return [aucunOption, ...parrainsList];
+  }, [localConseillers, selectedConseiller]);
   
   // Gestionnaires d'événements
   const handleSelectConseiller = async (val: string) => {
@@ -125,6 +131,11 @@ export default function FormParams() {
   
   const handleSelectParrain = async (val: string) => {
     setSelectedParrain(val);
+    // Si "Aucun" est sélectionné, mettre l'ID à null
+    if (val === "Aucun") {
+      setSelectedParrainId(null);
+      return;
+    }
     const parrain = localConseillers.find(
       (c: Conseiller) => `${c.prenom.trim()} ${c.nom.trim()}` === val
     );
@@ -133,6 +144,11 @@ export default function FormParams() {
   
   const handleSelectParrain2 = async (val: string) => {
     setSelectedParrain2(val);
+    // Si "Aucun" est sélectionné, mettre l'ID à null
+    if (val === "Aucun") {
+      setSelectedParrain2Id(null);
+      return;
+    }
     const parrain = localConseillers.find(
       (c: Conseiller) => `${c.prenom.trim()} ${c.nom.trim()}` === val
     );
@@ -141,6 +157,11 @@ export default function FormParams() {
   
   const handleSelectParrain3 = async (val: string) => {
     setSelectedParrain3(val);
+    // Si "Aucun" est sélectionné, mettre l'ID à null
+    if (val === "Aucun") {
+      setSelectedParrain3Id(null);
+      return;
+    }
     const parrain = localConseillers.find(
       (c: Conseiller) => `${c.prenom.trim()} ${c.nom.trim()}` === val
     );
