@@ -18,6 +18,9 @@ export async function GET() {
         siren: true,
         tva: true,
         chiffre_affaires: true,
+        retrocession: true,
+        auto_parrain: true,
+        typecontrat: true,
         role: true,
       },
       orderBy: {
@@ -25,7 +28,15 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(conseillers, { status: 200 });
+    // Convertir les types pour correspondre à ce que retournait getConseillersBDD
+    const mappedConseillers = conseillers.map(c => ({
+      ...c,
+      siren: c.siren ? c.siren : undefined,
+      chiffre_affaires: c.chiffre_affaires ? Number(c.chiffre_affaires) : 0,
+      retrocession: c.retrocession ? Number(c.retrocession) : 0
+    }));
+
+    return NextResponse.json(mappedConseillers, { status: 200 });
   } catch (error) {
     console.error("Erreur lors de la récupération des conseillers :", error);
     return NextResponse.json(

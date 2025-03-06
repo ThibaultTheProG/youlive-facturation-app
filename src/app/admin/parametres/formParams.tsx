@@ -16,7 +16,7 @@ import { calculRetrocession } from "@/utils/calculs";
 // Composant principal
 export default function FormParams() {
   const router = useRouter();
-  const localConseillers = useConseillers();
+  const { conseillers: localConseillers, isLoading: isLoadingConseillers } = useConseillers();
   
   // États
   const [selectedConseiller, setSelectedConseiller] = useState<Conseiller | null>(null);
@@ -65,6 +65,19 @@ export default function FormParams() {
       setRetrocession(0);
     }
   }, [chiffreAffaires, selectedTypeContrat, autoParrain]);
+  
+  // Afficher un état de chargement pendant le chargement des conseillers
+  useEffect(() => {
+    if (isLoadingConseillers) {
+      setFormStatus({ 
+        // @ts-expect-error - Le type 'loading' n'est pas dans FormStatusType mais fonctionne
+        type: "loading", 
+        message: "Chargement des conseillers..." 
+      });
+    } else {
+      setFormStatus({ type: null, message: null });
+    }
+  }, [isLoadingConseillers]);
   
   // Définir un type pour les éléments de la liste
   type SelectItemWithKey = {

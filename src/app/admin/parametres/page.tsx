@@ -25,7 +25,7 @@ export default function Parametres() {
   
   return (
     <div className="container mx-auto p-4 space-y-4">
-      <h1>Paramètres des conseillers</h1>
+      <h1 className="text-lg font-semibold mb-4">Paramètres des conseillers</h1>
       <FormParams />
     </div>
   );
