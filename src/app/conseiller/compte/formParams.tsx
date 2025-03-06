@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import RadioCustom from "@/components/uiCustom/radioCustom";
 import { Button } from "@/components/ui/button";
 import { Conseiller, User } from "@/lib/types";
-import getConseillerBDD from "@/backend/gestionConseiller";
 import { toast } from "react-hot-toast";
 import { calculRetrocession } from "@/utils/calculs";
 
@@ -23,18 +22,34 @@ export default function FormParams({ user }: { user: User }) {
   // Récupérer les informations du conseiller
   useEffect(() => {
     const fetchConseillers = async () => {
-      const data = await getConseillerBDD({ id: user.id });
-      setConseiller(data as Conseiller);
-      if (data) {
-        setAssujettiTVA(data.tva ? "oui" : "non");
-        setAutoParrain(data.auto_parrain || "non");
-        setSelectedTypeContrat(data.typecontrat || "");
-        setChiffreAffaires(data.chiffre_affaires || 0);
+      try {
+        const response = await fetch(`/api/conseiller/get?id=${user.id}`);
+        
+        if (!response.ok) {
+          throw new Error("Erreur lors de la récupération du conseiller");
+        }
+        
+        const data = await response.json();
+        setConseiller(data);
+        
+        if (data) {
+          setAssujettiTVA(data.tva ? "oui" : "non");
+          setAutoParrain(data.auto_parrain || "non");
+          setSelectedTypeContrat(data.typecontrat || "");
+          setChiffreAffaires(data.chiffre_affaires || 0);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération du conseiller:", error);
+        toast.error("Impossible de récupérer les informations du conseiller");
       }
     };
 
-    fetchConseillers();
-  }, [user.id]);
+    if (user?.id) {
+      fetchConseillers();
+    }
+  }, [user?.id]);
+
+  console.log(conseiller);
 
   // Calculer la rétrocession à chaque changement de chiffre d'affaires ou de type de contrat
   useEffect(() => {
@@ -83,8 +98,12 @@ export default function FormParams({ user }: { user: User }) {
       }
 
       // Recharger les données du conseiller
-      const updatedData = await getConseillerBDD({ id: user.id });
-      setConseiller(updatedData as Conseiller);
+      const conseillerResponse = await fetch(`/api/conseiller/get?id=${user.id}`);
+      if (!conseillerResponse.ok) {
+        throw new Error("Erreur lors de la récupération des données mises à jour");
+      }
+      const updatedData = await conseillerResponse.json();
+      setConseiller(updatedData);
       
       // ✅ Affichage du message de succès
       setSuccessMessage("Les modifications ont bien été enregistrées !");
