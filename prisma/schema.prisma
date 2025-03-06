@@ -70,12 +70,10 @@ model parrainages {
   niveau1    Int?
   niveau2    Int?
   niveau3    Int?
-  user_id    Int
+  user_id    Int       @unique
   created_at DateTime? @default(now()) @db.Timestamp(6)
 
   user utilisateurs @relation(fields: [user_id], references: [id])
-
-  @@unique([niveau1, niveau2, niveau3], map: "unique_parrainage")
 }
 
 model property {
