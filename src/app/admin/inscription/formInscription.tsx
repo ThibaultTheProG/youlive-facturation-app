@@ -1,142 +1,248 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
+import { 
+  Card, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription, 
+  CardContent, 
+  CardFooter 
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardContent,
-} from "@/components/ui/card";
-import SelectCustom from "@/components/uiCustom/selectCustom";
-import { getConseillersBDD } from "@/backend/gestionConseillers";
-import { Conseiller, SelectItem } from "@/lib/types";
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { Conseiller } from "@/lib/types";
 
 export default function FormInscription() {
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [localConseillers, setLocalConseillers] = useState<Conseiller[]>([]);
-  const [selectedConseiller, setSelectedConseiller] =
-    useState<Conseiller | null>(null);
-  const [password, setPassword] = useState("");
+  const router = useRouter();
+  const [conseillers, setConseillers] = useState<Conseiller[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    conseillerId: "",
+    password: "",
+    confirmPassword: "",
+  });
 
-  // Récupérer les conseillers depuis la BDD
   useEffect(() => {
-    const fetchConseillers = async () => {
-      const data = await getConseillersBDD();
-      setLocalConseillers(data);
-    };
-
     fetchConseillers();
   }, []);
 
-  // Générer le tableau des conseillers
-  const conseillersNoms: SelectItem[] = localConseillers.map((conseiller) => ({
-    key: conseiller.idapimo,
-    name: `${conseiller.prenom} ${conseiller.nom}`,
-  })).sort((a, b) => a.name.localeCompare(b.name));
-
-  // Gérer la sélection du conseiller
-  const handleSelectConseiller = async (val: string) => {
-    const conseiller = localConseillers.find(
-      (c) => `${c.prenom} ${c.nom}` === val
-    );
-    setSelectedConseiller(conseiller || null);
+  const fetchConseillers = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/conseillers/get");
+      const data = await response.json();
+      setConseillers(data);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des conseillers :", error);
+      toast.error("Impossible de charger la liste des conseillers");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Gérer la soumission du formulaire
+  const handleSelectConseiller = async (val: string) => {
+    setFormData({
+      ...formData,
+      conseillerId: val,
+    });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSuccessMessage(null);
-    setErrorMessage(null);
-
-    if (!selectedConseiller || !password) {
-      setErrorMessage("Veuillez sélectionner un conseiller et entrer un mot de passe.");
+    
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Les mots de passe ne correspondent pas");
       return;
     }
 
+    if (formData.password.length < 6) {
+      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+
+    setSubmitting(true);
+    
     try {
       const response = await fetch("/api/assignPassword", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          conseillerId: selectedConseiller.idapimo,
-          password,
+          conseillerId: formData.conseillerId,
+          password: formData.password,
         }),
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Une erreur est survenue.");
+      if (response.ok) {
+        toast.success("Mot de passe assigné avec succès");
+        router.push("/admin/conseillers");
+      } else {
+        toast.error(data.error || "Une erreur est survenue");
       }
-
-      setSuccessMessage(data.message);
-      setPassword(""); // Réinitialiser le champ
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Une erreur est survenue.");
+      console.error("Erreur lors de l'assignation du mot de passe :", error);
+      toast.error("Une erreur est survenue lors de l'assignation du mot de passe");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-md p-6 shadow-lg">
-      <CardHeader>
-        <h1 className="text-2xl font-semibold text-center">
-          Attribuer un mot de passe
-        </h1>
+    <Card className="w-full max-w-md mx-auto shadow-lg">
+      <CardHeader className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-t-lg">
+        <CardTitle className="text-2xl font-bold">Inscription Conseiller</CardTitle>
+        <CardDescription className="text-white/80">
+          Créez un compte pour un nouveau conseiller
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="conseiller">Sélectionner un conseiller</Label>
-            <SelectCustom
-              placeholder="Sélectionner un conseiller"
-              selectLabel="Conseillers"
-              options={conseillersNoms}
-              value={
-                selectedConseiller
-                  ? `${selectedConseiller.prenom} ${selectedConseiller.nom}`
-                  : ""
-              }
-              onChange={handleSelectConseiller}
-            />
+      
+      <CardContent className="pt-6 pb-2">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="conseiller" className="font-medium">
+              Sélectionner un conseiller
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  disabled={loading}
+                  className={cn(
+                    "w-full justify-between",
+                    !formData.conseillerId && "text-muted-foreground"
+                  )}
+                >
+                  {formData.conseillerId ? (
+                    conseillers.find(
+                      (conseiller) => conseiller.id.toString() === formData.conseillerId
+                    )
+                      ? `${conseillers.find(
+                          (conseiller) => conseiller.id.toString() === formData.conseillerId
+                        )?.prenom} ${conseillers.find(
+                          (conseiller) => conseiller.id.toString() === formData.conseillerId
+                        )?.nom}`
+                      : "Sélectionner un conseiller"
+                  ) : (
+                    "Sélectionner un conseiller"
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
+                <Command>
+                  <CommandInput placeholder="Rechercher un conseiller..." />
+                  <CommandList>
+                    <CommandEmpty>Aucun conseiller trouvé</CommandEmpty>
+                    <CommandGroup>
+                      {loading ? (
+                        <div className="flex items-center justify-center py-6">
+                          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                          <span>Chargement des conseillers...</span>
+                        </div>
+                      ) : (
+                        conseillers.map((conseiller) => (
+                          <CommandItem
+                            key={conseiller.id}
+                            value={`${conseiller.prenom} ${conseiller.nom}`}
+                            onSelect={() => {
+                              handleSelectConseiller(conseiller.id.toString());
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.conseillerId === conseiller.id.toString()
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            {conseiller.prenom} {conseiller.nom}
+                          </CommandItem>
+                        ))
+                      )}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
-          <div>
-            <Label htmlFor="password">Nouveau mot de passe</Label>
+
+          <div className="space-y-2">
+            <Label htmlFor="password" className="font-medium">
+              Mot de passe
+            </Label>
             <Input
               id="password"
               name="password"
               type="password"
-              placeholder="Entrez le mot de passe"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleInputChange}
+              className="w-full"
+              placeholder="Minimum 6 caractères"
+              required
             />
           </div>
 
-          {successMessage && (
-            <p className="text-sm text-green-600 text-center">
-              {successMessage}
-            </p>
-          )}
-          {errorMessage && (
-            <p className="text-sm text-red-600 text-center">{errorMessage}</p>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword" className="font-medium">
+              Confirmer le mot de passe
+            </Label>
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={handleInputChange}
+              className="w-full"
+              placeholder="Confirmer le mot de passe"
+              required
+            />
+          </div>
 
           <Button
             type="submit"
-            className="w-full bg-orange-strong"
-            disabled={!selectedConseiller || !password}
+            className="w-full bg-orange-500 hover:bg-orange-600 transition-colors"
+            disabled={submitting || !formData.conseillerId || !formData.password}
           >
-            Attribuer
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Inscription en cours...
+              </>
+            ) : (
+              "Inscrire le conseiller"
+            )}
           </Button>
         </form>
       </CardContent>
-      <CardFooter>
-        <p className="text-sm text-center text-gray-600">
-          Cette action attribuera un mot de passe à un conseiller.
-        </p>
+      
+      <CardFooter className="flex justify-center text-sm text-gray-500 pt-2 pb-6">
+        Le conseiller recevra ses identifiants par email
       </CardFooter>
     </Card>
   );
