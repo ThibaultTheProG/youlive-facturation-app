@@ -38,7 +38,7 @@ export async function GET(request: Request) {
                 property: true
               }
             },
-            utilisateurs: true
+            utilisateurs: true // Inclure l'utilisateur associé à la relation_contrat (le filleul)
           }
         }
       }
@@ -50,6 +50,22 @@ export async function GET(request: Request) {
         { status: 404 }
       );
     }
+
+    // Récupérer l'utilisateur associé à la facture dans une requête séparée
+    const utilisateur = result.user_id 
+      ? await prisma.utilisateurs.findUnique({
+          where: { id: result.user_id }
+        })
+      : null;
+
+    // Récupérer le filleul (celui qui a réalisé la vente)
+    const filleul = result.relations_contrats?.utilisateurs 
+      ? {
+          id: result.relations_contrats.utilisateurs.id,
+          prenom: result.relations_contrats.utilisateurs.prenom || '',
+          nom: result.relations_contrats.utilisateurs.nom || ''
+        }
+      : undefined;
 
     // Récupération des contacts associés au contrat
     const contratId = result.relations_contrats?.contrats?.id;
@@ -122,18 +138,18 @@ export async function GET(request: Request) {
       apporteur_amount: result.apporteur_amount || 0,
 
       conseiller: {
-        idapimo: result.relations_contrats?.utilisateurs?.idapimo || 0,
-        id: result.relations_contrats?.utilisateurs?.id || 0,
-        prenom: result.relations_contrats?.utilisateurs?.prenom || '',
-        nom: result.relations_contrats?.utilisateurs?.nom || '',
-        email: result.relations_contrats?.utilisateurs?.email || '',
-        telephone: result.relations_contrats?.utilisateurs?.telephone || '',
-        adresse: result.relations_contrats?.utilisateurs?.adresse || '',
-        mobile: result.relations_contrats?.utilisateurs?.mobile || '',
-        siren: Number(result.relations_contrats?.utilisateurs?.siren || 0),
-        tva: result.relations_contrats?.utilisateurs?.tva || false,
-        chiffre_affaires: Number(result.relations_contrats?.utilisateurs?.chiffre_affaires || 0),
-        retrocession: Number(result.relations_contrats?.utilisateurs?.retrocession || 0)
+        idapimo: utilisateur?.idapimo || 0,
+        id: utilisateur?.id || 0,
+        prenom: utilisateur?.prenom || '',
+        nom: utilisateur?.nom || '',
+        email: utilisateur?.email || '',
+        telephone: utilisateur?.telephone || '',
+        adresse: utilisateur?.adresse || '',
+        mobile: utilisateur?.mobile || '',
+        siren: Number(utilisateur?.siren || 0),
+        tva: utilisateur?.tva || false,
+        chiffre_affaires: Number(utilisateur?.chiffre_affaires || 0),
+        retrocession: Number(utilisateur?.retrocession || 0)
       },
 
       contrat: {
@@ -152,7 +168,8 @@ export async function GET(request: Request) {
       },
 
       acheteurs,
-      proprietaires
+      proprietaires,
+      filleul
     };
 
     return NextResponse.json(facture);

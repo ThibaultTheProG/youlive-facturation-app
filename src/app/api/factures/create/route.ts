@@ -158,8 +158,26 @@ async function createFactureRecrutement(
 
     // Traiter chaque niveau de parrainage
     for (const parrainage of parrainages) {
+      // Vérifier si le parrain de niveau 1 est associé à au moins 5 filleuls
+      let niveau1Percentage = 6; // Pourcentage par défaut
+      
+      if (parrainage.niveau1) {
+        // Compter combien de filleuls sont associés à ce parrain de niveau 1
+        const filleulsCount = await prisma.parrainages.count({
+          where: {
+            niveau1: parrainage.niveau1
+          }
+        });
+        
+        // Si le parrain est associé à au moins 5 filleuls, augmenter le pourcentage à 8%
+        if (filleulsCount >= 5) {
+          niveau1Percentage = 8;
+          console.log(`Le parrain ${parrainage.niveau1} a ${filleulsCount} filleuls, pourcentage augmenté à 8%`);
+        }
+      }
+      
       const niveaux = [
-        { id: parrainage.niveau1, percentage: 6 },
+        { id: parrainage.niveau1, percentage: niveau1Percentage },
         { id: parrainage.niveau2, percentage: 2 },
         { id: parrainage.niveau3, percentage: 1 }
       ];
