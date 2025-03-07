@@ -17,25 +17,42 @@ export async function POST(request: Request) {
       );
     }
 
+    // Convertir conseillerId en entier
+    const conseillerIdInt = parseInt(conseillerId, 10);
+    
+    if (isNaN(conseillerIdInt)) {
+      return NextResponse.json(
+        { error: "L'ID du conseiller doit être un nombre valide." },
+        { status: 400 }
+      );
+    }
+
+    // Vérifier si l'utilisateur existe
+    const utilisateur = await prisma.utilisateurs.findUnique({
+      where: {
+        id: conseillerIdInt
+      }
+    });
+
+    if (!utilisateur) {
+      return NextResponse.json(
+        { error: `Utilisateur avec l'ID ${conseillerIdInt} non trouvé.` },
+        { status: 404 }
+      );
+    }
+
     // Hasher le mot de passe avec notre fonction auth.ts
     const hashedPassword = await hashPassword(password.toString());
 
     // Mettre à jour l'utilisateur avec Prisma
-    const updatedUser = await prisma.utilisateurs.update({
+    await prisma.utilisateurs.update({
       where: {
-        idapimo: conseillerId
+        id: conseillerIdInt
       },
       data: {
         motDePasse: hashedPassword
       }
     });
-
-    if (!updatedUser) {
-      return NextResponse.json(
-        { error: "Utilisateur non trouvé." },
-        { status: 404 }
-      );
-    }
 
     return NextResponse.json(
       { message: "Mot de passe attribué avec succès !" },

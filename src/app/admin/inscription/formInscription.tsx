@@ -99,7 +99,7 @@ export default function FormInscription() {
 
       if (response.ok) {
         toast.success("Mot de passe assigné avec succès");
-        router.push("/admin/conseillers");
+        router.push("/admin/inscription");
       } else {
         toast.error(data.error || "Une erreur est survenue");
       }
