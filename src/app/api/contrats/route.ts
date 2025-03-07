@@ -112,6 +112,10 @@ export async function GET() {
             // Trouver l'utilisateur correspondant
             const utilisateur = await prisma.utilisateurs.findFirst({
               where: { idapimo: Number(user) },
+              select: {
+                id: true,
+                chiffre_affaires: true
+              }
             });
 
             if (!utilisateur) {
@@ -119,7 +123,7 @@ export async function GET() {
             }
 
             // Créer la relation si elle n'existe pas
-            const relation = await prisma.relations_contrats.upsert({
+            const relationResult = await prisma.relations_contrats.upsert({
               where: {
                 contrat_id_user_id: {
                   contrat_id: createdContrat.id,
@@ -140,16 +144,36 @@ export async function GET() {
               },
             });
 
-            // Mettre à jour le chiffre d'affaires si nouvelle relation
-            if (relation) {
-              await prisma.utilisateurs.update({
-                where: { id: utilisateur.id },
-                data: {
-                  chiffre_affaires: {
-                    increment: Number(amount),
-                  },
-                },
+            // Mise à jour du chiffre d'affaires uniquement pour les nouvelles relations
+            // (pour éviter de compter plusieurs fois le même montant)
+            if (relationResult) {
+              // Vérifier si c'est une création ou une mise à jour
+              const isNewRelation = !await prisma.relations_contrats.findFirst({
+                where: {
+                  contrat_id: createdContrat.id,
+                  user_id: utilisateur.id,
+                  created_at: {
+                    lt: new Date(new Date().getTime() - 5000) // Créé il y a plus de 5 secondes
+                  }
+                }
               });
+
+              if (isNewRelation) {
+                // Récupérer le chiffre d'affaires actuel
+                const currentCA = Number(utilisateur.chiffre_affaires || 0);
+                const honorairesAgent = Number(amount);
+                const newCA = currentCA + honorairesAgent;
+
+                // Mettre à jour le chiffre d'affaires
+                await prisma.utilisateurs.update({
+                  where: { id: utilisateur.id },
+                  data: { chiffre_affaires: newCA }
+                });
+
+                console.log(`✅ Chiffre d'affaires mis à jour pour l'utilisateur ${utilisateur.id}: ${currentCA} → ${newCA} (+${honorairesAgent})`);
+              } else {
+                console.log(`ℹ️ Relation existante, pas de mise à jour du chiffre d'affaires pour l'utilisateur ${utilisateur.id}`);
+              }
             }
           }
         }

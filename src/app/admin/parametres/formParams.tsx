@@ -243,11 +243,17 @@ export default function FormParams() {
         telephone: formDataObj.telephone as string,
         adresse: formDataObj.adresse as string,
         siren: formDataObj.siren as string,
-        tva: formDataObj.tva === "on",
+        retrocession: Number(retrocession),
+        tva: assujettiTVA === "oui",
+        typecontrat: selectedTypeContrat,
+        auto_parrain: autoParrain,
+        chiffre_affaires: Number(chiffreAffaires),
         parrain_id: selectedParrainId,
         niveau2_id: selectedParrain2Id,
         niveau3_id: selectedParrain3Id
       };
+      
+      console.log("Données envoyées à l'API:", conseillerData);
       
       // Appel à l'API
       const response = await fetch("/api/conseillers/update", {

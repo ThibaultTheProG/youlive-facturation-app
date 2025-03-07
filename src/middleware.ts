@@ -9,7 +9,6 @@ export async function middleware(request: NextRequest) {
   const isAuthDisabled = process.env.NEXT_PUBLIC_AUTH_DISABLED === "true";
 
   if (isAuthDisabled) {
-    console.log("Mode développement activé. Suppression du cookie authToken.");
     const response = NextResponse.next();
     response.cookies.delete("authToken");
     return response;

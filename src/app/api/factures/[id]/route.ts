@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import { FactureDetaillee } from "@/lib/types";
+import { FactureDetaillee, Contact } from "@/lib/types";
 
 export async function GET(request: Request) {
   try {
@@ -51,6 +51,61 @@ export async function GET(request: Request) {
       );
     }
 
+    // Récupération des contacts associés au contrat
+    const contratId = result.relations_contrats?.contrats?.id;
+    
+    // Récupérer les acheteurs (type 1) et les propriétaires (type 2)
+    const contactsContrats = contratId ? await prisma.contacts_contrats.findMany({
+      where: {
+        contrat_id: contratId
+      },
+      include: {
+        contrats: true
+      }
+    }) : [];
+
+    // Récupérer les informations détaillées des contacts
+    const contactIds = contactsContrats.map(cc => cc.contact_id);
+    const contactsDetails = contactIds.length > 0 ? await prisma.contacts.findMany({
+      where: {
+        contact_apimo_id: {
+          in: contactIds
+        }
+      }
+    }) : [];
+
+    // Séparer les acheteurs et les propriétaires
+    const acheteurs: Contact[] = [];
+    const proprietaires: Contact[] = [];
+
+    for (const contactContrat of contactsContrats) {
+      // Trouver les détails du contact correspondant
+      const contactDetail = contactsDetails.find(c => c.contact_apimo_id === contactContrat.contact_id);
+      
+      if (!contactDetail) continue;
+      
+      const contact: Contact = {
+        id: contactDetail.contact_apimo_id,
+        prenom: contactDetail.prenom || '',
+        nom: contactDetail.nom || '',
+        email: contactDetail.email || '',
+        mobile: contactDetail.mobile,
+        phone: null,
+        adresse: contactDetail.adresse || '',
+        ville: {
+          name: contactDetail.ville || '',
+          zipcode: contactDetail.cp || ''
+        }
+      };
+
+      // Type 1 = acheteur, Type 2 = propriétaire
+      if (contactContrat.type === 1) {
+        acheteurs.push(contact);
+      } else if (contactContrat.type === 2) {
+        proprietaires.push(contact);
+      }
+    }
+
     // Transformation des données pour le format FactureDetaillee
     const facture: FactureDetaillee = {
       id: result.id,
@@ -96,8 +151,8 @@ export async function GET(request: Request) {
         reference: result.relations_contrats?.contrats?.property?.numero_mandat || ''
       },
 
-      acheteurs: [],
-      proprietaires: []
+      acheteurs,
+      proprietaires
     };
 
     return NextResponse.json(facture);

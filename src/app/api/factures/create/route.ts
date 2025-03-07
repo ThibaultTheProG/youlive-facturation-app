@@ -55,12 +55,11 @@ async function createFacture() {
           honoraires_agent: Number(contrat.honoraires_agent),
           user_id: contrat.user_id,
           retrocession: Number(contrat.utilisateurs.retrocession),
-          relationId: contrat.id,
           relationid: contrat.id
         };
 
         await createFactureCommission(relationContrat, tx);
-        await createFactureParrainage(relationContrat, tx);
+        await createFactureRecrutement(relationContrat, tx);
       }
     });
 
@@ -108,24 +107,7 @@ async function createFactureCommission(
       }
     });
 
-    // Mettre à jour le chiffre d'affaires de l'utilisateur
-    const user = await prisma.utilisateurs.findUnique({
-      where: { id: user_id },
-      select: { chiffre_affaires: true }
-    });
-
-    const currentCA = Number(user?.chiffre_affaires || 0);
-    const newCA = currentCA + retrocessionAmount;
-
-    await prisma.utilisateurs.update({
-      where: { id: user_id },
-      data: {
-        chiffre_affaires: newCA
-      }
-    });
-
     console.log(`✅ Facture commission créée pour l'utilisateur ${user_id}`);
-    console.log(`✅ Chiffre d'affaires mis à jour : ${currentCA} -> ${newCA}`);
   } catch (error) {
     console.error("❌ Erreur lors de la création de la facture commission :", error);
     throw error;
@@ -133,7 +115,7 @@ async function createFactureCommission(
 }
 
 // Sous-fonction pour créer des factures de type "parrainage"
-async function createFactureParrainage(
+async function createFactureRecrutement(
   contrat: RelationContrat,
   prisma: PrismaTransaction
 ) {
@@ -146,8 +128,8 @@ async function createFactureParrainage(
       select: { chiffre_affaires: true }
     });
 
-    if (!utilisateur || !utilisateur.chiffre_affaires) {
-      console.log("❌ Utilisateur non trouvé ou pas de chiffre d'affaires :", user_id);
+    if (!utilisateur) {
+      console.log("❌ Utilisateur non trouvé :", user_id);
       return;
     }
 

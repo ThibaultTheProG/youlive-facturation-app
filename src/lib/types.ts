@@ -69,7 +69,6 @@ export interface RelationContrat {
   honoraires_agent: number;
   user_id: number;
   retrocession: number;
-  relationId: number;
   relationid: number;
 }
 
