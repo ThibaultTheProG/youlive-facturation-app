@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/auth";
-import { config } from '../middleware.config';
+import { config } from '../middleware.config.mjs';
 
 export { config };
 
 export async function middleware(request: NextRequest) {
+  // Vérifier si c'est une ressource statique
+  const { pathname } = request.nextUrl;
+  
+  // Ignorer les ressources statiques
+  if (
+    pathname.startsWith('/_next') || 
+    pathname.startsWith('/api') || 
+    pathname.includes('.') // Fichiers avec extension (js, css, etc.)
+  ) {
+    return NextResponse.next();
+  }
+
   const isAuthDisabled = process.env.NEXT_PUBLIC_AUTH_DISABLED === "true";
 
   if (isAuthDisabled) {
