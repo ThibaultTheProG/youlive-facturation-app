@@ -26,7 +26,7 @@ export default function TableauSuiviFactures() {
   useEffect(() => {
     async function fetchFactures() {
       try {
-        const response = await fetch("/api/factures/get");
+        const response = await fetch("/api/factures");
         const data = await response.json();
         console.log(data);
         setFactures(data);

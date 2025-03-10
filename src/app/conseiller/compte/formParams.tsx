@@ -23,7 +23,7 @@ export default function FormParams({ user }: { user: User }) {
   useEffect(() => {
     const fetchConseillers = async () => {
       try {
-        const response = await fetch(`/api/conseiller/get?id=${user.id}`);
+        const response = await fetch(`/api/conseiller?id=${user.id}`);
         
         if (!response.ok) {
           throw new Error("Erreur lors de la récupération du conseiller");
@@ -98,7 +98,7 @@ export default function FormParams({ user }: { user: User }) {
       }
 
       // Recharger les données du conseiller
-      const conseillerResponse = await fetch(`/api/conseiller/get?id=${user.id}`);
+      const conseillerResponse = await fetch(`/api/conseiller?id=${user.id}`);
       if (!conseillerResponse.ok) {
         throw new Error("Erreur lors de la récupération des données mises à jour");
       }
