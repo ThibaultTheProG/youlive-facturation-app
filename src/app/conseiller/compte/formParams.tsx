@@ -84,7 +84,7 @@ export default function FormParams({ user }: { user: User }) {
       console.log("Données envoyées à l'API:", conseillerData);
       
       // Appel à l'API
-      const response = await fetch("/api/conseillers/update", {
+      const response = await fetch("/api/conseillers", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

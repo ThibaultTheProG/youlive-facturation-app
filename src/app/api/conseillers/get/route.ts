@@ -14,6 +14,7 @@ export async function GET() {
         nom: true,
         email: true,
         telephone: true,
+        mobile: true,
         adresse: true,
         siren: true,
         tva: true,

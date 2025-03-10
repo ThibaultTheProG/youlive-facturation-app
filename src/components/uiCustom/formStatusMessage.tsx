@@ -1,5 +1,5 @@
 export type FormStatusType = {
-  type: 'success' | 'error' | null;
+  type: 'success' | 'error' | 'loading' | null;
   message: string | null;
 };
 
