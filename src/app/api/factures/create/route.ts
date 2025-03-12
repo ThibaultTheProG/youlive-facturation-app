@@ -83,7 +83,7 @@ async function createFactureCommission(
     return;
   }
 
-  const retrocessionAmount = honoraires_agent * (retrocession / 100);
+  const retrocessionAmount =  Number((honoraires_agent * (retrocession / 100)).toFixed(2));
 
   try {
     // Créer la facture
@@ -185,7 +185,7 @@ async function createFactureRecrutement(
       for (const { id: parrainId, percentage } of niveaux) {
         if (!parrainId) continue;
 
-        const retrocessionAmount = (honoraires_agent * percentage) / 100;
+        const retrocessionAmount = Number(((honoraires_agent * percentage) / 100).toFixed(2));
 
         await prisma.factures.upsert({
           where: {

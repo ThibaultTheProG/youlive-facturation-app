@@ -69,12 +69,12 @@ export default function TableauSuiviFactures() {
   }, [searchTerm, filterStatut, factures]);
 
   // 🆙 Mettre à jour le statut d'une facture
-  const updateStatut = async (factureId: number, newStatut: string) => {
+  const updateStatut = async (factureId: number, newStatut: string, numero: string, created_at: string) => {
     try {
       await fetch(`/api/factures/${factureId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ statut_paiement: newStatut }),
+        body: JSON.stringify({ statut_paiement: newStatut, numero: numero, created_at: created_at }),
       });
 
       // 🔄 Mettre à jour la liste localement sans recharger la page
@@ -107,9 +107,8 @@ export default function TableauSuiviFactures() {
           onChange={(e) => setFilterStatut(e.target.value)}
         >
           <option value="">Tous les statuts</option>
-          <option value="en attente">En attente</option>
+          <option value="non payé">Non payé</option>
           <option value="payé">Payé</option>
-          <option value="annulé">Annulé</option>
         </select>
       </div>
 
@@ -148,14 +147,14 @@ export default function TableauSuiviFactures() {
                   {facture.statut_paiement !== "payé" ? (
                     <Button
                       className="bg-green-500 text-white hover:bg-green-700 cursor-pointer"
-                      onClick={() => updateStatut(facture.id, "payé")}
+                      onClick={() => updateStatut(facture.id, "payé", facture.numero, facture.created_at)}
                     >
                       Marquer comme payé
                     </Button>
                   ) : (
                     <Button
                       className="bg-red-500 text-white hover:bg-red-700 cursor-pointer"
-                      onClick={() => updateStatut(facture.id, "annulé")}
+                      onClick={() => updateStatut(facture.id, "non payé", facture.numero, facture.created_at)}
                     >
                       Annuler
                     </Button>

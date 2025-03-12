@@ -206,6 +206,9 @@ export async function PUT(request: Request) {
     const { statut_paiement, numero, created_at, apporteur, apporteur_amount } =
       await request.json();
 
+
+      console.log(statut_paiement, numero, created_at, apporteur, apporteur_amount);
+
     // Vérifier les données à mettre à jour
     if (!numero && !created_at) {
       console.error("Aucune donnée à mettre à jour");

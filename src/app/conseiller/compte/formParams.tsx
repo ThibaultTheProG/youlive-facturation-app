@@ -189,7 +189,7 @@ export default function FormParams({ user }: { user: User }) {
         </div>
         <div className="flex flex-row space-x-4">
           <InputCustom
-            disable={false}
+            disable={true}
             name="siren"
             label="SIREN / RSAC / RCS"
             id="siren"
@@ -213,7 +213,7 @@ export default function FormParams({ user }: { user: User }) {
             />
           </div>
           <InputCustom
-            disable={false}
+            disable={true}
             name="chiffre_affaire_annuel"
             label="Chiffre d'affaire annuel"
             id="chiffre_affaire_annuel"
@@ -239,17 +239,17 @@ export default function FormParams({ user }: { user: User }) {
             name="tva"
           />
         </div>
-        <div className="flex flex-col justify-start space-y-2">
+        {/* <div className="flex flex-col justify-start space-y-2">
           <Label>Auto parrain</Label>
           <RadioCustom
             onChange={(value) => setAutoParrain(value)}
             value={autoParrain}
             name="auto_parrain"
           />
-        </div>
+        </div> */}
       </div>
       {successMessage && <p className="text-green-600">{successMessage}</p>}
-      <Button className="bg-orange-strong" type="submit" disabled={isSubmitting}>
+      <Button className="bg-orange-strong cursor-pointer" type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Chargement..." : "Valider"}
       </Button>
     </form>

@@ -63,6 +63,7 @@ export interface Entries {
   amount: number | string;
   vat: number | string;
   vat_rate: number | string;
+  type: string;
 }
 
 export interface RelationContrat {

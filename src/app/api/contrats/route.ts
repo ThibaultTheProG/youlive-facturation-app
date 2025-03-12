@@ -1,5 +1,5 @@
 import prisma from "@/lib/db";
-import { Contract } from "@/lib/types";
+import { Contract, Entries } from "@/lib/types";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -60,10 +60,10 @@ export async function GET() {
         !commission ||
         !contract_at
       ) {
-        console.error(
-          "Contrat invalide, certains champs requis sont manquants :",
-          contrat
-        );
+        // console.error(
+        //   "Contrat invalide, certains champs requis sont manquants :",
+        //   contrat
+        // );
         continue;
       }
 
@@ -100,10 +100,25 @@ export async function GET() {
 
         insertedContracts.push(createdContrat);
 
+        // Trier les entries pour avoir les type 2, donc apporteur d'affaire, en premier
+        const sortEntries = entries?.sort((a: Entries, b: Entries) => 
+          Number(b.type === "2") - Number(a.type === "2") || Number(a.type === "9") - Number(b.type === "9")
+        );
+
+        let caForUser = 0;
+
         // Gérer les relations (entries)
-        if (entries && Array.isArray(entries)) {
-          for (const entry of entries) {
-            const { user, amount, vat, vat_rate } = entry;
+        if (sortEntries && Array.isArray(sortEntries)) {
+          for (const entry of sortEntries) {
+            const { user, amount, vat, vat_rate, type } = entry;
+
+            if (type === '2') {
+              caForUser += Number(amount);
+              console.log("Il y a un apporteur d'affaire pour ce contrat et le montant est de : " + caForUser);
+              continue;
+            }
+
+            const amountForUser = Number(amount) + caForUser;
 
             if (!user || !amount || !vat || !vat_rate) {
               continue;
@@ -131,14 +146,14 @@ export async function GET() {
                 },
               },
               update: {
-                honoraires_agent: Number(amount),
+                honoraires_agent: Number(amountForUser),
                 vat: Number(vat),
                 vat_rate: Number(vat_rate),
               },
               create: {
                 contrat_id: createdContrat.id,
                 user_id: utilisateur.id,
-                honoraires_agent: Number(amount),
+                honoraires_agent: Number(amountForUser),
                 vat: Number(vat),
                 vat_rate: Number(vat_rate),
               },
@@ -161,7 +176,7 @@ export async function GET() {
               if (isNewRelation) {
                 // Récupérer le chiffre d'affaires actuel
                 const currentCA = Number(utilisateur.chiffre_affaires || 0);
-                const honorairesAgent = Number(amount);
+                const honorairesAgent = Number(amountForUser);
                 const newCA = currentCA + honorairesAgent;
 
                 // Mettre à jour le chiffre d'affaires

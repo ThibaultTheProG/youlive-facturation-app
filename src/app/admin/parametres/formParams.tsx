@@ -29,6 +29,7 @@ export default function FormParams() {
   const [selectedTypeContrat, setSelectedTypeContrat] = useState<string>("");
   const [chiffreAffaires, setChiffreAffaires] = useState<number>(0);
   const [retrocession, setRetrocession] = useState<number>(0);
+  const [adresse, setAdresse] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStatus, setFormStatus] = useState<FormStatusType>({
     type: null,
@@ -58,12 +59,13 @@ export default function FormParams() {
   // Synchroniser les champs lorsque selectedConseiller change
   useEffect(() => {
     if (selectedConseiller) {
-      const { tva, auto_parrain, typecontrat, chiffre_affaires } =
+      const { tva, auto_parrain, typecontrat, chiffre_affaires, adresse: conseillerAdresse } =
         selectedConseiller;
 
       setSelectedTypeContrat(typecontrat || "");
       setChiffreAffaires(chiffre_affaires || 0);
       setAssujettiTVA(tva ? "oui" : "non");
+      setAdresse(conseillerAdresse || "");
       if (auto_parrain) {
         setAutoParrain(auto_parrain);
       }
@@ -137,11 +139,10 @@ export default function FormParams() {
 
   // Gestionnaires d'événements
   const handleSelectConseiller = async (val: string) => {
+    // Trouver le conseiller dans la liste locale pour obtenir son ID
     const conseiller = localConseillers.find(
       (c: Conseiller) => `${c.prenom.trim()} ${c.nom.trim()}` === val
     );
-
-    setSelectedConseiller(conseiller || null);
 
     if (conseiller) {
       try {
@@ -150,8 +151,26 @@ export default function FormParams() {
           message: "Chargement des informations...",
         });
 
+        // Récupérer les informations à jour du conseiller depuis la base de données
+        const conseillerResponse = await fetch(`/api/conseiller?id=${conseiller.id}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        });
+
+        if (!conseillerResponse.ok) {
+          const errorData = await conseillerResponse.json();
+          throw new Error(errorData.error || `Erreur HTTP: ${conseillerResponse.status}`);
+        }
+
+        // Mettre à jour le conseiller sélectionné avec les données fraîches de la BDD
+        const conseillerData = await conseillerResponse.json();
+        setSelectedConseiller(conseillerData);
+
         // Récupération de tous les parrains en une seule requête
-        const response = await fetch(
+        const parrainagesResponse = await fetch(
           `/api/conseillers/getParrainages?idConseiller=${conseiller.id}`,
           {
             method: "GET",
@@ -162,12 +181,12 @@ export default function FormParams() {
           }
         );
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Erreur HTTP: ${response.status}`);
+        if (!parrainagesResponse.ok) {
+          const errorData = await parrainagesResponse.json();
+          throw new Error(errorData.error || `Erreur HTTP: ${parrainagesResponse.status}`);
         }
 
-        const parrainages = await response.json();
+        const parrainages = await parrainagesResponse.json();
 
         // Mise à jour des états pour chaque niveau de parrain
         setSelectedParrain(parrainages.niveau1.nom);
@@ -181,7 +200,7 @@ export default function FormParams() {
 
         setFormStatus({ type: null, message: null });
       } catch (error) {
-        console.error("Erreur lors de la récupération des parrainages:", error);
+        console.error("Erreur lors de la récupération des informations:", error);
         setFormStatus({
           type: "error",
           message: `Erreur: ${
@@ -189,7 +208,10 @@ export default function FormParams() {
           }`,
         });
 
-        // Réinitialiser les valeurs en cas d'erreur
+        // En cas d'erreur, utiliser les données locales comme fallback
+        setSelectedConseiller(conseiller || null);
+        
+        // Réinitialiser les valeurs des parrains
         setSelectedParrain("Aucun");
         setSelectedParrainId(null);
         setSelectedParrain2("Aucun");
@@ -199,6 +221,7 @@ export default function FormParams() {
       }
     } else {
       // Réinitialiser les valeurs si aucun conseiller n'est sélectionné
+      setSelectedConseiller(null);
       setSelectedParrain("Aucun");
       setSelectedParrainId(null);
       setSelectedParrain2("Aucun");
@@ -273,7 +296,7 @@ export default function FormParams() {
         nom: formDataObj.nom as string,
         email: formDataObj.email as string,
         telephone: formDataObj.telephone as string,
-        adresse: formDataObj.adresse as string,
+        adresse: adresse,
         siren: formDataObj.siren as string,
         retrocession: Number(retrocession),
         tva: assujettiTVA === "oui",
@@ -300,6 +323,25 @@ export default function FormParams() {
 
       if (!response.ok) {
         throw new Error(result.error || "Erreur lors de la mise à jour");
+      }
+
+      // Rafraîchir les données du conseiller après la mise à jour
+      try {
+        const conseillerResponse = await fetch(`/api/conseiller?id=${selectedConseiller.id}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        });
+
+        if (conseillerResponse.ok) {
+          const updatedConseillerData = await conseillerResponse.json();
+          setSelectedConseiller(updatedConseillerData);
+        }
+      } catch (refreshError) {
+        console.error("Erreur lors du rafraîchissement des données du conseiller:", refreshError);
+        // Ne pas bloquer le flux principal en cas d'erreur de rafraîchissement
       }
 
       toast.success("Conseiller mis à jour avec succès");
@@ -411,7 +453,8 @@ export default function FormParams() {
                 label="Adresse"
                 id="adresse"
                 type="text"
-                value={selectedConseiller?.adresse || ""}
+                value={adresse}
+                onChange={(val) => setAdresse(val as string)}
               />
             </div>
 
