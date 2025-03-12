@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     // Configuration de l'email
     const mailOptions = {
       from: `"WebSmith" <${process.env.SMTP_FROM_EMAIL}>`,
-      to: "tuffinthibaultgw@gmail.com",
+      to: "tuffinthibaultgw@gmail.com,tiphaine.chareyre.youlive@gmail.com",
       subject: "Votre facture est disponible",
       html: `<p>Bonjour,</p>
              <p>Votre facture est maintenant disponible.</p>
