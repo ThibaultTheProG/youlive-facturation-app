@@ -74,7 +74,7 @@ export default function FormParams() {
 
   // Calculer la rétrocession à chaque changement de chiffre d'affaires ou de type de contrat
   useEffect(() => {
-    if (chiffreAffaires > 0 && selectedTypeContrat) {
+    if (selectedTypeContrat) {
       const calculatedRetrocession = calculRetrocession(
         selectedTypeContrat,
         chiffreAffaires,
