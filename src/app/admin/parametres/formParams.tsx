@@ -503,7 +503,7 @@ export default function FormParams() {
               <InputCustom
                 disable={false}
                 name="chiffre_affaires"
-                label="Chiffre d'affaires annuel Youlive"
+                label="Honoraires Youlive HT générés"
                 id="chiffre_affaires"
                 type="number"
                 value={chiffreAffaires}
