@@ -13,7 +13,7 @@ const styles = StyleSheet.create({
   flexRow: { flexDirection: "row", justifyContent: "space-between" },
   headerInfo: { fontSize: 10, marginBottom: 5 },
   highlight: {
-    backgroundColor: "#E07C24",
+    backgroundColor: "#93c2ff",
     color: "#fff",
     padding: 5,
     textAlign: "center",
@@ -133,7 +133,7 @@ export default function FactureCommission({
         {/* Bloc DÉSIGNATION */}
         <View style={[styles.table, { marginTop: 10 }]}>
           {/* Titre DÉSIGNATION */}
-          <View style={[styles.tableRow, { backgroundColor: "#ffe6d2" }]}>
+          <View style={[styles.tableRow, { backgroundColor: "#b2d4ff" }]}>
             <Text style={[styles.tableCell, styles.bold]}>
               DÉSIGNATION - prestation de services
             </Text>
@@ -200,7 +200,7 @@ export default function FactureCommission({
           <View
             style={[
               styles.tableRow,
-              { backgroundColor: "#f28c1e", color: "#fff" },
+              { backgroundColor: "#93c2ff", color: "#fff" },
             ]}
           >
             <Text style={styles.tableCellTotal}>Honoraires Youlive HT</Text>

@@ -19,16 +19,42 @@ export default function TableauFactures({ user }: { user: User }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedFacture, setSelectedFacture] = useState<Facture | null>(null);
   const [actionType, setActionType] = useState<"voir" | "envoyer" | null>(null);
+  const [typeFilter, setTypeFilter] = useState<string>("tous");
   const itemsPerPage = 10;
+
+  // Calcul des totaux des rétrocessions par type
+  const totalRetrocessionCommission = facturesList
+    ? facturesList
+        .filter(facture => facture.type === "commission")
+        .reduce((total, facture) => total + parseFloat(facture.retrocession), 0)
+    : 0;
+
+  const totalRetrocessionRecrutement = facturesList
+    ? facturesList
+        .filter(facture => facture.type === "recrutement")
+        .reduce((total, facture) => total + parseFloat(facture.retrocession), 0)
+    : 0;
+
+  // Filtrer les factures par type
+  const filteredFactures = facturesList
+    ? typeFilter === "tous"
+      ? facturesList
+      : facturesList.filter(facture => facture.type === typeFilter)
+    : null;
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   let currentItems;
   let totalPages;
-  if (facturesList) {
-    currentItems = facturesList.slice(indexOfFirstItem, indexOfLastItem);
-    totalPages = Math.ceil(facturesList.length / itemsPerPage);
+  if (filteredFactures) {
+    currentItems = filteredFactures.slice(indexOfFirstItem, indexOfLastItem);
+    totalPages = Math.ceil(filteredFactures.length / itemsPerPage);
   }
+
+  // Réinitialiser la page courante lorsque le filtre change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [typeFilter]);
 
   useEffect(() => {
     getFactures(user.id)
@@ -73,6 +99,33 @@ export default function TableauFactures({ user }: { user: User }) {
 
   return (
     <>
+      <div className="mb-6 flex flex-col space-y-4">
+        <div className="flex items-center space-x-4">
+          <label htmlFor="typeFilter" className="font-medium">Filtrer par type :</label>
+          <select
+            id="typeFilter"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="border border-gray-300 rounded-md p-2"
+          >
+            <option value="tous">Tous les types</option>
+            <option value="commission">Commission</option>
+            <option value="recrutement">Recrutement</option>
+          </select>
+        </div>
+        
+        <div className="flex space-x-6">
+          <div className="bg-orange-50 p-4 rounded-md border border-orange-200">
+            <h3 className="font-semibold text-orange-800 mb-2">Total des rétrocessions (Commission)</h3>
+            <p className="text-lg font-bold">{totalRetrocessionCommission.toFixed(2)} €</p>
+          </div>
+          <div className="bg-orange-50 p-4 rounded-md border border-orange-200">
+            <h3 className="font-semibold text-orange-800 mb-2">Total des rétrocessions (Recrutement)</h3>
+            <p className="text-lg font-bold">{totalRetrocessionRecrutement.toFixed(2)} €</p>
+          </div>
+        </div>
+      </div>
+
       <Table>
         <TableCaption>Tableau des dernières factures.</TableCaption>
         <TableHeader>
@@ -127,8 +180,10 @@ export default function TableauFactures({ user }: { user: User }) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={8} className="text-center">
-                Aucune facture disponible.
+              <TableCell colSpan={9} className="text-center">
+                {typeFilter !== "tous" 
+                  ? `Aucune facture de type "${typeFilter}" disponible.` 
+                  : "Aucune facture disponible."}
               </TableCell>
             </TableRow>
           )}
