@@ -70,7 +70,7 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
           </SelectTrigger>
           <SelectContent className='bg-white'>
             <SelectItem value="tous_types">Tous les types</SelectItem>
-            <SelectItem value="honoraires">Honoraires</SelectItem>
+            <SelectItem value="recrutement">Recrutement</SelectItem>
             <SelectItem value="commission">Commission</SelectItem>
           </SelectContent>
         </Select>

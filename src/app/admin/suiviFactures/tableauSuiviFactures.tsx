@@ -74,7 +74,7 @@ export default function TableauSuiviFactures() {
         );
       });
       
-      alert(`Statut de la facture mis à jour avec succès: ${newStatut}`);
+      console.log(`Statut de la facture mis à jour avec succès: ${newStatut}`);
     } catch (error) {
       console.error("Erreur lors de la mise à jour :", error);
       alert(`Erreur lors de la mise à jour : ${error instanceof Error ? error.message : String(error)}`);
