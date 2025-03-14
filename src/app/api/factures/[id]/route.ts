@@ -209,14 +209,14 @@ export async function PUT(request: Request) {
 
       console.log(statut_paiement, numero, created_at, apporteur, apporteur_amount);
 
-    // Vérifier les données à mettre à jour
-    if (!numero && !created_at) {
-      console.error("Aucune donnée à mettre à jour");
-      return NextResponse.json(
-        { error: "Aucune donnée à mettre à jour" },
-        { status: 400 }
-      );
-    }
+    // // Vérifier les données à mettre à jour
+    // if (!numero && !created_at) {
+    //   console.error("Aucune donnée à mettre à jour");
+    //   return NextResponse.json(
+    //     { error: "Aucune donnée à mettre à jour" },
+    //     { status: 400 }
+    //   );
+    // }
 
     // Construire l'objet de mise à jour pour Prisma
     const updateData: Prisma.facturesUpdateInput = {
