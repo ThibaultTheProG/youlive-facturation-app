@@ -155,8 +155,6 @@ export async function GET(request: Request) {
       contrat: {
         id: result.relations_contrats?.contrats?.id.toString() || '',
         step: 'completed',
-        price: result.relations_contrats?.contrats?.price?.toString() || '0',
-        price_net: result.relations_contrats?.contrats?.price_net?.toString() || '0',
         commission: result.relations_contrats?.contrats?.honoraires?.toString() || '0',
         date_signature: result.relations_contrats?.contrats?.date_signature?.toISOString() || ''
       },

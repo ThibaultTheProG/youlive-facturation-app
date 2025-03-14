@@ -47,8 +47,6 @@ export interface Contract {
   agency?: string;
   property?: string;
   currency?: string;
-  price: string;
-  price_net: string;
   commission: string;
   commission_agency?: string;
   vat?: string;
