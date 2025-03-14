@@ -36,8 +36,6 @@ model contrats {
   idcontratapimo     Int                  @unique(map: "unique_idcontratapimo")
   statut             String?              @db.VarChar(120)
   property_id        Int
-  price              Decimal              @db.Decimal(10, 2)
-  price_net          Decimal              @db.Decimal(10, 2)
   honoraires         Decimal              @db.Decimal(10, 2)
   created_at         DateTime?            @default(now()) @db.Timestamp(6)
   updated_at         DateTime?            @default(now()) @db.Timestamp(6)

@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, FileCheck, LogOut } from "lucide-react";
+import { Settings, FileCheck, LogOut, KeyRound } from "lucide-react";
 
 import {
   Sidebar,
@@ -65,7 +65,7 @@ export function AppSidebar() {
                         : ""
                     }`}
                   >
-                    <span>Paramètres des conseillers</span>
+                    <span className="text-md font-bold">Paramètres des conseillers</span>
                     <Settings />
                   </Link>
                 </SidebarMenuButton>
@@ -80,8 +80,8 @@ export function AppSidebar() {
                         : ""
                     }`}
                   >
-                    <span>Assigner un mot de passe</span>
-                    <Settings />
+                    <span className="text-md font-bold">Assigner un mot de passe</span>
+                    <KeyRound />
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -95,7 +95,7 @@ export function AppSidebar() {
                         : ""
                     }`}
                   >
-                    <span>Suivi des factures</span>
+                    <span className="text-md font-bold">Suivi des factures</span>
                     <FileCheck />
                   </Link>
                 </SidebarMenuButton>

@@ -62,7 +62,7 @@ export function AppSidebar() {
                       pathname === "/compte" ? "text-orangeStrong" : ""
                     }`}
                   >
-                    <span>Mon compte</span>
+                    <span className="text-md font-bold">Mon compte</span>
                     <User />
                   </Link>
                 </SidebarMenuButton>
@@ -75,7 +75,7 @@ export function AppSidebar() {
                       pathname === "/factures" ? "text-orangeStrong" : ""
                     }`}
                   >
-                    <span>Mes factures</span>
+                    <span className="text-md font-bold">Mes factures</span>
                     <FileCheck />
                   </Link>
                 </SidebarMenuButton>
@@ -88,7 +88,7 @@ export function AppSidebar() {
                       pathname === "/filleuls" ? "text-orangeStrong" : ""
                     }`}
                   >
-                    <span>Mes filleuls</span>
+                    <span className="text-md font-bold">Mes filleuls</span>
                     <Users />
                   </Link>
                 </SidebarMenuButton>

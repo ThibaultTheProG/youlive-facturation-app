@@ -43,8 +43,6 @@ export async function GET() {
         id,
         step,
         property,
-        price,
-        price_net,
         commission,
         contract_at,
         entries,
@@ -55,8 +53,6 @@ export async function GET() {
         !id ||
         !step ||
         !property ||
-        !price ||
-        !price_net ||
         !commission ||
         !contract_at
       ) {
@@ -82,8 +78,6 @@ export async function GET() {
           update: {
             statut: step,
             property_id: Number(property),
-            price: Number(price),
-            price_net: Number(price_net),
             honoraires: Number(commission),
             date_signature: new Date(contract_at),
           },
@@ -91,8 +85,6 @@ export async function GET() {
             idcontratapimo: Number(id),
             statut: step,
             property_id: Number(property),
-            price: Number(price),
-            price_net: Number(price_net),
             honoraires: Number(commission),
             date_signature: new Date(contract_at),
           },
