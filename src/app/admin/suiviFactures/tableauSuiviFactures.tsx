@@ -19,7 +19,14 @@ export default function TableauSuiviFactures() {
     async function fetchFactures() {
       setIsLoading(true);
       try {
-        const response = await fetch("/api/factures");
+        const response = await fetch("/api/factures",
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
         const data = await response.json();
         console.log("Données reçues de l'API:", data);
         

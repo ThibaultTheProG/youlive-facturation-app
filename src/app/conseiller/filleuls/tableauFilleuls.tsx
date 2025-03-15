@@ -32,8 +32,6 @@ export default function TableauFilleuls({ user }: { user: User }) {
     const fetchFilleuls = async () => {
       try {
         if (!user || !user.id) return;
-
-        console.log("🔍 Chargement des filleuls pour :", user.id);
         
         const response = await fetch(`/api/filleuls?conseillerId=${user.id}`);
         if (!response.ok) throw new Error("Erreur lors de la récupération des filleuls");
@@ -50,10 +48,15 @@ export default function TableauFilleuls({ user }: { user: User }) {
     fetchFilleuls();
   }, [user]);
 
+  // Tri des filleuls par niveau (en supposant que niveau est une chaîne)
+  filleuls.sort((a, b) => a.niveau.localeCompare(b.niveau));
+
   // Pagination - Filtrage des filleuls affichés sur la page actuelle
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
   const currentFilleuls = filleuls.slice(indexOfFirstRow, indexOfLastRow);
+
+  
 
   // Gestion des pages
   const nextPage = () => setCurrentPage((prev) => Math.min(prev + 1, Math.ceil(filleuls.length / rowsPerPage)));

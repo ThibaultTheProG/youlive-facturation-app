@@ -26,7 +26,7 @@ export default function FormParams({ user }: { user: User }) {
         const response = await fetch(`/api/conseiller?id=${user.id}`);
         
         if (!response.ok) {
-          throw new Error("Erreur lors de la récupération du conseiller");
+          throw new Error("Erreur lors de la récupération du conseiller")
         }
         
         const data = await response.json();
@@ -48,8 +48,6 @@ export default function FormParams({ user }: { user: User }) {
       fetchConseillers();
     }
   }, [user?.id]);
-
-  console.log(conseiller);
 
   // Calculer la rétrocession à chaque changement de chiffre d'affaires ou de type de contrat
   useEffect(() => {
@@ -81,7 +79,7 @@ export default function FormParams({ user }: { user: User }) {
         auto_parrain: formData.get("auto_parrain")?.toString() || "non",
       };
       
-      console.log("Données envoyées à l'API:", conseillerData);
+      //console.log("Données envoyées à l'API:", conseillerData);
       
       // Appel à l'API
       const response = await fetch("/api/conseillers", {
