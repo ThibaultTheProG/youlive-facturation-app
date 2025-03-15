@@ -6,15 +6,18 @@ import { useFacturesFiltering } from "./hooks/useFacturesFiltering";
 import FacturesFilters from "./components/FacturesFilters";
 import { FacturesTable } from "./components/FacturesTable";
 import Pagination from "./components/Pagination";
+import { Loader2 } from "lucide-react";
 
 // Composant principal
 export default function TableauSuiviFactures() {
   // États pour les données
   const [factures, setFactures] = useState<FactureDetaillee[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Récupération des données
   useEffect(() => {
     async function fetchFactures() {
+      setIsLoading(true);
       try {
         const response = await fetch("/api/factures");
         const data = await response.json();
@@ -26,6 +29,8 @@ export default function TableauSuiviFactures() {
       } catch (error) {
         console.error("Erreur lors de la récupération des factures :", error);
         setFactures([]);
+      } finally {
+        setIsLoading(false);
       }
     }
 
@@ -95,21 +100,31 @@ export default function TableauSuiviFactures() {
         setFilterType={setFilterType}
       />
 
-      {/* Tableau des factures */}
-      <FacturesTable 
-        currentFactures={currentFactures}
-        sortField={sortField}
-        sortDirection={sortDirection}
-        handleSort={handleSort}
-        updateStatut={updateStatut}
-      />
+      {/* État de chargement */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+          <p className="text-lg text-gray-600">Chargement des factures en cours...</p>
+        </div>
+      ) : (
+        <>
+          {/* Tableau des factures */}
+          <FacturesTable 
+            currentFactures={currentFactures}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            handleSort={handleSort}
+            updateStatut={updateStatut}
+          />
 
-      {/* Pagination */}
-      <Pagination 
-        currentPage={currentPage} 
-        totalPages={totalPages} 
-        onPageChange={setCurrentPage} 
-      />
+          {/* Pagination */}
+          <Pagination 
+            currentPage={currentPage} 
+            totalPages={totalPages} 
+            onPageChange={setCurrentPage} 
+          />
+        </>
+      )}
     </div>
   );
 }

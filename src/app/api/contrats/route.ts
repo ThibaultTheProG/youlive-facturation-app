@@ -56,10 +56,10 @@ export async function GET() {
         !commission ||
         !contract_at
       ) {
-        // console.error(
-        //   "Contrat invalide, certains champs requis sont manquants :",
-        //   contrat
-        // );
+        console.error(
+          "Contrat invalide, certains champs requis sont manquants :",
+          contrat
+        );
         continue;
       }
 
