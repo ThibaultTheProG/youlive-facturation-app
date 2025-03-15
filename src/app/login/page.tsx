@@ -71,7 +71,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-100">
+    <div className="flex items-center justify-center h-screen">
       <Card className="w-full max-w-md p-6 shadow-lg">
         <CardHeader>
           <h1 className="text-2xl font-semibold text-center">Connexion</h1>
