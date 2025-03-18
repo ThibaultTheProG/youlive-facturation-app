@@ -29,7 +29,7 @@ export async function GET() {
     const brut = await response.json();
     const contracts: Contract[] = brut.contracts || [];
     const filteredContracts = contracts.filter(
-      (contract) => contract.step === "4" || "2"
+      (contract) => contract.step === "4"
     );
 
     console.log("Nombre de contrats filtrés:", filteredContracts.length);
