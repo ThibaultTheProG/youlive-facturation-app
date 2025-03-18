@@ -39,23 +39,11 @@ export async function GET() {
     const insertedContracts = [];
 
     for (const contrat of filteredContracts) {
-      const {
-        id,
-        step,
-        property,
-        commission,
-        contract_at,
-        entries,
-      } = contrat;
+      const { id, step, property, commission_agency, contract_at, entries } =
+        contrat;
 
       // Validation des champs principaux
-      if (
-        !id ||
-        !step ||
-        !property ||
-        !commission ||
-        !contract_at
-      ) {
+      if (!id || !step || !property || !commission_agency || !contract_at) {
         console.error(
           "Contrat invalide, certains champs requis sont manquants :",
           contrat
@@ -78,14 +66,14 @@ export async function GET() {
           update: {
             statut: step,
             property_id: Number(property),
-            honoraires: Number(commission),
+            honoraires: Number(commission_agency),
             date_signature: new Date(contract_at),
           },
           create: {
             idcontratapimo: Number(id),
             statut: step,
             property_id: Number(property),
-            honoraires: Number(commission),
+            honoraires: Number(commission_agency),
             date_signature: new Date(contract_at),
           },
         });
@@ -93,8 +81,10 @@ export async function GET() {
         insertedContracts.push(createdContrat);
 
         // Trier les entries pour avoir les type 2, donc apporteur d'affaire, en premier
-        const sortEntries = entries?.sort((a: Entries, b: Entries) => 
-          Number(b.type === "2") - Number(a.type === "2") || Number(a.type === "9") - Number(b.type === "9")
+        const sortEntries = entries?.sort(
+          (a: Entries, b: Entries) =>
+            Number(b.type === "2") - Number(a.type === "2") ||
+            Number(a.type === "9") - Number(b.type === "9")
         );
 
         let caForUser = 0;
@@ -102,17 +92,20 @@ export async function GET() {
         // Gérer les relations (entries)
         if (sortEntries && Array.isArray(sortEntries)) {
           for (const entry of sortEntries) {
-            const { user, amount, vat, vat_rate, type } = entry;
+            const { id, user, amount, vat, vat_rate, type } = entry;
 
-            if (type === '2') {
+            if (type === "2") {
               caForUser += Number(amount);
-              console.log("Il y a un apporteur d'affaire pour ce contrat et le montant est de : " + caForUser);
+              console.log(
+                "Il y a un apporteur d'affaire pour ce contrat et le montant est de : " +
+                  caForUser
+              );
               continue;
             }
 
             const amountForUser = Number(amount) + caForUser;
 
-            if (!user || !amount || !vat || !vat_rate) {
+            if (!id || !user || !amount || !vat || !vat_rate) {
               continue;
             }
 
@@ -121,8 +114,8 @@ export async function GET() {
               where: { idapimo: Number(user) },
               select: {
                 id: true,
-                chiffre_affaires: true
-              }
+                chiffre_affaires: true,
+              },
             });
 
             if (!utilisateur) {
@@ -132,10 +125,7 @@ export async function GET() {
             // Créer la relation si elle n'existe pas
             const relationResult = await prisma.relations_contrats.upsert({
               where: {
-                contrat_id_user_id: {
-                  contrat_id: createdContrat.id,
-                  user_id: utilisateur.id,
-                },
+                idrelationapimo: Number(id),
               },
               update: {
                 honoraires_agent: Number(amountForUser),
@@ -143,6 +133,7 @@ export async function GET() {
                 vat_rate: Number(vat_rate),
               },
               create: {
+                idrelationapimo: Number(id),
                 contrat_id: createdContrat.id,
                 user_id: utilisateur.id,
                 honoraires_agent: Number(amountForUser),
@@ -155,15 +146,17 @@ export async function GET() {
             // (pour éviter de compter plusieurs fois le même montant)
             if (relationResult) {
               // Vérifier si c'est une création ou une mise à jour
-              const isNewRelation = !await prisma.relations_contrats.findFirst({
-                where: {
-                  contrat_id: createdContrat.id,
-                  user_id: utilisateur.id,
-                  created_at: {
-                    lt: new Date(new Date().getTime() - 5000) // Créé il y a plus de 5 secondes
-                  }
+              const isNewRelation = !(await prisma.relations_contrats.findFirst(
+                {
+                  where: {
+                    contrat_id: createdContrat.id,
+                    user_id: utilisateur.id,
+                    created_at: {
+                      lt: new Date(new Date().getTime() - 5000), // Créé il y a plus de 5 secondes
+                    },
+                  },
                 }
-              });
+              ));
 
               if (isNewRelation) {
                 // Récupérer le chiffre d'affaires actuel
@@ -174,12 +167,16 @@ export async function GET() {
                 // Mettre à jour le chiffre d'affaires
                 await prisma.utilisateurs.update({
                   where: { id: utilisateur.id },
-                  data: { chiffre_affaires: newCA }
+                  data: { chiffre_affaires: newCA },
                 });
 
-                console.log(`✅ Chiffre d'affaires mis à jour pour l'utilisateur ${utilisateur.id}: ${currentCA} → ${newCA} (+${honorairesAgent})`);
+                console.log(
+                  `✅ Chiffre d'affaires mis à jour pour l'utilisateur ${utilisateur.id}: ${currentCA} → ${newCA} (+${honorairesAgent})`
+                );
               } else {
-                console.log(`ℹ️ Relation existante, pas de mise à jour du chiffre d'affaires pour l'utilisateur ${utilisateur.id}`);
+                console.log(
+                  `ℹ️ Relation existante, pas de mise à jour du chiffre d'affaires pour l'utilisateur ${utilisateur.id}`
+                );
               }
             }
           }
@@ -220,10 +217,10 @@ export async function GET() {
 
     console.log(`${insertedContracts.length} contrats insérés avec succès`);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: `${insertedContracts.length} contrats insérés avec succès`,
-      data: filteredContracts 
+      data: filteredContracts,
     });
   } catch (error) {
     console.error("Erreur lors de la récupération des contrats :", error);

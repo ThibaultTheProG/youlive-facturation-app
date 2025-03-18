@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { PrismaClient } from "@prisma/client";
 import { RelationContrat } from "@/lib/types.js";
-import nodemailer from "nodemailer";
+//import nodemailer from "nodemailer";
 
 // Type pour la transaction Prisma
 type PrismaTransaction = Omit<
@@ -87,15 +87,15 @@ async function createFacture() {
 
     console.log("✅ Factures créées avec succès.");
 
-    // Envoyer les notifications après la fin de la transaction
-    console.log(`📧 Envoi de ${notificationsToSend.length} notifications...`);
-    for (const notification of notificationsToSend) {
-      await sendEmailNotification(
-        notification.userId,
-        notification.factureType,
-        notification.montant
-      );
-    }
+    // // Envoyer les notifications après la fin de la transaction
+    // console.log(`📧 Envoi de ${notificationsToSend.length} notifications...`);
+    // for (const notification of notificationsToSend) {
+    //   await sendEmailNotification(
+    //     notification.userId,
+    //     notification.factureType,
+    //     notification.montant
+    //   );
+    // }
   } catch (error) {
     console.error("❌ Erreur lors de la création des factures :", error);
     throw error;
@@ -271,59 +271,59 @@ async function createFactureRecrutement(
   }
 }
 
-// Fonction pour envoyer une notification par email
-async function sendEmailNotification(userId: number, factureType: string, montant: number) {
-  try {
-    // Pour les tests, on envoie toujours à cette adresse
-    const testEmail = "tuffinthibaultgw@gmail.com";
+// // Fonction pour envoyer une notification par email
+// async function sendEmailNotification(userId: number, factureType: string, montant: number) {
+//   try {
+//     // Pour les tests, on envoie toujours à cette adresse
+//     const testEmail = "tuffinthibaultgw@gmail.com";
     
-    // Dans un environnement de production, on récupérerait l'email du conseiller
-    // const user = await prisma.utilisateurs.findUnique({
-    //   where: { id: userId },
-    //   select: { email: true, prenom: true, nom: true }
-    // });
-    // const email = user?.email;
+//     // Dans un environnement de production, on récupérerait l'email du conseiller
+//     // const user = await prisma.utilisateurs.findUnique({
+//     //   where: { id: userId },
+//     //   select: { email: true, prenom: true, nom: true }
+//     // });
+//     // const email = user?.email;
     
-    // Configuration du transporteur d'emails
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_SERVER_HOST,
-      port: Number(process.env.SMTP_SERVER_PORT),
-      secure: true, // true pour le port 465, false pour 587
-      auth: {
-        user: process.env.SMTP_SERVER_USERNAME,
-        pass: process.env.SMTP_SERVER_PASSWORD,
-      },
-    });
+//     // Configuration du transporteur d'emails
+//     const transporter = nodemailer.createTransport({
+//       host: process.env.SMTP_SERVER_HOST,
+//       port: Number(process.env.SMTP_SERVER_PORT),
+//       secure: true, // true pour le port 465, false pour 587
+//       auth: {
+//         user: process.env.SMTP_SERVER_USERNAME,
+//         pass: process.env.SMTP_SERVER_PASSWORD,
+//       },
+//     });
     
-    // Configuration de l'email
-    const mailOptions = {
-      from: process.env.SMTP_FROM_EMAIL,
-      to: testEmail,
-      subject: `Nouvelle facture ${factureType} créée`,
-      text: `Une nouvelle facture de type ${factureType} d'un montant de ${montant.toLocaleString()} € a été créée pour vous.`,
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
-          <h2 style="color: #e67e22;">Nouvelle facture créée</h2>
-          <p>Bonjour,</p>
-          <p>Une nouvelle facture a été créée dans votre espace :</p>
-          <ul>
-            <li><strong>Type :</strong> ${factureType}</li>
-            <li><strong>Montant :</strong> ${montant.toLocaleString()} €</li>
-          </ul>
-          <p>Vous pouvez consulter cette facture dans votre espace personnel.</p>
-          <p>Cordialement,<br>L'équipe YouLive</p>
-        </div>
-      `
-    };
+//     // Configuration de l'email
+//     const mailOptions = {
+//       from: process.env.SMTP_FROM_EMAIL,
+//       to: testEmail,
+//       subject: `Nouvelle facture ${factureType} créée`,
+//       text: `Une nouvelle facture de type ${factureType} d'un montant de ${montant.toLocaleString()} € a été créée pour vous.`,
+//       html: `
+//         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
+//           <h2 style="color: #e67e22;">Nouvelle facture créée</h2>
+//           <p>Bonjour,</p>
+//           <p>Une nouvelle facture a été créée dans votre espace :</p>
+//           <ul>
+//             <li><strong>Type :</strong> ${factureType}</li>
+//             <li><strong>Montant :</strong> ${montant.toLocaleString()} €</li>
+//           </ul>
+//           <p>Vous pouvez consulter cette facture dans votre espace personnel.</p>
+//           <p>Cordialement,<br>L'équipe YouLive</p>
+//         </div>
+//       `
+//     };
     
-    console.log("📧 Tentative d'envoi d'email à:", testEmail);
+//     console.log("📧 Tentative d'envoi d'email à:", testEmail);
     
-    // Envoi de l'email
-    const info = await transporter.sendMail(mailOptions);
+//     // Envoi de l'email
+//     const info = await transporter.sendMail(mailOptions);
     
-    console.log(`✉️ Notification envoyée pour la facture de type ${factureType}:`, info.messageId);
-  } catch (error) {
-    console.error("❌ Erreur lors de l'envoi de la notification par email:", error);
-    // On ne propage pas l'erreur pour ne pas bloquer la création de facture
-  }
-}
+//     console.log(`✉️ Notification envoyée pour la facture de type ${factureType}:`, info.messageId);
+//   } catch (error) {
+//     console.error("❌ Erreur lors de l'envoi de la notification par email:", error);
+//     // On ne propage pas l'erreur pour ne pas bloquer la création de facture
+//   }
+// }

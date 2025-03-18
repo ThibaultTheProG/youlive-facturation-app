@@ -57,6 +57,7 @@ export interface Contract {
 }
 
 export interface Entries {
+  id: number;
   user: number | string;
   amount: number | string;
   vat: number | string;
