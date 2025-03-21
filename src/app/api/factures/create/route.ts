@@ -135,14 +135,19 @@ async function createFactureCommission(
         user_id: user_id,
         type: 'commission',
         retrocession: retrocessionAmount,
-        statut_paiement: 'non payé'
+        statut_paiement: 'non payé',
+        created_at: new Date()
       }
     });
 
-    console.log(`✅ Facture commission créée pour l'utilisateur ${user_id}`);
+    console.log(`✅ Facture commission créée/mise à jour pour l'utilisateur ${user_id}`);
     
-    // Si c'est une nouvelle facture (pas une mise à jour), préparer une notification
-    if (result) {
+    // Vérifier si c'est une nouvelle facture en comparant la date de création avec la date actuelle
+    const isNewInvoice = result.created_at && 
+      new Date().getTime() - new Date(result.created_at).getTime() < 1000; // moins d'une seconde d'écart
+    
+    // Ne renvoyer la notification que si c'est une nouvelle facture
+    if (isNewInvoice) {
       return {
         userId: user_id,
         factureType: 'commission',
@@ -247,14 +252,19 @@ async function createFactureRecrutement(
             user_id: parrainId,
             type: 'recrutement',
             retrocession: retrocessionAmount,
-            statut_paiement: 'non payé'
+            statut_paiement: 'non payé',
+            created_at: new Date()
           }
         });
 
-        console.log(`✅ Facture parrainage créée pour le parrain ${parrainId} (${percentage}%)`);
+        console.log(`✅ Facture parrainage créée/mise à jour pour le parrain ${parrainId} (${percentage}%)`);
         
-        // Si c'est une nouvelle facture (pas une mise à jour), préparer une notification
-        if (result) {
+        // Vérifier si c'est une nouvelle facture en comparant la date de création avec la date actuelle
+        const isNewInvoice = result.created_at && 
+          new Date().getTime() - new Date(result.created_at).getTime() < 1000; // moins d'une seconde d'écart
+        
+        // Ne renvoyer la notification que si c'est une nouvelle facture
+        if (isNewInvoice) {
           notifications.push({
             userId: parrainId,
             factureType: 'recrutement',

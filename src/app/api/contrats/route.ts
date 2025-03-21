@@ -44,7 +44,7 @@ export async function GET() {
 
       // Validation des champs principaux
       if (!id || !step || !property || !commission_agency || !contract_at) {
-        console.error(
+        console.log(
           "Contrat invalide, certains champs requis sont manquants :",
           contrat
         );
