@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { FactureDetaillee } from "@/lib/types";
-import { SortDirection, SortField } from "../components/SortableHeader";
+import { SortDirection, SortField } from "../app/admin/suiviFactures/components/SortableHeader";
 
 export const useFacturesFiltering = (factures: FactureDetaillee[]) => {
   // États pour les filtres
@@ -16,21 +16,18 @@ export const useFacturesFiltering = (factures: FactureDetaillee[]) => {
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  // Filtrage et tri des factures
-  const [filteredFactures, setFilteredFactures] = useState<FactureDetaillee[]>([]);
-
   // Fonction pour normaliser les chaînes (pour la recherche insensible aux accents)
-  const normalizeString = (str: string = "") => 
+  const normalizeString = useCallback((str: string = "") => 
     str
       .normalize("NFD")
       .replace(/\p{Diacritic}/gu, "")
-      .toLowerCase();
+      .toLowerCase()
+  , []);
 
-  // Filtrage et tri des factures
-  useEffect(() => {
+  // Filtrage des factures
+  const filteredFactures = useMemo(() => {
     if (!Array.isArray(factures)) {
-      setFilteredFactures([]);
-      return;
+      return [];
     }
     
     let filtered = [...factures];
@@ -88,18 +85,20 @@ export const useFacturesFiltering = (factures: FactureDetaillee[]) => {
       });
     }
 
-    setFilteredFactures(filtered);
-  }, [searchTerm, filterStatut, filterType, factures, sortField, sortDirection]);
+    return filtered;
+  }, [factures, searchTerm, filterStatut, filterType, sortField, sortDirection, normalizeString]);
 
   // Gestion du tri
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field as SortField);
+  const handleSort = useCallback((field: string) => {
+    setSortField((prevField) => {
+      if (prevField === field) {
+        setSortDirection((prev) => prev === 'asc' ? 'desc' : 'asc');
+        return prevField;
+      }
       setSortDirection('asc');
-    }
-  };
+      return field as SortField;
+    });
+  }, []);
 
   // Calcul des factures à afficher pour la page courante
   const currentFactures = useMemo(() => {

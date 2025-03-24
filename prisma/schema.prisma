@@ -61,6 +61,10 @@ model factures {
   utilisateurs       utilisateurs?       @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@unique([relation_id, type, user_id], map: "factures_unique_constraint")
+  @@index([created_at], map: "idx_factures_created_at")
+  @@index([user_id], map: "idx_factures_user_id")
+  @@index([type], map: "idx_factures_type")
+  @@index([statut_paiement], map: "idx_factures_statut_paiement")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
