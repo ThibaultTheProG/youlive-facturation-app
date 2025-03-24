@@ -63,7 +63,7 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
           <SelectTrigger id="filter-statut" className="w-full">
             <SelectValue placeholder="Tous les statuts" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white">
             <SelectItem value="tous_statuts">Tous les statuts</SelectItem>
             <SelectItem value="payé">Payé</SelectItem>
             <SelectItem value="non payé">Non payé</SelectItem>
@@ -81,7 +81,7 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
           <SelectTrigger id="filter-type" className="w-full">
             <SelectValue placeholder="Tous les types" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white">
             <SelectItem value="tous_types">Tous les types</SelectItem>
             <SelectItem value="recrutement">Recrutement</SelectItem>
             <SelectItem value="commission">Commission</SelectItem>
