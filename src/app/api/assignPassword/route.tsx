@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { hashPassword } from "@/lib/password";
 import prisma from "@/lib/db"; // Assure-toi que c'est la bonne connexion à la base de données
 import { Prisma } from "@prisma/client";
+import { sendPasswordEmail } from "@/lib/email";
 
 export const runtime = 'nodejs';
 
@@ -41,6 +42,35 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!utilisateur.email) {
+      return NextResponse.json(
+        { error: "L'utilisateur n'a pas d'adresse email configurée." },
+        { status: 400 }
+      );
+    }
+
+    if (!utilisateur.prenom || !utilisateur.nom) {
+      return NextResponse.json(
+        { error: "Les informations de l'utilisateur sont incomplètes." },
+        { status: 400 }
+      );
+    }
+
+    // Envoyer l'email avec le mot de passe
+    const emailSent = await sendPasswordEmail(
+      utilisateur.email,
+      password,
+      utilisateur.prenom,
+      utilisateur.nom
+    );
+
+    if (!emailSent) {
+      return NextResponse.json(
+        { error: "Erreur lors de l'envoi de l'email." },
+        { status: 500 }
+      );
+    }
+
     // Hasher le mot de passe avec notre fonction auth.ts
     const hashedPassword = await hashPassword(password.toString());
 
@@ -55,7 +85,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      { message: "Mot de passe attribué avec succès !" },
+      { message: "Mot de passe attribué avec succès et email envoyé !" },
       { status: 200 }
     );
   } catch (error) {
