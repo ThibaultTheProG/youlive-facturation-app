@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { FactureDetaillee } from "@/lib/types";
 import { SortDirection, SortField } from "../app/admin/suiviFactures/components/SortableHeader";
 import useSWR from 'swr';
 

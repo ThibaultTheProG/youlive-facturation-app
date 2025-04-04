@@ -12,8 +12,6 @@ export async function GET(request: Request) {
     const filterType = searchParams.get('filterType') || '';
     const sortField = searchParams.get('sortField') || 'created_at';
     const sortDirection = searchParams.get('sortDirection') || 'desc';
-    
-    const skip = (page - 1) * pageSize;
 
     // Construire la condition de recherche
     const where: Prisma.facturesWhereInput = {
