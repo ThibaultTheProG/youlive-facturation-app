@@ -1,8 +1,16 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { FactureDetaillee } from "@/lib/types";
 import { SortDirection, SortField } from "../app/admin/suiviFactures/components/SortableHeader";
+import useSWR from 'swr';
 
-export const useFacturesFiltering = (factures: FactureDetaillee[]) => {
+// Fonction fetcher pour SWR
+const fetcher = async (url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Erreur lors de la récupération des données');
+  return response.json();
+};
+
+export const useFacturesFiltering = () => {
   // États pour les filtres
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatut, setFilterStatut] = useState("");
@@ -16,77 +24,35 @@ export const useFacturesFiltering = (factures: FactureDetaillee[]) => {
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  // Fonction pour normaliser les chaînes (pour la recherche insensible aux accents)
-  const normalizeString = useCallback((str: string = "") => 
-    str
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "")
-      .toLowerCase()
-  , []);
+  // Référence pour suivre les changements de filtres
+  const prevFiltersRef = useRef({
+    searchTerm,
+    filterStatut,
+    filterType,
+    sortField,
+    sortDirection
+  });
 
-  // Filtrage des factures
-  const filteredFactures = useMemo(() => {
-    if (!Array.isArray(factures)) {
-      return [];
-    }
-    
-    let filtered = [...factures];
+  // Construction de l'URL pour SWR avec les paramètres de filtrage
+  const swrKey = useMemo(() => {
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      pageSize: itemsPerPage.toString(),
+      searchTerm,
+      filterStatut,
+      filterType,
+      sortField: sortField || 'created_at',
+      sortDirection
+    });
+    return `/api/factures?${params.toString()}`;
+  }, [currentPage, itemsPerPage, searchTerm, filterStatut, filterType, sortField, sortDirection]);
 
-    // Filtre par nom de conseiller
-    if (searchTerm) {
-      const normalizedSearch = normalizeString(searchTerm);
-      filtered = filtered.filter((facture) => {
-        if (!facture.conseiller || !facture.conseiller.prenom || !facture.conseiller.nom) {
-          return false;
-        }
-        
-        return normalizeString(
-          `${facture.conseiller.prenom} ${facture.conseiller.nom}`
-        ).includes(normalizedSearch);
-      });
-    }
-
-    // Filtre par statut
-    if (filterStatut) {
-      filtered = filtered.filter(
-        (facture) => facture.statut_paiement === filterStatut
-      );
-    }
-
-    // Filtre par type
-    if (filterType) {
-      filtered = filtered.filter(
-        (facture) => facture.type === filterType
-      );
-    }
-
-    // Tri des résultats
-    if (sortField) {
-      filtered.sort((a, b) => {
-        let valueA, valueB;
-        
-        if (sortField === 'conseiller') {
-          valueA = `${a.conseiller?.prenom || ''} ${a.conseiller?.nom || ''}`.toLowerCase();
-          valueB = `${b.conseiller?.prenom || ''} ${b.conseiller?.nom || ''}`.toLowerCase();
-        } else if (sortField === 'montant') {
-          valueA = parseFloat(a.retrocession);
-          valueB = parseFloat(b.retrocession);
-        } else {
-          return 0;
-        }
-        
-        if (valueA < valueB) {
-          return sortDirection === 'asc' ? -1 : 1;
-        }
-        if (valueA > valueB) {
-          return sortDirection === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-
-    return filtered;
-  }, [factures, searchTerm, filterStatut, filterType, sortField, sortDirection, normalizeString]);
+  // Utilisation de SWR pour la gestion du cache et des données
+  const { data, isLoading, mutate } = useSWR(swrKey, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 60000 // Cache pendant 1 minute
+  });
 
   // Gestion du tri
   const handleSort = useCallback((field: string) => {
@@ -100,26 +66,29 @@ export const useFacturesFiltering = (factures: FactureDetaillee[]) => {
     });
   }, []);
 
-  // Calcul des factures à afficher pour la page courante
-  const currentFactures = useMemo(() => {
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    return Array.isArray(filteredFactures) 
-      ? filteredFactures.slice(indexOfFirstItem, indexOfLastItem) 
-      : [];
-  }, [filteredFactures, currentPage, itemsPerPage]);
-
-  // Calcul du nombre total de pages
-  const totalPages = useMemo(() => 
-    Array.isArray(filteredFactures) 
-      ? Math.ceil(filteredFactures.length / itemsPerPage) 
-      : 0,
-    [filteredFactures, itemsPerPage]
-  );
-
   // Réinitialiser la page courante lorsque les filtres ou le tri changent
   useEffect(() => {
-    setCurrentPage(1);
+    // Vérifier si les filtres ont changé
+    const filtersChanged = 
+      prevFiltersRef.current.searchTerm !== searchTerm ||
+      prevFiltersRef.current.filterStatut !== filterStatut ||
+      prevFiltersRef.current.filterType !== filterType ||
+      prevFiltersRef.current.sortField !== sortField ||
+      prevFiltersRef.current.sortDirection !== sortDirection;
+
+    if (filtersChanged) {
+      // Réinitialiser la page à 1
+      setCurrentPage(1);
+      
+      // Mettre à jour la référence des filtres précédents
+      prevFiltersRef.current = {
+        searchTerm,
+        filterStatut,
+        filterType,
+        sortField,
+        sortDirection
+      };
+    }
   }, [searchTerm, filterStatut, filterType, sortField, sortDirection]);
 
   return {
@@ -134,9 +103,10 @@ export const useFacturesFiltering = (factures: FactureDetaillee[]) => {
     sortField,
     sortDirection,
     handleSort,
-    currentFactures,
-    totalPages,
-    filteredFactures
+    currentFactures: data?.factures || [],
+    totalPages: Math.ceil((data?.totalCount || 0) / itemsPerPage),
+    isLoading,
+    mutate
   };
 };
 

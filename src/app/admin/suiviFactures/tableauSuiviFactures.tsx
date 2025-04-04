@@ -1,35 +1,14 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useEffect } from "react";
 import { useFacturesFiltering } from "@/hooks/useFacturesFiltering";
 import FacturesFilters from "./components/FacturesFilters";
 import { FacturesTable } from "./components/FacturesTable";
 import Pagination from "./components/Pagination";
 import { Loader2 } from "lucide-react";
-import useSWR from 'swr';
-
-// Fonction fetcher pour SWR
-const fetcher = async (url: string) => {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Erreur lors de la récupération des données');
-  return response.json();
-};
 
 // Composant principal
 const TableauSuiviFactures: React.FC = () => {
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
-
-  // Construction de l'URL pour SWR
-  const swrKey = useMemo(() => `/api/factures?page=${page}&pageSize=${pageSize}`, [page, pageSize]);
-
-  // Utilisation de SWR pour la gestion du cache et des données
-  const { data, isLoading, mutate } = useSWR(swrKey, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 60000 // Cache pendant 1 minute
-  });
-
   // Utilisation du hook personnalisé pour la gestion des filtres et du tri
   const {
     searchTerm,
@@ -38,19 +17,28 @@ const TableauSuiviFactures: React.FC = () => {
     setFilterStatut,
     filterType,
     setFilterType,
+    currentPage,
+    setCurrentPage,
     sortField,
     sortDirection,
     handleSort,
     currentFactures,
-  } = useFacturesFiltering(data?.factures || []);
+    totalPages,
+    isLoading,
+    mutate
+  } = useFacturesFiltering();
 
-  // Gestionnaire de changement de page
-  const handlePageChange = useCallback((newPage: number) => {
-    setPage(newPage);
-  }, []);
+  // Effet pour s'assurer que la pagination est correctement gérée
+  useEffect(() => {
+    // Si le nombre total de pages est inférieur à la page courante,
+    // réinitialiser la page courante à 1
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage, setCurrentPage]);
 
   // Mise à jour du statut d'une facture
-  const updateStatut = useCallback(async (
+  const updateStatut = async (
     factureId: number,
     newStatut: string,
     numero: string,
@@ -84,40 +72,21 @@ const TableauSuiviFactures: React.FC = () => {
         }`
       );
     }
-  }, [mutate]);
-
-  // Mémorisation des props pour FacturesFilters
-  const filtersProps = useMemo(() => ({
-    searchTerm,
-    setSearchTerm,
-    filterStatut,
-    setFilterStatut,
-    filterType,
-    setFilterType
-  }), [searchTerm, setSearchTerm, filterStatut, setFilterStatut, filterType, setFilterType]);
-
-  // Mémorisation des props pour FacturesTable
-  const tableProps = useMemo(() => ({
-    currentFactures,
-    sortField,
-    sortDirection,
-    handleSort,
-    updateStatut
-  }), [currentFactures, sortField, sortDirection, handleSort, updateStatut]);
-
-  // Mémorisation des props pour Pagination
-  const paginationProps = useMemo(() => ({
-    currentPage: page,
-    totalPages: Math.ceil((data?.totalCount || 0) / pageSize),
-    onPageChange: handlePageChange
-  }), [page, data?.totalCount, pageSize, handlePageChange]);
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Suivi des factures</h1>
 
       {/* Filtres */}
-      <FacturesFilters {...filtersProps} />
+      <FacturesFilters
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        filterStatut={filterStatut}
+        setFilterStatut={setFilterStatut}
+        filterType={filterType}
+        setFilterType={setFilterType}
+      />
 
       {/* État de chargement */}
       {isLoading ? (
@@ -130,14 +99,24 @@ const TableauSuiviFactures: React.FC = () => {
       ) : (
         <>
           {/* Tableau des factures */}
-          <FacturesTable {...tableProps} />
+          <FacturesTable
+            currentFactures={currentFactures}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            handleSort={handleSort}
+            updateStatut={updateStatut}
+          />
 
           {/* Pagination */}
-          <Pagination {...paginationProps} />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </>
       )}
     </div>
   );
 };
 
-export default React.memo(TableauSuiviFactures);
+export default TableauSuiviFactures;

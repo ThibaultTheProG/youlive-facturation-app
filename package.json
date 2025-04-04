@@ -63,5 +63,23 @@
     "prisma": "^6.5.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "@vercel/speed-insights",
+      "esbuild",
+      "prisma",
+      "sharp"
+    ],
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "@vercel/speed-insights",
+      "esbuild",
+      "prisma",
+      "sharp"
+    ]
   }
 }

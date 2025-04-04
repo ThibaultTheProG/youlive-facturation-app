@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -38,6 +38,12 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
   const handleTypeChange = useCallback((value: string) => {
     setFilterType(value === "tous_types" ? "" : value);
   }, [setFilterType]);
+
+  // Effet pour réinitialiser les filtres si nécessaire
+  useEffect(() => {
+    // Cette fonction vide est intentionnelle, elle sert juste à déclencher l'effet dans le hook parent
+    // qui réinitialisera la pagination
+  }, [searchTerm, filterStatut, filterType]);
 
   return (
     <div className="grid gap-4 mb-6 md:grid-cols-3">
