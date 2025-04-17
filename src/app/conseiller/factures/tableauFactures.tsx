@@ -22,6 +22,29 @@ export default function TableauFactures({ user }: { user: User }) {
   const [typeFilter, setTypeFilter] = useState<string>("tous");
   const itemsPerPage = 10;
 
+  // Fonction pour charger les factures
+  const loadFactures = () => {
+    getFactures(user.id)
+      .then((factures) => {
+        const facturesTriees = factures
+          .map(facture => {
+            const factureFormatted = {
+              ...facture,
+              date_signature: facture.date_signature || new Date().toISOString(),
+              numero_mandat: facture.numero_mandat,
+              vat_rate: 0,
+              created_at: facture.created_at ? new Date(facture.created_at).toISOString() : new Date().toISOString()
+            };
+            return factureFormatted as unknown as Facture;
+          })
+          .sort((a, b) => {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
+        setFacturesList(facturesTriees);
+      })
+      .catch((error) => console.error("Impossible de récupérer les factures :", error));
+  };
+
   // Calcul des totaux des rétrocessions par type
   const totalRetrocessionCommission = facturesList
     ? facturesList
@@ -57,25 +80,7 @@ export default function TableauFactures({ user }: { user: User }) {
   }, [typeFilter]);
 
   useEffect(() => {
-    getFactures(user.id)
-      .then((factures) => {
-        const facturesTriees = factures
-          .map(facture => {
-            const factureFormatted = {
-              ...facture,
-              date_signature: facture.date_signature || new Date().toISOString(),
-              numero_mandat: facture.numero_mandat,
-              vat_rate: 0,
-              created_at: facture.created_at ? new Date(facture.created_at).toISOString() : new Date().toISOString()
-            };
-            return factureFormatted as unknown as Facture;
-          })
-          .sort((a, b) => {
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          });
-        setFacturesList(facturesTriees);
-      })
-      .catch((error) => console.error("Impossible de récupérer les factures :", error));
+    loadFactures();
   }, [user.id]);
 
   const sendFacture = async (factureId: number) => {
@@ -224,10 +229,12 @@ export default function TableauFactures({ user }: { user: User }) {
             }
             setSelectedFacture(null);
             setActionType(null);
+            loadFactures(); // Recharger les factures après validation
           }}
           onClose={() => {
             setSelectedFacture(null);
             setActionType(null);
+            loadFactures(); // Recharger les factures après fermeture
           }}
         />
       )}
