@@ -16,8 +16,8 @@ const transporter = nodemailer.createTransport({
 export async function sendPasswordEmail(email: string, password: string, prenom: string, nom: string) {
   try {
     await transporter.sendMail({
-      from: process.env.SMTP_FROM,
-      to: "tuffinthibaultgw@gmail.com",
+      from: `"Youlive" <${process.env.SMTP_SERVER_USERNAME}>`,
+      to: email,
       subject: 'Vos identifiants de connexion',
       html: `
         <h1>Bienvenue ${prenom} ${nom} !</h1>
