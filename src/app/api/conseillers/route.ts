@@ -40,7 +40,8 @@ export async function GET() {
       
       if (!firstname || !lastname) continue;
       
-      await prisma.utilisateurs.upsert({
+      // Créer ou mettre à jour le conseiller
+      const utilisateur = await prisma.utilisateurs.upsert({
         where: {
           idapimo: idToNumber
         },
@@ -63,6 +64,20 @@ export async function GET() {
           siren: siren || null,
           role: "conseiller",
         },
+      });
+
+      // Créer automatiquement une entrée dans la table parrainages
+      await prisma.parrainages.upsert({
+        where: {
+          user_id: utilisateur.id
+        },
+        create: {
+          user_id: utilisateur.id,
+          niveau1: null,
+          niveau2: null,
+          niveau3: null
+        },
+        update: {} // Ne rien mettre à jour si l'entrée existe déjà
       });
     }
     
