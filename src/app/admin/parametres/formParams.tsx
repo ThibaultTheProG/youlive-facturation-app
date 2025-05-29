@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import InputCustom from "@/components/uiCustom/inputCustom";
+// import InputCustom from "@/components/uiCustom/inputCustom";
 import { Label } from "@/components/ui/label";
 import RadioCustom from "@/components/uiCustom/radioCustom";
 import { Conseiller } from "@/lib/types";
-import PopoverCustom from "@/components/uiCustom/popoverCustom";
+// import PopoverCustom from "@/components/uiCustom/popoverCustom";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import SubmitButton from "@/components/uiCustom/submitButton";
@@ -14,6 +14,10 @@ import FormStatusMessage, {
 } from "@/components/uiCustom/formStatusMessage";
 import useConseillers from "@/hooks/useConseillers";
 import { calculRetrocession } from "@/utils/calculs";
+import ConseillerSelector from "./_components/ConseillerSelector";
+import ConseillerDetails from "./_components/ConseillerDetails";
+import ContratManager from "./_components/ContratManager";
+import ParrainagesManager from "./_components/ParrainagesManager";
 
 // Composant principal
 export default function FormParams() {
@@ -56,6 +60,9 @@ export default function FormParams() {
     null
   );
 
+  // Ajout de l'état pour la gestion manuelle de la rétrocession
+  const [isRetrocessionManuallySet, setIsRetrocessionManuallySet] = useState(false);
+
   // Synchroniser les champs lorsque selectedConseiller change
   useEffect(() => {
     if (selectedConseiller) {
@@ -74,17 +81,24 @@ export default function FormParams() {
 
   // Calculer la rétrocession à chaque changement de chiffre d'affaires ou de type de contrat
   useEffect(() => {
-    if (selectedTypeContrat) {
-      const calculatedRetrocession = calculRetrocession(
-        selectedTypeContrat,
-        chiffreAffaires,
-        autoParrain
-      );
-      setRetrocession(calculatedRetrocession);
-    } else {
-      setRetrocession(0);
+    if (!isRetrocessionManuallySet) {
+      if (selectedTypeContrat) {
+        const calculatedRetrocession = calculRetrocession(
+          selectedTypeContrat,
+          chiffreAffaires,
+          autoParrain
+        );
+        setRetrocession(calculatedRetrocession);
+      } else {
+        setRetrocession(0);
+      }
     }
-  }, [chiffreAffaires, selectedTypeContrat, autoParrain]);
+  }, [chiffreAffaires, selectedTypeContrat, autoParrain, isRetrocessionManuallySet]);
+
+  // Remise à zéro du flag manuel lors du changement de conseiller
+  useEffect(() => {
+    setIsRetrocessionManuallySet(false);
+  }, [selectedConseiller]);
 
   // Afficher un état de chargement pendant le chargement des conseillers
   useEffect(() => {
@@ -369,212 +383,66 @@ export default function FormParams() {
   // Rendu
   return (
     <form action={handleFormSubmit} className="space-y-8">
-      <div className="flex flex-col space-y-2">
-        <Label>Sélectionner un conseiller</Label>
-        <PopoverCustom
-          open={openConseiller}
-          onOpenChange={setOpenConseiller}
-          options={conseillersNoms}
-          value={
-            selectedConseiller
-              ? `${selectedConseiller.prenom.trim()} ${selectedConseiller.nom.trim()}`
-              : ""
-          }
-          onSelect={handleSelectConseiller}
-          placeholder="Sélectionner un conseiller..."
-          searchPlaceholder="Rechercher un conseiller..."
-          emptyMessage="Aucun conseiller trouvé."
-          selectedId={selectedConseiller?.id}
-        />
-      </div>
-
+      <ConseillerSelector
+        conseillersNoms={conseillersNoms}
+        selectedConseiller={selectedConseiller}
+        openConseiller={openConseiller}
+        setOpenConseiller={setOpenConseiller}
+        handleSelectConseiller={handleSelectConseiller}
+      />
       {selectedConseiller && (
         <>
-          <div className="flex flex-col space-y-8">
-            <div className="flex flex-row justify-start space-x-4">
-              <InputCustom
-                disable={true}
-                name="nom"
-                label="Nom"
-                id="nom"
-                type="text"
-                value={selectedConseiller?.nom || ""}
-              />
-              <InputCustom
-                disable={true}
-                name="prenom"
-                label="Prénom"
-                id="prenom"
-                type="text"
-                value={selectedConseiller?.prenom || ""}
-              />
-              <InputCustom
-                disable={true}
-                name="id"
-                label="ID dans l'application"
-                id="id"
-                type="number"
-                value={selectedConseiller?.id || ""}
+          <ConseillerDetails
+            selectedConseiller={selectedConseiller}
+            adresse={adresse}
+            setAdresse={setAdresse}
+          />
+          <div className="flex flex-row justify-start space-x-4">
+            <div className="flex flex-col space-y-2">
+              <Label>Assujetti à la TVA</Label>
+              <RadioCustom
+                onChange={(value) => setAssujettiTVA(value)}
+                value={assujettiTVA}
+                name="assujetti_tva"
               />
             </div>
-
-            <div className="flex flex-row justify-start space-x-4">
-              <InputCustom
-                disable={true}
-                name="email"
-                label="Email"
-                id="email"
-                type="email"
-                value={selectedConseiller?.email || ""}
+            <div className="flex flex-col space-y-2">
+              <Label>Auto-parrainage</Label>
+              <RadioCustom
+                onChange={(value) => setAutoParrain(value)}
+                value={autoParrain}
+                name="auto_parrain"
               />
-              {selectedConseiller.telephone && (
-                <InputCustom
-                  disable={true}
-                  name="telephone"
-                  label="Téléphone"
-                  id="telephone"
-                  type="tel"
-                  value={selectedConseiller?.telephone || ""}
-                />
-              )}
-              {selectedConseiller.mobile && (
-                <InputCustom
-                  disable={true}
-                  name="mobile"
-                  label="Mobile"
-                  id="mobile"
-                  type="tel"
-                  value={selectedConseiller?.mobile || ""}
-                />
-              )}
-              <InputCustom
-                disable={false}
-                name="adresse"
-                label="Adresse"
-                id="adresse"
-                type="text"
-                value={adresse}
-                onChange={(val) => setAdresse(val as string)}
-              />
-            </div>
-
-            <div className="flex flex-row justify-start space-x-4">
-              <InputCustom
-                disable={true}
-                name="siren"
-                label="SIREN"
-                id="siren"
-                type="text"
-                value={selectedConseiller?.siren || ""}
-              />
-              <div className="flex flex-col space-y-2">
-                <Label>Assujetti à la TVA</Label>
-                <RadioCustom
-                  onChange={(value) => setAssujettiTVA(value)}
-                  value={assujettiTVA}
-                  name="assujetti_tva"
-                />
-              </div>
-              <div className="flex flex-col space-y-2">
-                <Label>Auto-parrainage</Label>
-                <RadioCustom
-                  onChange={(value) => setAutoParrain(value)}
-                  value={autoParrain}
-                  name="auto_parrain"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-row justify-start space-x-4">
-              <div className="flex flex-col space-y-2">
-                <Label>Type de contrat</Label>
-                <select
-                  className="border border-gray-300 rounded-md p-2"
-                  value={selectedTypeContrat}
-                  onChange={(e) => setSelectedTypeContrat(e.target.value)}
-                  name="type_contrat"
-                >
-                  <option value="">Sélectionner un type</option>
-                  <option value="Offre Youlive">Offre Youlive</option>
-                  <option value="Offre Découverte">Offre Découverte</option>
-                </select>
-              </div>
-
-              <InputCustom
-                disable={false}
-                name="chiffre_affaires"
-                label="Honoraires Youlive HT générés"
-                id="chiffre_affaires"
-                type="number"
-                value={chiffreAffaires}
-                onChange={(val) => setChiffreAffaires(Number(val))}
-              />
-
-              <InputCustom
-                disable={true}
-                name="retrocession"
-                label="Pourcentage de rétrocession"
-                id="retrocession"
-                type="number"
-                value={retrocession}
-              />
-            </div>
-
-            <div className="mt-8 border-t pt-6">
-              <h2 className="text-lg font-semibold mb-4">
-                Gestion des parrainages
-              </h2>
-              <div className="grid grid-cols-3 gap-6">
-                <div className="flex flex-col space-y-2">
-                  <Label>Parrain niveau 1</Label>
-                  <PopoverCustom
-                    open={openParrain1}
-                    onOpenChange={setOpenParrain1}
-                    options={parrains}
-                    value={selectedParrain}
-                    onSelect={handleSelectParrain}
-                    placeholder="Sélectionner un parrain..."
-                    searchPlaceholder="Rechercher un parrain..."
-                    emptyMessage="Aucun parrain trouvé."
-                    selectedId={selectedParrainId}
-                  />
-                </div>
-
-                <div className="flex flex-col space-y-2">
-                  <Label>Parrain niveau 2</Label>
-                  <PopoverCustom
-                    open={openParrain2}
-                    onOpenChange={setOpenParrain2}
-                    options={parrains}
-                    value={selectedParrain2}
-                    onSelect={handleSelectParrain2}
-                    placeholder="Sélectionner un parrain..."
-                    searchPlaceholder="Rechercher un parrain..."
-                    emptyMessage="Aucun parrain trouvé."
-                    selectedId={selectedParrain2Id}
-                  />
-                </div>
-
-                <div className="flex flex-col space-y-2">
-                  <Label>Parrain niveau 3</Label>
-                  <PopoverCustom
-                    open={openParrain3}
-                    onOpenChange={setOpenParrain3}
-                    options={parrains}
-                    value={selectedParrain3}
-                    onSelect={handleSelectParrain3}
-                    placeholder="Sélectionner un parrain..."
-                    searchPlaceholder="Rechercher un parrain..."
-                    emptyMessage="Aucun parrain trouvé."
-                    selectedId={selectedParrain3Id}
-                  />
-                </div>
-              </div>
             </div>
           </div>
-
+          <ContratManager
+            selectedTypeContrat={selectedTypeContrat}
+            setSelectedTypeContrat={setSelectedTypeContrat}
+            chiffreAffaires={chiffreAffaires}
+            setChiffreAffaires={setChiffreAffaires}
+            retrocession={retrocession}
+            setRetrocession={setRetrocession}
+            setIsRetrocessionManuallySet={setIsRetrocessionManuallySet}
+          />
+          <ParrainagesManager
+            parrains={parrains}
+            openParrain1={openParrain1}
+            setOpenParrain1={setOpenParrain1}
+            selectedParrain={selectedParrain}
+            handleSelectParrain={handleSelectParrain}
+            selectedParrainId={selectedParrainId}
+            openParrain2={openParrain2}
+            setOpenParrain2={setOpenParrain2}
+            selectedParrain2={selectedParrain2}
+            handleSelectParrain2={handleSelectParrain2}
+            selectedParrain2Id={selectedParrain2Id}
+            openParrain3={openParrain3}
+            setOpenParrain3={setOpenParrain3}
+            selectedParrain3={selectedParrain3}
+            handleSelectParrain3={handleSelectParrain3}
+            selectedParrain3Id={selectedParrain3Id}
+          />
           <FormStatusMessage status={formStatus} />
-
           <SubmitButton isSubmitting={isSubmitting} />
         </>
       )}
