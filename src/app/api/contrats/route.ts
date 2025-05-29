@@ -87,23 +87,10 @@ export async function GET() {
             Number(a.type === "9") - Number(b.type === "9")
         );
 
-        let caForUser = 0;
-
         // Gérer les relations (entries)
         if (sortEntries && Array.isArray(sortEntries)) {
           for (const entry of sortEntries) {
             const { id, user, amount, vat, vat_rate, type } = entry;
-
-            if (type === "2") {
-              caForUser += Number(amount);
-              console.log(
-                "Il y a un apporteur d'affaire pour ce contrat et le montant est de : " +
-                  caForUser
-              );
-              continue;
-            }
-
-            const amountForUser = Number(amount) + caForUser;
 
             if (!id || !user || !amount || !vat || !vat_rate) {
               continue;
@@ -128,7 +115,7 @@ export async function GET() {
                 idrelationapimo: Number(id),
               },
               update: {
-                honoraires_agent: Number(amountForUser),
+                honoraires_agent: Number(amount),
                 vat: Number(vat),
                 vat_rate: Number(vat_rate),
               },
@@ -136,35 +123,30 @@ export async function GET() {
                 idrelationapimo: Number(id),
                 contrat_id: createdContrat.id,
                 user_id: utilisateur.id,
-                honoraires_agent: Number(amountForUser),
+                honoraires_agent: Number(amount),
                 vat: Number(vat),
                 vat_rate: Number(vat_rate),
               },
             });
 
-            // Mise à jour du chiffre d'affaires uniquement pour les nouvelles relations
-            // (pour éviter de compter plusieurs fois le même montant)
-            if (relationResult) {
+            // Mise à jour du chiffre d'affaires uniquement pour les conseillers (type 9) et pour les nouvelles relations
+            if (type === "9" && relationResult) {
               // Vérifier si c'est une création ou une mise à jour
-              const isNewRelation = !(await prisma.relations_contrats.findFirst(
-                {
-                  where: {
-                    contrat_id: createdContrat.id,
-                    user_id: utilisateur.id,
-                    created_at: {
-                      lt: new Date(new Date().getTime() - 5000), // Créé il y a plus de 5 secondes
-                    },
+              const isNewRelation = !(await prisma.relations_contrats.findFirst({
+                where: {
+                  contrat_id: createdContrat.id,
+                  user_id: utilisateur.id,
+                  created_at: {
+                    lt: new Date(new Date().getTime() - 5000), // Créé il y a plus de 5 secondes
                   },
-                }
-              ));
+                },
+              }));
 
               if (isNewRelation) {
-                // Récupérer le chiffre d'affaires actuel
                 const currentCA = Number(utilisateur.chiffre_affaires || 0);
-                const honorairesAgent = Number(amountForUser);
+                const honorairesAgent = Number(amount); // On prend uniquement le montant de l'entry
                 const newCA = currentCA + honorairesAgent;
 
-                // Mettre à jour le chiffre d'affaires
                 await prisma.utilisateurs.update({
                   where: { id: utilisateur.id },
                   data: { chiffre_affaires: newCA },
@@ -172,10 +154,6 @@ export async function GET() {
 
                 console.log(
                   `✅ Chiffre d'affaires mis à jour pour l'utilisateur ${utilisateur.id}: ${currentCA} → ${newCA} (+${honorairesAgent})`
-                );
-              } else {
-                console.log(
-                  `ℹ️ Relation existante, pas de mise à jour du chiffre d'affaires pour l'utilisateur ${utilisateur.id}`
                 );
               }
             }

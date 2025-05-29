@@ -23,27 +23,28 @@ export async function GET() {
         cache: "force-cache",
       },
     });
-    
+
     const brut = await response.json();
     const conseillers: ConseillerInput[] = brut.users;
-    
+
     // Insertion des conseillers dans la BDD
     if (!Array.isArray(conseillers)) {
       throw new Error("Les données conseillers ne sont pas valides.");
     }
-    
+
     for (const conseiller of conseillers) {
-      const { id, firstname, lastname, email, phone, mobile, city, partners } = conseiller;
+      const { id, firstname, lastname, email, phone, mobile, city, partners } =
+        conseiller;
       const adresse = city?.name || null;
       const siren = partners?.[0]?.reference;
       const idToNumber = Number(id);
-      
+
       if (!firstname || !lastname) continue;
-      
+
       // Créer ou mettre à jour le conseiller
       const utilisateur = await prisma.utilisateurs.upsert({
         where: {
-          idapimo: idToNumber
+          idapimo: idToNumber,
         },
         update: {
           prenom: firstname,
@@ -66,25 +67,28 @@ export async function GET() {
         },
       });
 
-      // Créer automatiquement une entrée dans la table parrainages
-      await prisma.parrainages.upsert({
-        where: {
-          user_id: utilisateur.id
-        },
-        create: {
-          user_id: utilisateur.id,
-          niveau1: null,
-          niveau2: null,
-          niveau3: null
-        },
-        update: {} // Ne rien mettre à jour si l'entrée existe déjà
+      // Vérifier si un parrainage existe déjà pour cet utilisateur
+      const existingParrainage = await prisma.parrainages.findFirst({
+        where: { user_id: utilisateur.id },
       });
+
+      // Créer ou mettre à jour le parrainage
+      if (!existingParrainage) {
+        await prisma.parrainages.create({
+          data: {
+            user_id: utilisateur.id,
+            niveau1: null,
+            niveau2: null,
+            niveau3: null,
+          },
+        });
+      }
     }
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       message: "Conseillers synchronisés avec succès",
-      count: conseillers.length
+      count: conseillers.length,
     });
   } catch (error) {
     console.error("Erreur lors de la synchronisation des conseillers :", error);
@@ -106,7 +110,7 @@ export async function PUT(req: Request) {
       parrain_id,
       niveau2_id,
       niveau3_id,
-      ...conseillerData
+      ...conseillerData,
     });
 
     if (!id) {
@@ -120,13 +124,22 @@ export async function PUT(req: Request) {
     try {
       await prisma.utilisateurs.update({
         where: { id: Number(id) },
-        data: conseillerData
+        data: conseillerData,
       });
       console.log("Mise à jour utilisateur réussie");
     } catch (updateError) {
-      console.error("Erreur lors de la mise à jour de l'utilisateur:", updateError);
+      console.error(
+        "Erreur lors de la mise à jour de l'utilisateur:",
+        updateError
+      );
       return NextResponse.json(
-        { error: `Erreur lors de la mise à jour de l'utilisateur: ${updateError instanceof Error ? updateError.message : String(updateError)}` },
+        {
+          error: `Erreur lors de la mise à jour de l'utilisateur: ${
+            updateError instanceof Error
+              ? updateError.message
+              : String(updateError)
+          }`,
+        },
         { status: 500 }
       );
     }
@@ -134,7 +147,7 @@ export async function PUT(req: Request) {
     // Gestion des parrainages
     try {
       const existingParrainage = await prisma.parrainages.findFirst({
-        where: { user_id: Number(id) }
+        where: { user_id: Number(id) },
       });
       console.log("Parrainage existant:", existingParrainage);
 
@@ -142,43 +155,56 @@ export async function PUT(req: Request) {
       const parrainageData = {
         niveau1: parrain_id ? Number(parrain_id) : null,
         niveau2: niveau2_id ? Number(niveau2_id) : null,
-        niveau3: niveau3_id ? Number(niveau3_id) : null
+        niveau3: niveau3_id ? Number(niveau3_id) : null,
       };
-      
+
       console.log("Données de parrainage à enregistrer:", parrainageData);
 
       // Mise à jour ou création du parrainage
       if (existingParrainage) {
         await prisma.parrainages.update({
           where: { id: existingParrainage.id },
-          data: parrainageData
+          data: parrainageData,
         });
         console.log("Mise à jour parrainage réussie");
       } else if (parrain_id || niveau2_id || niveau3_id) {
         await prisma.parrainages.create({
           data: {
             user_id: Number(id),
-            ...parrainageData
-          }
+            ...parrainageData,
+          },
         });
         console.log("Création parrainage réussie");
       }
     } catch (parrainageError) {
-      console.error("Erreur lors de la gestion des parrainages:", parrainageError);
+      console.error(
+        "Erreur lors de la gestion des parrainages:",
+        parrainageError
+      );
       return NextResponse.json(
-        { error: `Erreur lors de la gestion des parrainages: ${parrainageError instanceof Error ? parrainageError.message : String(parrainageError)}` },
+        {
+          error: `Erreur lors de la gestion des parrainages: ${
+            parrainageError instanceof Error
+              ? parrainageError.message
+              : String(parrainageError)
+          }`,
+        },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Conseiller mis à jour avec succès" 
+    return NextResponse.json({
+      success: true,
+      message: "Conseiller mis à jour avec succès",
     });
   } catch (error) {
     console.error("Erreur lors de la mise à jour du conseiller:", error);
     return NextResponse.json(
-      { error: `Erreur lors de la mise à jour du conseiller: ${error instanceof Error ? error.message : String(error)}` },
+      {
+        error: `Erreur lors de la mise à jour du conseiller: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      },
       { status: 500 }
     );
   }
