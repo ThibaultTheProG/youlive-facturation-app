@@ -285,14 +285,14 @@ async function createFactureRecrutement(
 async function sendEmailNotification(userId: number, factureType: string, montant: number) {
   try {
     // Pour les tests, on envoie toujours à cette adresse
-    const testEmail = "tuffinthibaultgw@gmail.com";
+    // const testEmail = "tuffinthibaultgw@gmail.com";
     
     // Dans un environnement de production, on récupérerait l'email du conseiller
-    // const user = await prisma.utilisateurs.findUnique({
-    //   where: { id: userId },
-    //   select: { email: true, prenom: true, nom: true }
-    // });
-    // const email = user?.email;
+    const user = await prisma.utilisateurs.findUnique({
+      where: { id: userId },
+      select: { email: true, prenom: true, nom: true }
+    });
+    const email = user?.email;
     
     // Configuration du transporteur d'emails
     const transporter = nodemailer.createTransport({
@@ -308,7 +308,7 @@ async function sendEmailNotification(userId: number, factureType: string, montan
     // Configuration de l'email
     const mailOptions = {
       from: process.env.SMTP_FROM_EMAIL,
-      to: testEmail,
+      to: `${email},${process.env.SMTP_TO_EMAIL}`,
       subject: `Nouvelle facture ${factureType} créée`,
       text: `Une nouvelle facture de type ${factureType} d'un montant de ${montant.toLocaleString()} € a été créée pour vous.`,
       html: `
@@ -326,7 +326,7 @@ async function sendEmailNotification(userId: number, factureType: string, montan
       `
     };
     
-    console.log("📧 Tentative d'envoi d'email à:", testEmail);
+    console.log("📧 Tentative d'envoi d'email à:", email, process.env.SMTP_TO_EMAIL);
     
     // Envoi de l'email
     const info = await transporter.sendMail(mailOptions);
