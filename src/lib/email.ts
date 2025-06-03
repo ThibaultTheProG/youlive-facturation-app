@@ -18,15 +18,16 @@ export async function sendPasswordEmail(email: string, password: string, prenom:
     await transporter.sendMail({
       from: `"Youlive" <${process.env.SMTP_SERVER_USERNAME}>`,
       to: email,
-      subject: 'Vos identifiants de connexion',
+      subject: 'Tes identifiants de connexion sont disponibles',
       html: `
         <h1>Bienvenue ${prenom} ${nom} !</h1>
-        <p>Nous vous avons attribué un mot de passe pour accéder à votre compte.</p>
-        <p>Voici vos identifiants de connexion :</p>
+        <p>Nous t'avons attribué un mot de passe pour accéder à ton espace de factures en ligne pour le paiement et le suivi de tes commissions.</p>
+        <p>Tu pourras également suivre l'évolution de ton chiffre d'affaires et celui des conseillers que tu auras recrutés.</p>
+        <p>Voici tes identifiants de connexion :</p>
         <p><strong>Email :</strong> ${email}</p>
         <p><strong>Mot de passe :</strong> ${password}</p>
-        <p>Pour des raisons de sécurité, nous vous recommandons de changer votre mot de passe lors de votre première connexion.</p>
-        <p>Merci de vous connecter ici : <a href="${process.env.NEXT_PUBLIC_BASE_URL}">${process.env.NEXT_PUBLIC_BASE_URL}</a></p>
+        <p>Pour des raisons de sécurité, nous te recommandons de changer ton mot de passe lors de ta première connexion.</p>
+        <p>Merci de te connecter ici : <a href="${process.env.NEXT_PUBLIC_BASE_URL}">${process.env.NEXT_PUBLIC_BASE_URL}</a></p>
       `,
     });
     return true;
