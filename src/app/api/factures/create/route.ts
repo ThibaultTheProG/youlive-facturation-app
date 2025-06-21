@@ -118,19 +118,26 @@ async function createFactureCommission(
   const retrocessionAmount = Number((honoraires_agent * (retrocession / 100)).toFixed(2));
 
   try {
-    // Créer la facture
-    const result = await prisma.factures.upsert({
+    // Vérifier si la facture existe déjà
+    const existingFacture = await prisma.factures.findUnique({
       where: {
         relation_id_type_user_id: {
           relation_id: relationid,
           type: 'commission',
           user_id: user_id
         }
-      },
-      update: {
-        retrocession: retrocessionAmount
-      },
-      create: {
+      }
+    });
+
+    // Si la facture existe déjà, ne rien faire
+    if (existingFacture) {
+      console.log(`⚠️ Facture commission déjà existante pour l'utilisateur ${user_id}, pas de création`);
+      return null;
+    }
+
+    // Créer la nouvelle facture
+    await prisma.factures.create({
+      data: {
         relation_id: relationid,
         user_id: user_id,
         type: 'commission',
@@ -140,22 +147,13 @@ async function createFactureCommission(
       }
     });
 
-    console.log(`✅ Facture commission créée/mise à jour pour l'utilisateur ${user_id}`);
+    console.log(`✅ Nouvelle facture commission créée pour l'utilisateur ${user_id}`);
     
-    // Vérifier si c'est une nouvelle facture en comparant la date de création avec la date actuelle
-    const isNewInvoice = result.created_at && 
-      new Date().getTime() - new Date(result.created_at).getTime() < 1000; // moins d'une seconde d'écart
-    
-    // Ne renvoyer la notification que si c'est une nouvelle facture
-    if (isNewInvoice) {
-      return {
-        userId: user_id,
-        factureType: 'commission',
-        montant: retrocessionAmount
-      };
-    }
-    
-    return null;
+    return {
+      userId: user_id,
+      factureType: 'commission',
+      montant: retrocessionAmount
+    };
   } catch (error) {
     console.error("❌ Erreur lors de la création de la facture commission :", error);
     throw error;
@@ -236,18 +234,26 @@ async function createFactureRecrutement(
 
         const retrocessionAmount = Number(((honoraires_agent * percentage) / 100).toFixed(2));
 
-        const result = await prisma.factures.upsert({
+        // Vérifier si la facture existe déjà
+        const existingFacture = await prisma.factures.findUnique({
           where: {
             relation_id_type_user_id: {
               relation_id: relationid,
               type: 'recrutement',
               user_id: parrainId
             }
-          },
-          update: {
-            retrocession: retrocessionAmount
-          },
-          create: {
+          }
+        });
+
+        // Si la facture existe déjà, passer au suivant
+        if (existingFacture) {
+          console.log(`⚠️ Facture recrutement déjà existante pour le parrain ${parrainId}, pas de création`);
+          continue;
+        }
+
+        // Créer la nouvelle facture
+        await prisma.factures.create({
+          data: {
             relation_id: relationid,
             user_id: parrainId,
             type: 'recrutement',
@@ -257,20 +263,13 @@ async function createFactureRecrutement(
           }
         });
 
-        console.log(`✅ Facture parrainage créée/mise à jour pour le parrain ${parrainId} (${percentage}%)`);
+        console.log(`✅ Nouvelle facture recrutement créée pour le parrain ${parrainId} (${percentage}%)`);
         
-        // Vérifier si c'est une nouvelle facture en comparant la date de création avec la date actuelle
-        const isNewInvoice = result.created_at && 
-          new Date().getTime() - new Date(result.created_at).getTime() < 1000; // moins d'une seconde d'écart
-        
-        // Ne renvoyer la notification que si c'est une nouvelle facture
-        if (isNewInvoice) {
-          notifications.push({
-            userId: parrainId,
-            factureType: 'recrutement',
-            montant: retrocessionAmount
-          });
-        }
+        notifications.push({
+          userId: parrainId,
+          factureType: 'recrutement',
+          montant: retrocessionAmount
+        });
       }
     }
     

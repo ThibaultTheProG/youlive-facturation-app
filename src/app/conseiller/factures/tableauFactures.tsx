@@ -33,11 +33,24 @@ export default function TableauFactures({ user }: { user: User }) {
               date_signature: facture.date_signature || new Date().toISOString(),
               numero_mandat: facture.numero_mandat,
               vat_rate: 0,
-              created_at: facture.created_at ? new Date(facture.created_at).toISOString() : new Date().toISOString()
+              created_at: facture.created_at ? new Date(facture.created_at).toISOString() : null
             };
             return factureFormatted as unknown as Facture;
           })
           .sort((a, b) => {
+            // Si a.created_at est null et b.created_at n'est pas null, a vient en premier
+            if (!a.created_at && b.created_at) {
+              return -1;
+            }
+            // Si b.created_at est null et a.created_at n'est pas null, b vient en premier
+            if (a.created_at && !b.created_at) {
+              return 1;
+            }
+            // Si les deux sont null, ordre arbitraire
+            if (!a.created_at && !b.created_at) {
+              return 0;
+            }
+            // Si les deux ont une date, trier par ordre décroissant (plus récent en premier)
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
           });
         setFacturesList(facturesTriees);
