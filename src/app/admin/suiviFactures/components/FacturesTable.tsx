@@ -49,7 +49,7 @@ export const FacturesTable = ({
           />
           <TableHead>Numéro de mandat</TableHead>
           <TableHead>Statut</TableHead>
-          <TableHead>Action</TableHead>
+          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

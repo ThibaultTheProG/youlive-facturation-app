@@ -16,6 +16,8 @@ export async function GET() {
         telephone: true,
         mobile: true,
         adresse: true,
+        autre_adresse: true,
+        utilise_autre_adresse: true,
         siren: true,
         tva: true,
         chiffre_affaires: true,

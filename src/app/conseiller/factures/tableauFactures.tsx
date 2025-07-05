@@ -20,6 +20,7 @@ export default function TableauFactures({ user }: { user: User }) {
   const [selectedFacture, setSelectedFacture] = useState<Facture | null>(null);
   const [actionType, setActionType] = useState<"voir" | "envoyer" | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("tous");
+  const [dateFilter, setDateFilter] = useState<string>("tous");
   const itemsPerPage = 10;
 
   // Fonction pour charger les factures
@@ -33,25 +34,43 @@ export default function TableauFactures({ user }: { user: User }) {
               date_signature: facture.date_signature || new Date().toISOString(),
               numero_mandat: facture.numero_mandat,
               vat_rate: 0,
-              created_at: facture.created_at ? new Date(facture.created_at).toISOString() : null
+              created_at: facture.created_at ? new Date(facture.created_at).toISOString() : null,
+              added_at: facture.added_at ? new Date(facture.added_at).toISOString() : null
             };
             return factureFormatted as unknown as Facture;
           })
           .sort((a, b) => {
-            // Si a.created_at est null et b.created_at n'est pas null, a vient en premier
-            if (!a.created_at && b.created_at) {
+            // Priorité 1: Les factures avec added_at renseigné viennent en premier
+            const aHasAddedAt = a.added_at !== null && a.added_at !== undefined;
+            const bHasAddedAt = b.added_at !== null && b.added_at !== undefined;
+            
+            if (aHasAddedAt && !bHasAddedAt) {
               return -1;
             }
-            // Si b.created_at est null et a.created_at n'est pas null, b vient en premier
-            if (a.created_at && !b.created_at) {
+            if (!aHasAddedAt && bHasAddedAt) {
               return 1;
             }
-            // Si les deux sont null, ordre arbitraire
-            if (!a.created_at && !b.created_at) {
-              return 0;
+            
+            // Priorité 2: Si les deux ont ou n'ont pas added_at, trier par added_at (plus récent en premier)
+            if (aHasAddedAt && bHasAddedAt && a.added_at && b.added_at) {
+              return new Date(b.added_at).getTime() - new Date(a.added_at).getTime();
             }
-            // Si les deux ont une date, trier par ordre décroissant (plus récent en premier)
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            
+            // Priorité 3: Si aucun n'a added_at, trier par created_at (plus récent en premier)
+            if (!aHasAddedAt && !bHasAddedAt) {
+              if (!a.created_at && b.created_at) {
+                return -1;
+              }
+              if (a.created_at && !b.created_at) {
+                return 1;
+              }
+              if (!a.created_at && !b.created_at) {
+                return 0;
+              }
+              return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            }
+            
+            return 0;
           });
         setFacturesList(facturesTriees);
       })
@@ -71,11 +90,42 @@ export default function TableauFactures({ user }: { user: User }) {
         .reduce((total, facture) => total + parseFloat(facture.retrocession), 0)
     : 0;
 
-  // Filtrer les factures par type
+  // Filtrer les factures par type et par date
   const filteredFactures = facturesList
-    ? typeFilter === "tous"
-      ? facturesList
-      : facturesList.filter(facture => facture.type === typeFilter)
+    ? facturesList.filter(facture => {
+        // Filtre par type
+        if (typeFilter !== "tous" && facture.type !== typeFilter) {
+          return false;
+        }
+        
+        // Filtre par date de signature
+        if (dateFilter !== "tous") {
+          const factureDate = facture.date_signature ? new Date(facture.date_signature) : null;
+          if (!factureDate) return false;
+          
+          const today = new Date();
+          
+          switch (dateFilter) {
+            case "aujourd_hui":
+              return factureDate.toDateString() === today.toDateString();
+            case "cette_semaine":
+              const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+              return factureDate >= weekAgo;
+            case "ce_mois":
+              return factureDate.getMonth() === today.getMonth() && 
+                     factureDate.getFullYear() === today.getFullYear();
+            case "ce_trimestre":
+              const quarterStart = new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1);
+              return factureDate >= quarterStart;
+            case "cette_annee":
+              return factureDate.getFullYear() === today.getFullYear();
+            default:
+              return true;
+          }
+        }
+        
+        return true;
+      })
     : null;
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -90,7 +140,7 @@ export default function TableauFactures({ user }: { user: User }) {
   // Réinitialiser la page courante lorsque le filtre change
   useEffect(() => {
     setCurrentPage(1);
-  }, [typeFilter]);
+  }, [typeFilter, dateFilter]);
 
   useEffect(() => {
     loadFactures();
@@ -130,6 +180,21 @@ export default function TableauFactures({ user }: { user: User }) {
             <option value="commission">Commission</option>
             <option value="recrutement">Recrutement</option>
           </select>
+          
+          <label htmlFor="dateFilter" className="font-medium ml-4">Filtrer par date de signature :</label>
+          <select
+            id="dateFilter"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="border border-gray-300 rounded-md p-2"
+          >
+            <option value="tous">Toutes les dates</option>
+            <option value="aujourd_hui">Aujourd&apos;hui</option>
+            <option value="cette_semaine">Cette semaine</option>
+            <option value="ce_mois">Ce mois</option>
+            <option value="ce_trimestre">Ce trimestre</option>
+            <option value="cette_annee">Cette année</option>
+          </select>
         </div>
         
         <div className="flex space-x-6">
@@ -154,6 +219,7 @@ export default function TableauFactures({ user }: { user: User }) {
             <TableHead>Rétrocession HT</TableHead>
             <TableHead className="text-center">N° de mandat</TableHead>
             <TableHead className="text-center">Date de signature</TableHead>
+            <TableHead className="text-center">Date d&apos;ajout</TableHead>
             <TableHead className="text-center">Statut</TableHead>
             <TableHead className="text-center">Générer facture</TableHead>
             <TableHead className="text-center">Envoyer facture</TableHead>
@@ -171,6 +237,9 @@ export default function TableauFactures({ user }: { user: User }) {
                 <TableCell className="text-center">
                   {facture.date_signature ? new Date(facture.date_signature).toLocaleDateString() : "N/A"}
                 </TableCell>
+                <TableCell className="text-center">
+                  {facture.added_at ? new Date(facture.added_at).toLocaleDateString() : "Non disponible"}
+                </TableCell>
                 <TableCell className="text-center">{facture.statut_paiement}</TableCell>
                 <TableCell className="text-center">
                   <button
@@ -185,11 +254,18 @@ export default function TableauFactures({ user }: { user: User }) {
                 </TableCell>
                 <TableCell className="text-center">
                   <button
-                    className="px-4 py-2 rounded bg-orange-strong text-white hover:bg-orange-light hover:text-black cursor-pointer"
+                    className={`px-4 py-2 rounded cursor-pointer ${
+                      facture.statut_paiement === "payé"
+                        ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                        : "bg-orange-strong text-white hover:bg-orange-light hover:text-black"
+                    }`}
                     onClick={() => {
-                      setSelectedFacture(facture);
-                      setActionType("envoyer");
+                      if (facture.statut_paiement !== "payé") {
+                        setSelectedFacture(facture);
+                        setActionType("envoyer");
+                      }
                     }}
+                    disabled={facture.statut_paiement === "payé"}
                   >
                     Envoyer facture
                   </button>
@@ -198,7 +274,7 @@ export default function TableauFactures({ user }: { user: User }) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={9} className="text-center">
+              <TableCell colSpan={10} className="text-center">
                 {typeFilter !== "tous" 
                   ? `Aucune facture de type "${typeFilter}" disponible.` 
                   : "Aucune facture disponible."}

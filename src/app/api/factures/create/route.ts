@@ -143,7 +143,8 @@ async function createFactureCommission(
         type: 'commission',
         retrocession: retrocessionAmount,
         statut_paiement: 'non payé',
-        created_at: new Date()
+        created_at: new Date(),
+        added_at: new Date()
       }
     });
 
@@ -259,7 +260,8 @@ async function createFactureRecrutement(
             type: 'recrutement',
             retrocession: retrocessionAmount,
             statut_paiement: 'non payé',
-            created_at: new Date()
+            created_at: new Date(),
+            added_at: new Date()
           }
         });
 

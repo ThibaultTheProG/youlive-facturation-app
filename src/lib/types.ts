@@ -6,6 +6,8 @@ export interface Conseiller {
   telephone?: string;
   mobile?: string;
   adresse?: string;
+  autre_adresse?: string;
+  utilise_autre_adresse?: boolean;
   idapimo: number;
   tva?: boolean;
   typecontrat?: string;
@@ -118,6 +120,7 @@ export interface Facture {
   retrocession: string;
   statut_paiement: string;
   created_at: string;
+  added_at?: string;
   numero_mandat: string;
   date_signature: string;
   numero: string;

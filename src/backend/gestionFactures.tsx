@@ -12,6 +12,7 @@ export async function getFactures(userId: number) {
       retrocession: true,
       statut_paiement: true,
       created_at: true,
+      added_at: true,
       numero: true,
       apporteur: true,
       apporteur_amount: true,

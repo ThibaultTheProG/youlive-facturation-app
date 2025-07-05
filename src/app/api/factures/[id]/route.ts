@@ -145,6 +145,8 @@ export async function GET(request: Request) {
         email: utilisateur?.email || '',
         telephone: utilisateur?.telephone || '',
         adresse: utilisateur?.adresse || '',
+        autre_adresse: utilisateur?.autre_adresse || '',
+        utilise_autre_adresse: utilisateur?.utilise_autre_adresse || false,
         mobile: utilisateur?.mobile || '',
         siren: Number(utilisateur?.siren || 0),
         tva: utilisateur?.tva || false,
@@ -201,7 +203,7 @@ export async function PUT(request: Request) {
       );
     }
 
-    const { statut_paiement, numero, created_at, apporteur, apporteur_amount } =
+    const { statut_paiement, numero, created_at, apporteur, apporteur_amount, utilise_autre_adresse, autre_adresse } =
       await request.json();
 
 
@@ -226,6 +228,24 @@ export async function PUT(request: Request) {
     if (created_at) updateData.created_at = new Date(created_at);
     if (apporteur) updateData.apporteur = apporteur;
     if (apporteur_amount) updateData.apporteur_amount = apporteur_amount;
+    // Mettre à jour l'utilisateur si les champs d'adresse sont fournis
+    if (utilise_autre_adresse !== undefined || autre_adresse) {
+      const facture = await prisma.factures.findUnique({
+        where: { id: factureId },
+        select: { user_id: true }
+      });
+      
+      if (facture?.user_id) {
+        const userUpdateData: Prisma.utilisateursUpdateInput = {};
+        if (utilise_autre_adresse !== undefined) userUpdateData.utilise_autre_adresse = utilise_autre_adresse;
+        if (autre_adresse) userUpdateData.autre_adresse = autre_adresse;
+        
+        await prisma.utilisateurs.update({
+          where: { id: facture.user_id },
+          data: userUpdateData
+        });
+      }
+    }
 
     const result = await prisma.factures.update({
       where: {

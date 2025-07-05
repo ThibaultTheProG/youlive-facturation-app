@@ -48,6 +48,8 @@ export async function GET(request: Request) {
       telephone: conseiller.telephone || "",
       mobile: conseiller.mobile || "",
       adresse: conseiller.adresse || "",
+      autre_adresse: conseiller.autre_adresse || "",
+      utilise_autre_adresse: conseiller.utilise_autre_adresse || false,
       idapimo: conseiller.idapimo || 0,
       tva: conseiller.tva || false,
       typecontrat: conseiller.typecontrat || "",

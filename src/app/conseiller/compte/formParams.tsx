@@ -16,6 +16,7 @@ export default function FormParams({ user }: { user: User }) {
   const [selectedTypeContrat, setSelectedTypeContrat] = useState<string>("");
   const [chiffreAffaires, setChiffreAffaires] = useState<number>(0);
   const [retrocession, setRetrocession] = useState<number>(0);
+  const [autreAdresse, setAutreAdresse] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,6 +38,7 @@ export default function FormParams({ user }: { user: User }) {
           setAutoParrain(data.auto_parrain || "non");
           setSelectedTypeContrat(data.typecontrat || "");
           setChiffreAffaires(data.chiffre_affaires || 0);
+          setAutreAdresse(data.autre_adresse || "");
         }
       } catch (error) {
         console.error("Erreur lors de la récupération du conseiller:", error);
@@ -71,6 +73,8 @@ export default function FormParams({ user }: { user: User }) {
         email: conseiller?.email,
         telephone: conseiller?.telephone,
         adresse: formData.get("localisation")?.toString() || conseiller?.adresse || null,
+        autre_adresse: formData.get("autre_adresse")?.toString() || autreAdresse || null,
+
         siren: conseiller?.siren?.toString() || null,
         tva: formData.get("tva") === "oui",
         typecontrat: formData.get("type_contrat")?.toString() || null,
@@ -183,6 +187,14 @@ export default function FormParams({ user }: { user: User }) {
                 prev ? { ...prev, adresse: String(val) } : prev
               )
             }
+          />
+          <InputCustom
+            disable={false}
+            name="autre_adresse"
+            label="Autre adresse"
+            id="autre_adresse"
+            value={autreAdresse}
+            onChange={(val) => setAutreAdresse(String(val))}
           />
         </div>
         <div className="flex flex-row space-x-4">

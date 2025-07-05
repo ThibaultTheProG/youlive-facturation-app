@@ -6,9 +6,11 @@ interface ConseillerDetailsProps {
   selectedConseiller: Conseiller | null;
   adresse: string;
   setAdresse: (adresse: string) => void;
+  autreAdresse: string;
+  setAutreAdresse: (autreAdresse: string) => void;
 }
 
-export default function ConseillerDetails({ selectedConseiller, adresse, setAdresse }: ConseillerDetailsProps) {
+export default function ConseillerDetails({ selectedConseiller, adresse, setAdresse, autreAdresse, setAutreAdresse }: ConseillerDetailsProps) {
   return (
     <div className="flex flex-col space-y-4">
       {/* Ligne 1 : nom, prénom, id */}
@@ -79,6 +81,15 @@ export default function ConseillerDetails({ selectedConseiller, adresse, setAdre
           type="text"
           value={adresse}
           onChange={(val) => setAdresse(val as string)}
+        />
+        <InputCustom
+          disable={false}
+          name="autre_adresse"
+          label="Autre adresse"
+          id="autre_adresse"
+          type="text"
+          value={autreAdresse}
+          onChange={(val) => setAutreAdresse(val as string)}
         />
       </div>
     </div>

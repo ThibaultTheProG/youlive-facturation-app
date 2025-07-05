@@ -57,11 +57,13 @@ model factures {
   numero             String?             @db.VarChar(255)
   apporteur          String              @default("non")
   apporteur_amount   Int?
+  added_at           DateTime?           @db.Timestamp(6)
+  utilisateurs       utilisateurs?       @relation(fields: [user_id], references: [id], onUpdate: NoAction)
   relations_contrats relations_contrats? @relation(fields: [relation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_factures_relation_id")
-  utilisateurs       utilisateurs?       @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@unique([relation_id, type, user_id], map: "factures_unique_constraint")
   @@index([created_at], map: "idx_factures_created_at")
+  @@index([added_at], map: "idx_factures_added_at")
   @@index([user_id], map: "idx_factures_user_id")
   @@index([type], map: "idx_factures_type")
   @@index([statut_paiement], map: "idx_factures_statut_paiement")
@@ -69,14 +71,13 @@ model factures {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model parrainages {
-  id         Int       @id @default(autoincrement())
+  id         Int          @id @default(autoincrement())
+  created_at DateTime?    @default(now()) @db.Timestamp(6)
   niveau1    Int?
   niveau2    Int?
   niveau3    Int?
-  user_id    Int       @unique
-  created_at DateTime? @default(now()) @db.Timestamp(6)
-
-  user utilisateurs @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id    Int          @unique
+  user       utilisateurs @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model property {
@@ -91,7 +92,6 @@ model property {
 
 model relations_contrats {
   id               Int          @id(map: "contrats_utilisateurs_pkey") @default(autoincrement())
-  idrelationapimo  Int          @unique(map: "unique_idrelationapimo")
   contrat_id       Int
   user_id          Int
   honoraires_agent Decimal?     @db.Decimal(10, 2)
@@ -99,6 +99,7 @@ model relations_contrats {
   vat_rate         Decimal?     @db.Decimal(5, 2)
   created_at       DateTime?    @default(now()) @db.Timestamp(6)
   updated_at       DateTime?    @default(now()) @db.Timestamp(6)
+  idrelationapimo  Int          @unique(map: "unique_idrelationapimo")
   factures         factures[]
   contrats         contrats     @relation(fields: [contrat_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_contrat")
   utilisateurs     utilisateurs @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_utilisateur")
@@ -113,6 +114,8 @@ model utilisateurs {
   email              String?              @db.VarChar(255)
   telephone          String?              @db.VarChar(60)
   adresse            String?              @db.VarChar(255)
+  autre_adresse      String?              @db.VarChar(255)
+  utilise_autre_adresse Boolean?          @default(false)
   role               String?              @db.VarChar(50)
   created_at         DateTime?            @db.Timestamp(6)
   updated_at         DateTime?            @db.Timestamp(6)
@@ -124,7 +127,7 @@ model utilisateurs {
   retrocession       Decimal?             @db.Decimal(5, 2)
   auto_parrain       String?              @default("non") @db.VarChar(3)
   mobile             String?              @db.VarChar(60)
-  relations_contrats relations_contrats[]
-  parrainages        parrainages[]
   factures           factures[]
+  parrainages        parrainages?
+  relations_contrats relations_contrats[]
 }

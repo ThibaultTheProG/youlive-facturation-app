@@ -34,6 +34,7 @@ export default function FormParams() {
   const [chiffreAffaires, setChiffreAffaires] = useState<number>(0);
   const [retrocession, setRetrocession] = useState<number>(0);
   const [adresse, setAdresse] = useState<string>("");
+  const [autreAdresse, setAutreAdresse] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStatus, setFormStatus] = useState<FormStatusType>({
     type: null,
@@ -66,13 +67,15 @@ export default function FormParams() {
   // Synchroniser les champs lorsque selectedConseiller change
   useEffect(() => {
     if (selectedConseiller) {
-      const { tva, auto_parrain, typecontrat, chiffre_affaires, adresse: conseillerAdresse } =
+      const { tva, auto_parrain, typecontrat, chiffre_affaires, adresse: conseillerAdresse, autre_adresse } =
         selectedConseiller;
 
       setSelectedTypeContrat(typecontrat || "");
       setChiffreAffaires(chiffre_affaires || 0);
       setAssujettiTVA(tva ? "oui" : "non");
       setAdresse(conseillerAdresse || "");
+      setAutreAdresse(autre_adresse || "");
+
       if (auto_parrain) {
         setAutoParrain(auto_parrain);
       }
@@ -311,6 +314,8 @@ export default function FormParams() {
         email: formDataObj.email as string,
         telephone: formDataObj.telephone as string,
         adresse: adresse,
+        autre_adresse: autreAdresse,
+
         siren: formDataObj.siren as string,
         retrocession: Number(retrocession),
         tva: assujettiTVA === "oui",
@@ -396,6 +401,9 @@ export default function FormParams() {
             selectedConseiller={selectedConseiller}
             adresse={adresse}
             setAdresse={setAdresse}
+            autreAdresse={autreAdresse}
+            setAutreAdresse={setAutreAdresse}
+
           />
           <div className="flex flex-row justify-start space-x-4">
             <div className="flex flex-col space-y-2">

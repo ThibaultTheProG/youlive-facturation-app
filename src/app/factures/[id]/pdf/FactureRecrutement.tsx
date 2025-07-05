@@ -74,7 +74,9 @@ export default function FactureRecrutement({
               EI {facture.conseiller.nom} {facture.conseiller.prenom}
             </Text>
             <Text style={styles.headerInfo}>
-              Adresse : {facture.conseiller.adresse}
+              Adresse : {facture.conseiller.utilise_autre_adresse && facture.conseiller.autre_adresse 
+                ? facture.conseiller.autre_adresse 
+                : facture.conseiller.adresse}
             </Text>
             <Text style={styles.headerInfo}>
               {facture.conseiller.telephone
