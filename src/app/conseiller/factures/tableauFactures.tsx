@@ -40,37 +40,11 @@ export default function TableauFactures({ user }: { user: User }) {
             return factureFormatted as unknown as Facture;
           })
           .sort((a, b) => {
-            // Priorité 1: Les factures avec added_at renseigné viennent en premier
-            const aHasAddedAt = a.added_at !== null && a.added_at !== undefined;
-            const bHasAddedAt = b.added_at !== null && b.added_at !== undefined;
+            // Trier par date de signature (plus récente en premier)
+            const dateA = a.date_signature ? new Date(a.date_signature).getTime() : 0;
+            const dateB = b.date_signature ? new Date(b.date_signature).getTime() : 0;
             
-            if (aHasAddedAt && !bHasAddedAt) {
-              return -1;
-            }
-            if (!aHasAddedAt && bHasAddedAt) {
-              return 1;
-            }
-            
-            // Priorité 2: Si les deux ont ou n'ont pas added_at, trier par added_at (plus récent en premier)
-            if (aHasAddedAt && bHasAddedAt && a.added_at && b.added_at) {
-              return new Date(b.added_at).getTime() - new Date(a.added_at).getTime();
-            }
-            
-            // Priorité 3: Si aucun n'a added_at, trier par created_at (plus récent en premier)
-            if (!aHasAddedAt && !bHasAddedAt) {
-              if (!a.created_at && b.created_at) {
-                return -1;
-              }
-              if (a.created_at && !b.created_at) {
-                return 1;
-              }
-              if (!a.created_at && !b.created_at) {
-                return 0;
-              }
-              return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-            }
-            
-            return 0;
+            return dateB - dateA;
           });
         setFacturesList(facturesTriees);
       })
