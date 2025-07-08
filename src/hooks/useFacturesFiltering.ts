@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { SortDirection, SortField } from "../app/admin/suiviFactures/components/SortableHeader";
 import useSWR from 'swr';
 
@@ -23,15 +23,6 @@ export const useFacturesFiltering = () => {
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  // Référence pour suivre les changements de filtres
-  const prevFiltersRef = useRef({
-    searchTerm,
-    filterStatut,
-    filterType,
-    sortField,
-    sortDirection
-  });
-
   // Construction de l'URL pour SWR avec les paramètres de filtrage
   const swrKey = useMemo(() => {
     const params = new URLSearchParams({
@@ -40,9 +31,10 @@ export const useFacturesFiltering = () => {
       searchTerm,
       filterStatut,
       filterType,
-      sortField: sortField || 'created_at',
+      sortField: sortField || 'date_signature',
       sortDirection
     });
+    
     return `/api/factures?${params.toString()}`;
   }, [currentPage, itemsPerPage, searchTerm, filterStatut, filterType, sortField, sortDirection]);
 
@@ -55,39 +47,21 @@ export const useFacturesFiltering = () => {
 
   // Gestion du tri
   const handleSort = useCallback((field: string) => {
-    setSortField((prevField) => {
-      if (prevField === field) {
-        setSortDirection((prev) => prev === 'asc' ? 'desc' : 'asc');
-        return prevField;
-      }
+    if (sortField === field) {
+      // Même champ : inverser la direction
+      const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      setSortDirection(newDirection);
+    } else {
+      // Nouveau champ : réinitialiser à asc
+      setSortField(field as SortField);
       setSortDirection('asc');
-      return field as SortField;
-    });
-  }, []);
+    }
+  }, [sortField, sortDirection]);
 
   // Réinitialiser la page courante lorsque les filtres ou le tri changent
   useEffect(() => {
-    // Vérifier si les filtres ont changé
-    const filtersChanged = 
-      prevFiltersRef.current.searchTerm !== searchTerm ||
-      prevFiltersRef.current.filterStatut !== filterStatut ||
-      prevFiltersRef.current.filterType !== filterType ||
-      prevFiltersRef.current.sortField !== sortField ||
-      prevFiltersRef.current.sortDirection !== sortDirection;
-
-    if (filtersChanged) {
-      // Réinitialiser la page à 1
-      setCurrentPage(1);
-      
-      // Mettre à jour la référence des filtres précédents
-      prevFiltersRef.current = {
-        searchTerm,
-        filterStatut,
-        filterType,
-        sortField,
-        sortDirection
-      };
-    }
+    // Réinitialiser la page à 1 quand les filtres ou le tri changent
+    setCurrentPage(1);
   }, [searchTerm, filterStatut, filterType, sortField, sortDirection]);
 
   return {

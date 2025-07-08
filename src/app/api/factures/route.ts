@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const searchTerm = searchParams.get('searchTerm') || '';
     const filterStatut = searchParams.get('filterStatut') || '';
     const filterType = searchParams.get('filterType') || '';
-    const sortField = searchParams.get('sortField') || 'created_at';
+    const sortField = searchParams.get('sortField') || 'date_signature';
     const sortDirection = searchParams.get('sortDirection') || 'desc';
 
     // Construire la condition de recherche
@@ -53,6 +53,12 @@ export async function GET(request: Request) {
       orderBy.utilisateurs = { nom: sortDirection as Prisma.SortOrder };
     } else if (sortField === 'montant') {
       orderBy.retrocession = sortDirection as Prisma.SortOrder;
+    } else if (sortField === 'date_signature') {
+      orderBy.relations_contrats = {
+        contrats: {
+          date_signature: sortDirection as Prisma.SortOrder
+        }
+      };
     } else {
       orderBy[sortField as keyof Prisma.facturesOrderByWithRelationInput] = sortDirection as Prisma.SortOrder;
     }
@@ -95,7 +101,8 @@ export async function GET(request: Request) {
       },
       propriete: {
         numero_mandat: facture.relations_contrats?.contrats?.property?.numero_mandat || ""
-      }
+      },
+      date_signature: facture.relations_contrats?.contrats?.date_signature?.toISOString() || null
     }));
 
     return NextResponse.json({

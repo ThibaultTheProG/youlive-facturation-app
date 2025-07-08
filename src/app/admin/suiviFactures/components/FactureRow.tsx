@@ -17,6 +17,12 @@ export const FactureRow = ({ facture, updateStatut }: FactureRowProps) => {
       <TableCell>{facture.type}</TableCell>
       <TableCell>{facture.retrocession.toLocaleString()} €</TableCell>
       <TableCell>{facture.propriete?.numero_mandat ? String(facture.propriete.numero_mandat).trim() : "N/A"}</TableCell>
+      <TableCell>
+        {facture.date_signature 
+          ? new Date(facture.date_signature).toLocaleDateString('fr-FR')
+          : "N/A"
+        }
+      </TableCell>
       <TableCell>{facture.statut_paiement}</TableCell>
       <TableCell>
         <div className="flex space-x-2">

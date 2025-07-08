@@ -4,7 +4,7 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 // Types pour le tri
 export type SortDirection = 'asc' | 'desc';
-export type SortField = 'conseiller' | 'montant' | null;
+export type SortField = 'conseiller' | 'montant' | 'date_signature' | null;
 
 // Composant pour l'en-tête de colonne triable
 interface SortableHeaderProps {
@@ -21,20 +21,22 @@ const SortableHeader: React.FC<SortableHeaderProps> = ({
   currentSortField, 
   currentSortDirection, 
   onSort 
-}) => (
-  <TableHead 
-    className="cursor-pointer hover:bg-gray-100 transition-colors" 
-    onClick={() => onSort(field)}
-  >
-    <div className="flex items-center gap-1">
-      {title}
-      {currentSortField === field ? (
-        currentSortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
-      ) : (
-        <ArrowUpDown className="h-4 w-4 text-gray-400" />
-      )}
-    </div>
-  </TableHead>
-);
+}) => {
+  return (
+    <TableHead 
+      className="cursor-pointer hover:bg-gray-100 transition-colors" 
+      onClick={() => onSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {title}
+        {currentSortField === field ? (
+          currentSortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+        ) : (
+          <ArrowUpDown className="h-4 w-4 text-gray-400" />
+        )}
+      </div>
+    </TableHead>
+  );
+};
 
 export default SortableHeader; 

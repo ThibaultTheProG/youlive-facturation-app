@@ -48,6 +48,13 @@ export const FacturesTable = ({
             onSort={handleSort} 
           />
           <TableHead>Numéro de mandat</TableHead>
+          <SortableHeader 
+            title="Date de signature" 
+            field="date_signature" 
+            currentSortField={sortField} 
+            currentSortDirection={sortDirection} 
+            onSort={handleSort} 
+          />
           <TableHead>Statut</TableHead>
           <TableHead>Actions</TableHead>
         </TableRow>
@@ -55,7 +62,7 @@ export const FacturesTable = ({
       <TableBody>
         {currentFactures.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="text-center">
+            <TableCell colSpan={8} className="text-center">
               Aucune facture trouvée.
             </TableCell>
           </TableRow>

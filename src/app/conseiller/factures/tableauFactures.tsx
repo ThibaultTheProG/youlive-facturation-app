@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { User, Facture } from "@/lib/types";
 import { getFactures } from "@/backend/gestionFactures";
 import Popin from "./popin";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 export default function TableauFactures({ user }: { user: User }) {
   const [facturesList, setFacturesList] = useState<Facture[] | null>(null);
@@ -21,7 +22,54 @@ export default function TableauFactures({ user }: { user: User }) {
   const [actionType, setActionType] = useState<"voir" | "envoyer" | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("tous");
   const [dateFilter, setDateFilter] = useState<string>("tous");
+  
+  // États pour le tri
+  const [sortField, setSortField] = useState<string | null>("date_signature");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  
   const itemsPerPage = 10;
+
+  // Composant pour l'en-tête de colonne triable
+  const SortableHeader = ({ 
+    title, 
+    field, 
+    currentSortField, 
+    currentSortDirection, 
+    onSort 
+  }: {
+    title: string;
+    field: string;
+    currentSortField: string | null;
+    currentSortDirection: "asc" | "desc";
+    onSort: (field: string) => void;
+  }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-gray-100 transition-colors text-center" 
+      onClick={() => onSort(field)}
+    >
+      <div className="flex items-center gap-1 justify-center">
+        {title}
+        {currentSortField === field ? (
+          currentSortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+        ) : (
+          <ArrowUpDown className="h-4 w-4 text-gray-400" />
+        )}
+      </div>
+    </TableHead>
+  );
+
+  // Fonction pour gérer le tri
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Même champ : inverser la direction
+      const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      setSortDirection(newDirection);
+    } else {
+      // Nouveau champ : réinitialiser à asc
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Fonction pour charger les factures
   const loadFactures = () => {
@@ -40,11 +88,29 @@ export default function TableauFactures({ user }: { user: User }) {
             return factureFormatted as unknown as Facture;
           })
           .sort((a, b) => {
-            // Trier par date de signature (plus récente en premier)
-            const dateA = a.date_signature ? new Date(a.date_signature).getTime() : 0;
-            const dateB = b.date_signature ? new Date(b.date_signature).getTime() : 0;
+            // Trier selon le champ et la direction sélectionnés
+            let comparison = 0;
             
-            return dateB - dateA;
+            if (sortField === 'date_signature') {
+              const dateA = a.date_signature ? new Date(a.date_signature).getTime() : 0;
+              const dateB = b.date_signature ? new Date(b.date_signature).getTime() : 0;
+              comparison = dateA - dateB;
+            } else if (sortField === 'montant') {
+              const montantA = parseFloat(a.retrocession) || 0;
+              const montantB = parseFloat(b.retrocession) || 0;
+              comparison = montantA - montantB;
+            } else if (sortField === 'numero') {
+              const numeroA = a.numero || '';
+              const numeroB = b.numero || '';
+              comparison = numeroA.localeCompare(numeroB);
+            } else if (sortField === 'type') {
+              const typeA = a.type || '';
+              const typeB = b.type || '';
+              comparison = typeA.localeCompare(typeB);
+            }
+            
+            // Appliquer la direction de tri
+            return sortDirection === 'asc' ? comparison : -comparison;
           });
         setFacturesList(facturesTriees);
       })
@@ -115,6 +181,13 @@ export default function TableauFactures({ user }: { user: User }) {
   useEffect(() => {
     setCurrentPage(1);
   }, [typeFilter, dateFilter]);
+
+  // Recharger les factures quand le tri change
+  useEffect(() => {
+    if (facturesList) {
+      loadFactures();
+    }
+  }, [sortField, sortDirection]);
 
   useEffect(() => {
     loadFactures();
@@ -187,12 +260,36 @@ export default function TableauFactures({ user }: { user: User }) {
         <TableCaption>Tableau des dernières factures.</TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[100px]">Numéro</TableHead>
-            <TableHead className="w-[100px]">Type de facture</TableHead>
+            <SortableHeader 
+              title="Numéro" 
+              field="numero" 
+              currentSortField={sortField} 
+              currentSortDirection={sortDirection} 
+              onSort={handleSort} 
+            />
+            <SortableHeader 
+              title="Type de facture" 
+              field="type" 
+              currentSortField={sortField} 
+              currentSortDirection={sortDirection} 
+              onSort={handleSort} 
+            />
             <TableHead>Honoraire Youlive HT</TableHead>
-            <TableHead>Rétrocession HT</TableHead>
+            <SortableHeader 
+              title="Rétrocession HT" 
+              field="montant" 
+              currentSortField={sortField} 
+              currentSortDirection={sortDirection} 
+              onSort={handleSort} 
+            />
             <TableHead className="text-center">N° de mandat</TableHead>
-            <TableHead className="text-center">Date de signature</TableHead>
+            <SortableHeader 
+              title="Date de signature" 
+              field="date_signature" 
+              currentSortField={sortField} 
+              currentSortDirection={sortDirection} 
+              onSort={handleSort} 
+            />
             <TableHead className="text-center">Date d&apos;ajout</TableHead>
             <TableHead className="text-center">Statut</TableHead>
             <TableHead className="text-center">Générer facture</TableHead>
