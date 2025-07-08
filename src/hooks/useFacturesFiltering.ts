@@ -14,6 +14,7 @@ export const useFacturesFiltering = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatut, setFilterStatut] = useState("");
   const [filterType, setFilterType] = useState("");
+  const [filterStatutEnvoi, setFilterStatutEnvoi] = useState("");
   
   // États pour la pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,12 +32,13 @@ export const useFacturesFiltering = () => {
       searchTerm,
       filterStatut,
       filterType,
+      filterStatutEnvoi,
       sortField: sortField || 'date_signature',
       sortDirection
     });
     
     return `/api/factures?${params.toString()}`;
-  }, [currentPage, itemsPerPage, searchTerm, filterStatut, filterType, sortField, sortDirection]);
+  }, [currentPage, itemsPerPage, searchTerm, filterStatut, filterType, filterStatutEnvoi, sortField, sortDirection]);
 
   // Utilisation de SWR pour la gestion du cache et des données
   const { data, isLoading, mutate } = useSWR(swrKey, fetcher, {
@@ -62,7 +64,7 @@ export const useFacturesFiltering = () => {
   useEffect(() => {
     // Réinitialiser la page à 1 quand les filtres ou le tri changent
     setCurrentPage(1);
-  }, [searchTerm, filterStatut, filterType, sortField, sortDirection]);
+  }, [searchTerm, filterStatut, filterType, filterStatutEnvoi, sortField, sortDirection]);
 
   return {
     searchTerm,
@@ -71,6 +73,8 @@ export const useFacturesFiltering = () => {
     setFilterStatut,
     filterType,
     setFilterType,
+    filterStatutEnvoi,
+    setFilterStatutEnvoi,
     currentPage,
     setCurrentPage,
     sortField,

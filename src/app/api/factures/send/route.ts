@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import prisma from "@/lib/db";
 
 export async function POST(req: Request) {
   try {
@@ -8,6 +9,12 @@ export async function POST(req: Request) {
     if (!factureId) {
       return NextResponse.json({ error: "L'ID de la facture est requis" }, { status: 400 });
     }
+
+    // Mettre à jour le statut d'envoi de la facture
+    await prisma.factures.update({
+      where: { id: factureId },
+      data: { statut_envoi: 'envoyée' }
+    });
 
     // Générer l'URL de la facture
     const factureUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/factures/${factureId}/pdf`;

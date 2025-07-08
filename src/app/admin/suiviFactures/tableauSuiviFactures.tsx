@@ -17,6 +17,8 @@ const TableauSuiviFactures: React.FC = () => {
     setFilterStatut,
     filterType,
     setFilterType,
+    filterStatutEnvoi,
+    setFilterStatutEnvoi,
     currentPage,
     setCurrentPage,
     sortField,
@@ -86,6 +88,8 @@ const TableauSuiviFactures: React.FC = () => {
         setFilterStatut={setFilterStatut}
         filterType={filterType}
         setFilterType={setFilterType}
+        filterStatutEnvoi={filterStatutEnvoi}
+        setFilterStatutEnvoi={setFilterStatutEnvoi}
       />
 
       {/* État de chargement */}

@@ -23,6 +23,7 @@ export const FactureRow = ({ facture, updateStatut }: FactureRowProps) => {
           : "N/A"
         }
       </TableCell>
+      <TableCell>{facture.statut_envoi || "non envoyée"}</TableCell>
       <TableCell>{facture.statut_paiement}</TableCell>
       <TableCell>
         <div className="flex space-x-2">

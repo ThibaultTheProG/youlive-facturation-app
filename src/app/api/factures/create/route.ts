@@ -143,6 +143,7 @@ async function createFactureCommission(
         type: 'commission',
         retrocession: retrocessionAmount,
         statut_paiement: 'non payé',
+        statut_envoi: 'non envoyée',
         created_at: new Date(),
         added_at: new Date()
       }
@@ -260,6 +261,7 @@ async function createFactureRecrutement(
             type: 'recrutement',
             retrocession: retrocessionAmount,
             statut_paiement: 'non payé',
+            statut_envoi: 'non envoyée',
             created_at: new Date(),
             added_at: new Date()
           }

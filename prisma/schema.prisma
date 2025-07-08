@@ -51,6 +51,7 @@ model factures {
   type               String?             @db.VarChar(50)
   retrocession       Float?
   statut_paiement    String?             @db.VarChar(50)
+  statut_envoi       String?             @db.VarChar(50) @default("non envoyée")
   created_at         DateTime?           @db.Timestamp(6)
   updated_at         DateTime?           @db.Timestamp(6)
   relation_id        Int?
@@ -67,6 +68,7 @@ model factures {
   @@index([user_id], map: "idx_factures_user_id")
   @@index([type], map: "idx_factures_type")
   @@index([statut_paiement], map: "idx_factures_statut_paiement")
+  @@index([statut_envoi], map: "idx_factures_statut_envoi")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

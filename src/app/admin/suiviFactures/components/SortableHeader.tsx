@@ -4,7 +4,7 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 // Types pour le tri
 export type SortDirection = 'asc' | 'desc';
-export type SortField = 'conseiller' | 'montant' | 'date_signature' | null;
+export type SortField = 'conseiller' | 'montant' | 'date_signature' | 'statut_envoi' | null;
 
 // Composant pour l'en-tête de colonne triable
 interface SortableHeaderProps {

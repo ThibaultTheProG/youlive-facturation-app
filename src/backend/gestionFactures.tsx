@@ -11,6 +11,7 @@ export async function getFactures(userId: number) {
       type: true,
       retrocession: true,
       statut_paiement: true,
+      statut_envoi: true,
       created_at: true,
       added_at: true,
       numero: true,
@@ -39,7 +40,8 @@ export async function getFactures(userId: number) {
     honoraires_agent: relations_contrats?.honoraires_agent?.toString() || "0",
     retrocession: retrocession?.toString() || "0",
     numero_mandat: relations_contrats?.contrats?.property?.numero_mandat || "",
-    date_signature: relations_contrats?.contrats?.date_signature?.toISOString() || null
+    date_signature: relations_contrats?.contrats?.date_signature?.toISOString() || null,
+    statut_envoi: rest.statut_envoi || "non envoyée"
   }));
 }
 

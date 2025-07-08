@@ -291,7 +291,7 @@ export default function TableauFactures({ user }: { user: User }) {
               onSort={handleSort} 
             />
             <TableHead className="text-center">Date d&apos;ajout</TableHead>
-            <TableHead className="text-center">Statut</TableHead>
+            <TableHead className="text-center">Statut de paiement</TableHead>
             <TableHead className="text-center">Générer facture</TableHead>
             <TableHead className="text-center">Envoyer facture</TableHead>
           </TableRow>
@@ -328,17 +328,23 @@ export default function TableauFactures({ user }: { user: User }) {
                     className={`px-4 py-2 rounded cursor-pointer ${
                       facture.statut_paiement === "payé"
                         ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                        : facture.statut_envoi === "envoyée"
+                        ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                         : "bg-orange-strong text-white hover:bg-orange-light hover:text-black"
                     }`}
                     onClick={() => {
-                      if (facture.statut_paiement !== "payé") {
+                      if (facture.statut_paiement !== "payé" && facture.statut_envoi !== "envoyée") {
                         setSelectedFacture(facture);
                         setActionType("envoyer");
                       }
                     }}
-                    disabled={facture.statut_paiement === "payé"}
+                    disabled={facture.statut_paiement === "payé" || facture.statut_envoi === "envoyée"}
                   >
-                    Envoyer facture
+                    {facture.statut_paiement === "payé" 
+                      ? "Facture payée" 
+                      : facture.statut_envoi === "envoyée" 
+                      ? "Facture envoyée" 
+                      : "Envoyer facture"}
                   </button>
                 </TableCell>
               </TableRow>

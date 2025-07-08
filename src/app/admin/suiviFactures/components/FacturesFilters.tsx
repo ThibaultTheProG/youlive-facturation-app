@@ -16,6 +16,8 @@ interface FacturesFiltersProps {
   setFilterStatut: (value: string) => void;
   filterType: string;
   setFilterType: (value: string) => void;
+  filterStatutEnvoi: string;
+  setFilterStatutEnvoi: (value: string) => void;
 }
 
 const FacturesFilters: React.FC<FacturesFiltersProps> = ({
@@ -25,6 +27,8 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
   setFilterStatut,
   filterType,
   setFilterType,
+  filterStatutEnvoi,
+  setFilterStatutEnvoi,
 }) => {
   // Mémoriser les gestionnaires d'événements
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,14 +43,18 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
     setFilterType(value === "tous_types" ? "" : value);
   }, [setFilterType]);
 
+  const handleStatutEnvoiChange = useCallback((value: string) => {
+    setFilterStatutEnvoi(value === "tous_statuts_envoi" ? "" : value);
+  }, [setFilterStatutEnvoi]);
+
   // Effet pour réinitialiser les filtres si nécessaire
   useEffect(() => {
     // Cette fonction vide est intentionnelle, elle sert juste à déclencher l'effet dans le hook parent
     // qui réinitialisera la pagination
-  }, [searchTerm, filterStatut, filterType]);
+  }, [searchTerm, filterStatut, filterType, filterStatutEnvoi]);
 
   return (
-    <div className="grid gap-4 mb-6 md:grid-cols-3">
+    <div className="grid gap-4 mb-6 md:grid-cols-4">
       {/* Filtre par nom de conseiller */}
       <div className="space-y-2">
         <Label htmlFor="search-conseiller">Rechercher un conseiller</Label>
@@ -91,6 +99,24 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
             <SelectItem value="tous_types">Tous les types</SelectItem>
             <SelectItem value="recrutement">Recrutement</SelectItem>
             <SelectItem value="commission">Commission</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Filtre par statut d'envoi */}
+      <div className="space-y-2">
+        <Label htmlFor="filter-statut-envoi">Statut d&apos;envoi</Label>
+        <Select
+          value={filterStatutEnvoi || "tous_statuts_envoi"}
+          onValueChange={handleStatutEnvoiChange}
+        >
+          <SelectTrigger id="filter-statut-envoi" className="w-full">
+            <SelectValue placeholder="Tous les statuts d&apos;envoi" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            <SelectItem value="tous_statuts_envoi">Tous les statuts d&apos;envoi</SelectItem>
+            <SelectItem value="envoyée">Envoyée</SelectItem>
+            <SelectItem value="non envoyée">Non envoyée</SelectItem>
           </SelectContent>
         </Select>
       </div>

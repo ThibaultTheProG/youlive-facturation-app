@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     const searchTerm = searchParams.get('searchTerm') || '';
     const filterStatut = searchParams.get('filterStatut') || '';
     const filterType = searchParams.get('filterType') || '';
+    const filterStatutEnvoi = searchParams.get('filterStatutEnvoi') || '';
     const sortField = searchParams.get('sortField') || 'date_signature';
     const sortDirection = searchParams.get('sortDirection') || 'desc';
 
@@ -34,7 +35,9 @@ export async function GET(request: Request) {
         // Filtre par statut
         filterStatut ? { statut_paiement: filterStatut } : {},
         // Filtre par type
-        filterType ? { type: filterType } : {}
+        filterType ? { type: filterType } : {},
+        // Filtre par statut d'envoi
+        filterStatutEnvoi ? { statut_envoi: filterStatutEnvoi } : {}
       ]
     };
 
@@ -59,6 +62,8 @@ export async function GET(request: Request) {
           date_signature: sortDirection as Prisma.SortOrder
         }
       };
+    } else if (sortField === 'statut_envoi') {
+      orderBy.statut_envoi = sortDirection as Prisma.SortOrder;
     } else {
       orderBy[sortField as keyof Prisma.facturesOrderByWithRelationInput] = sortDirection as Prisma.SortOrder;
     }
@@ -102,7 +107,8 @@ export async function GET(request: Request) {
       propriete: {
         numero_mandat: facture.relations_contrats?.contrats?.property?.numero_mandat || ""
       },
-      date_signature: facture.relations_contrats?.contrats?.date_signature?.toISOString() || null
+      date_signature: facture.relations_contrats?.contrats?.date_signature?.toISOString() || null,
+      statut_envoi: facture.statut_envoi || "non envoyée"
     }));
 
     return NextResponse.json({
