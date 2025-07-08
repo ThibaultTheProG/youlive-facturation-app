@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { User, Facture } from "@/lib/types";
 import { getFactures } from "@/backend/gestionFactures";
 import Popin from "./popin";
@@ -72,7 +72,7 @@ export default function TableauFactures({ user }: { user: User }) {
   };
 
   // Fonction pour charger les factures
-  const loadFactures = () => {
+  const loadFactures = useCallback(() => {
     getFactures(user.id)
       .then((factures) => {
         const facturesTriees = factures
@@ -115,7 +115,7 @@ export default function TableauFactures({ user }: { user: User }) {
         setFacturesList(facturesTriees);
       })
       .catch((error) => console.error("Impossible de récupérer les factures :", error));
-  };
+  }, [user.id, sortField, sortDirection]);
 
   // Calcul des totaux des rétrocessions par type
   const totalRetrocessionCommission = facturesList
@@ -187,11 +187,11 @@ export default function TableauFactures({ user }: { user: User }) {
     if (facturesList) {
       loadFactures();
     }
-  }, [sortField, sortDirection]);
+  }, [sortField, sortDirection, loadFactures, facturesList]);
 
   useEffect(() => {
     loadFactures();
-  }, [user.id]);
+  }, [user.id, loadFactures]);
 
   const sendFacture = async (factureId: number) => {
     try {
