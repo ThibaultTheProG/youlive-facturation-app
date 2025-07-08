@@ -16,9 +16,13 @@ export default function FormParams({ user }: { user: User }) {
   const [selectedTypeContrat, setSelectedTypeContrat] = useState<string>("");
   const [chiffreAffaires, setChiffreAffaires] = useState<number>(0);
   const [retrocession, setRetrocession] = useState<number>(0);
-  const [autreAdresse, setAutreAdresse] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Nouveaux états pour les informations de facture de recrutement
+  const [nomSocieteFacture, setNomSocieteFacture] = useState<string>("");
+  const [sirenFacture, setSirenFacture] = useState<string>("");
+  const [adresseFacture, setAdresseFacture] = useState<string>("");
 
   // Récupérer les informations du conseiller
   useEffect(() => {
@@ -38,7 +42,10 @@ export default function FormParams({ user }: { user: User }) {
           setAutoParrain(data.auto_parrain || "non");
           setSelectedTypeContrat(data.typecontrat || "");
           setChiffreAffaires(data.chiffre_affaires || 0);
-          setAutreAdresse(data.autre_adresse || "");
+          // Initialiser les nouveaux champs
+          setNomSocieteFacture(data.nom_societe_facture || "");
+          setSirenFacture(data.siren_facture || "");
+          setAdresseFacture(data.adresse_facture || "");
         }
       } catch (error) {
         console.error("Erreur lors de la récupération du conseiller:", error);
@@ -73,7 +80,6 @@ export default function FormParams({ user }: { user: User }) {
         email: conseiller?.email,
         telephone: conseiller?.telephone,
         adresse: formData.get("localisation")?.toString() || conseiller?.adresse || null,
-        autre_adresse: formData.get("autre_adresse")?.toString() || autreAdresse || null,
 
         siren: conseiller?.siren?.toString() || null,
         tva: formData.get("tva") === "oui",
@@ -81,6 +87,11 @@ export default function FormParams({ user }: { user: User }) {
         chiffre_affaires: chiffreAffaires,
         retrocession: retrocession,
         auto_parrain: formData.get("auto_parrain")?.toString() || "non",
+        
+        // Nouvelles données pour les informations de facture de recrutement
+        nom_societe_facture: formData.get("nom_societe_facture")?.toString() || nomSocieteFacture || null,
+        siren_facture: formData.get("siren_facture")?.toString() || sirenFacture || null,
+        adresse_facture: formData.get("adresse_facture")?.toString() || adresseFacture || null,
       };
       
       //console.log("Données envoyées à l'API:", conseillerData);
@@ -119,7 +130,7 @@ export default function FormParams({ user }: { user: User }) {
   };
 
   return (
-    <form action={handleSubmit} className="space-y-4">
+    <form action={handleSubmit} className="space-y-6">
       <div className="flex flex-col space-y-4">
         <div className="flex flex-row justify-start space-x-4">
           <InputCustom
@@ -188,14 +199,6 @@ export default function FormParams({ user }: { user: User }) {
               )
             }
           />
-          <InputCustom
-            disable={false}
-            name="autre_adresse"
-            label="Autre adresse"
-            id="autre_adresse"
-            value={autreAdresse}
-            onChange={(val) => setAutreAdresse(String(val))}
-          />
         </div>
         <div className="flex flex-row space-x-4">
           <InputCustom
@@ -258,6 +261,53 @@ export default function FormParams({ user }: { user: User }) {
           />
         </div> */}
       </div>
+
+      {/* Section Informations facture de recrutement */}
+      <div className="border-t pt-6">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Informations facture de recrutement
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            À compléter uniquement si les informations sont différentes des informations déjà renseignées ci-dessus.
+          </p>
+        </div>
+        
+        <div className="flex flex-col space-y-4">
+          <div className="flex flex-row justify-start space-x-4">
+            <InputCustom
+              disable={false}
+              name="nom_societe_facture"
+              label="Nom de société"
+              id="nom_societe_facture"
+              type="text"
+              value={nomSocieteFacture}
+              onChange={(val) => setNomSocieteFacture(String(val))}
+            />
+            <InputCustom
+              disable={false}
+              name="siren_facture"
+              label="SIREN / RSAC / RCS"
+              id="siren_facture"
+              type="text"
+              value={sirenFacture}
+              onChange={(val) => setSirenFacture(String(val))}
+            />
+          </div>
+          <div className="flex flex-row justify-start space-x-4">
+            <InputCustom
+              disable={false}
+              name="adresse_facture"
+              label="Adresse de facturation"
+              id="adresse_facture"
+              type="text"
+              value={adresseFacture}
+              onChange={(val) => setAdresseFacture(String(val))}
+            />
+          </div>
+        </div>
+      </div>
+
       {successMessage && <p className="text-green-600">{successMessage}</p>}
       <Button className="bg-orange-strong cursor-pointer" type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Chargement..." : "Valider"}

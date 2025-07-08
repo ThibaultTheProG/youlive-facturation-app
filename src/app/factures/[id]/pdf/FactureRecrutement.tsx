@@ -71,12 +71,13 @@ export default function FactureRecrutement({
         <View style={styles.flexRow}>
           <View>
             <Text style={[styles.bold, styles.headerInfo]}>
-              EI {facture.conseiller.nom} {facture.conseiller.prenom}
+              {facture.conseiller.nom_societe_facture 
+                ? facture.conseiller.nom_societe_facture
+                : `EI ${facture.conseiller.nom} ${facture.conseiller.prenom}`
+              }
             </Text>
             <Text style={styles.headerInfo}>
-              Adresse : {facture.conseiller.utilise_autre_adresse && facture.conseiller.autre_adresse 
-                ? facture.conseiller.autre_adresse 
-                : facture.conseiller.adresse}
+              Adresse : {facture.conseiller.adresse_facture || facture.conseiller.adresse}
             </Text>
             <Text style={styles.headerInfo}>
               {facture.conseiller.telephone
@@ -87,7 +88,7 @@ export default function FactureRecrutement({
               Mail : {facture.conseiller.email}
             </Text>
             <Text style={styles.headerInfo}>
-              Siren : {facture.conseiller.siren}
+              Siren : {facture.conseiller.siren_facture || facture.conseiller.siren}
             </Text>
           </View>
           <View>

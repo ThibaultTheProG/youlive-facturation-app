@@ -36,8 +36,6 @@ export default function Popin({
   );
   const [apporteur, setApporteur] = useState<string>(a ?? "non");
   const [apporteurAmount, setApporteurAmount] = useState<number>(amount ?? 0);
-  const [utiliseAutreAdresse, setUtiliseAutreAdresse] = useState<boolean>(false);
-  const [autreAdresse, setAutreAdresse] = useState<string>("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,8 +49,6 @@ export default function Popin({
           created_at: dateCreation?.toISOString(),
           apporteur,
           apporteur_amount: apporteurAmount,
-          utilise_autre_adresse: utiliseAutreAdresse,
-          autre_adresse: autreAdresse,
         }),
       });
 
@@ -158,34 +154,6 @@ export default function Popin({
                   onChange={(val) => setApporteurAmount(Number(val))}
                 />
               </div>
-            )}
-
-            {/* Case à cocher pour utiliser une autre adresse */}
-            <div className="flex flex-col space-y-2">
-              <span className="text-sm">Utiliser une autre adresse sur la facture ?</span>
-              <RadioGroup value={utiliseAutreAdresse ? "oui" : "non"} onValueChange={(value) => setUtiliseAutreAdresse(value === "oui")}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="oui" />
-                  <Label htmlFor="oui">Oui</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="non" />
-                  <Label htmlFor="non">Non</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {/* Champ autre adresse conditionnel */}
-            {utiliseAutreAdresse && (
-              <InputCustom
-                disable={false}
-                name="autre_adresse"
-                label="Autre adresse"
-                id="autre_adresse"
-                type="text"
-                value={autreAdresse}
-                onChange={(val) => setAutreAdresse(String(val))}
-              />
             )}
 
             <div className="flex justify-end mt-4">

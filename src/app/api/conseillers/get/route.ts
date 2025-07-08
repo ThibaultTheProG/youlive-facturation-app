@@ -16,8 +16,6 @@ export async function GET() {
         telephone: true,
         mobile: true,
         adresse: true,
-        autre_adresse: true,
-        utilise_autre_adresse: true,
         siren: true,
         tva: true,
         chiffre_affaires: true,
@@ -25,6 +23,10 @@ export async function GET() {
         auto_parrain: true,
         typecontrat: true,
         role: true,
+        // Informations facture de recrutement
+        nom_societe_facture: true,
+        siren_facture: true,
+        adresse_facture: true,
       },
       orderBy: {
         nom: "asc",

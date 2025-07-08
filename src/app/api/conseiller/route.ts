@@ -48,8 +48,6 @@ export async function GET(request: Request) {
       telephone: conseiller.telephone || "",
       mobile: conseiller.mobile || "",
       adresse: conseiller.adresse || "",
-      autre_adresse: conseiller.autre_adresse || "",
-      utilise_autre_adresse: conseiller.utilise_autre_adresse || false,
       idapimo: conseiller.idapimo || 0,
       tva: conseiller.tva || false,
       typecontrat: conseiller.typecontrat || "",
@@ -63,6 +61,10 @@ export async function GET(request: Request) {
       auto_parrain: conseiller.auto_parrain || "",
       parrain_id: undefined,
       niveau: "",
+      // Informations facture de recrutement
+      nom_societe_facture: conseiller.nom_societe_facture || "",
+      siren_facture: conseiller.siren_facture || "",
+      adresse_facture: conseiller.adresse_facture || "",
     };
 
     return NextResponse.json(conseillerData);

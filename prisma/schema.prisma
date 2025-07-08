@@ -114,8 +114,6 @@ model utilisateurs {
   email              String?              @db.VarChar(255)
   telephone          String?              @db.VarChar(60)
   adresse            String?              @db.VarChar(255)
-  autre_adresse      String?              @db.VarChar(255)
-  utilise_autre_adresse Boolean?          @default(false)
   role               String?              @db.VarChar(50)
   created_at         DateTime?            @db.Timestamp(6)
   updated_at         DateTime?            @db.Timestamp(6)
@@ -127,6 +125,10 @@ model utilisateurs {
   retrocession       Decimal?             @db.Decimal(5, 2)
   auto_parrain       String?              @default("non") @db.VarChar(3)
   mobile             String?              @db.VarChar(60)
+  // Informations facture de recrutement
+  nom_societe_facture String?             @db.VarChar(255)
+  siren_facture      String?              @db.VarChar(255)
+  adresse_facture    String?              @db.VarChar(255)
   factures           factures[]
   parrainages        parrainages?
   relations_contrats relations_contrats[]

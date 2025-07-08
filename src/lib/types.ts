@@ -6,8 +6,6 @@ export interface Conseiller {
   telephone?: string;
   mobile?: string;
   adresse?: string;
-  autre_adresse?: string;
-  utilise_autre_adresse?: boolean;
   idapimo: number;
   tva?: boolean;
   typecontrat?: string;
@@ -17,6 +15,10 @@ export interface Conseiller {
   parrain_id?: number;
   auto_parrain?: string;
   niveau?:string;
+  // Informations facture de recrutement
+  nom_societe_facture?: string;
+  siren_facture?: string;
+  adresse_facture?: string;
 }
 
 export type SelectItem = {
