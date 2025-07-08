@@ -129,6 +129,7 @@ export async function GET(request: Request) {
       honoraires_agent: result.relations_contrats?.honoraires_agent?.toString() || "0",
       retrocession: result.retrocession?.toString() || "0",
       statut_paiement: result.statut_paiement || '',
+      statut_envoi: result.statut_envoi || 'non envoyée',
       created_at: result.created_at?.toISOString() || '',
       numero_mandat: result.relations_contrats?.contrats?.property?.numero_mandat || '',
       date_signature: result.relations_contrats?.contrats?.date_signature?.toISOString() || '',
