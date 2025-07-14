@@ -182,16 +182,10 @@ export default function TableauFactures({ user }: { user: User }) {
     setCurrentPage(1);
   }, [typeFilter, dateFilter]);
 
-  // Recharger les factures quand le tri change
-  useEffect(() => {
-    if (facturesList) {
-      loadFactures();
-    }
-  }, [sortField, sortDirection, loadFactures, facturesList]);
-
+  // Charger les factures au montage du composant et quand le tri change
   useEffect(() => {
     loadFactures();
-  }, [user.id, loadFactures]);
+  }, [loadFactures]);
 
   const sendFacture = async (factureId: number) => {
     try {
@@ -395,12 +389,10 @@ export default function TableauFactures({ user }: { user: User }) {
             }
             setSelectedFacture(null);
             setActionType(null);
-            loadFactures(); // Recharger les factures après validation
           }}
           onClose={() => {
             setSelectedFacture(null);
             setActionType(null);
-            loadFactures(); // Recharger les factures après fermeture
           }}
         />
       )}
