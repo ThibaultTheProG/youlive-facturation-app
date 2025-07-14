@@ -69,7 +69,8 @@ export default function FactureCommission({
   } else {
     const retrocession = Number(facture.retrocession) || 0;
     if (user.tva) {
-      amountTTC = retrocession + (retrocession * Number(facture.vat_rate)) / 100;
+      amountTTC =
+        retrocession + (retrocession * Number(facture.vat_rate)) / 100;
     } else {
       amountTTC = retrocession;
     }
@@ -82,13 +83,10 @@ export default function FactureCommission({
         <View style={styles.flexRow}>
           <View>
             <Text style={[styles.bold, styles.headerInfo]}>
-              {facture.conseiller.nom_societe_facture 
-                ? facture.conseiller.nom_societe_facture
-                : `EI ${facture.conseiller.nom} ${facture.conseiller.prenom}`
-              }
+              {facture.conseiller.nom} {facture.conseiller.prenom}
             </Text>
             <Text style={styles.headerInfo}>
-              Adresse : {facture.conseiller.adresse_facture || facture.conseiller.adresse}
+              Adresse : {facture.conseiller.adresse}
             </Text>
             <Text style={styles.headerInfo}>
               {facture.conseiller.telephone
@@ -99,7 +97,7 @@ export default function FactureCommission({
               Mail : {facture.conseiller.email}
             </Text>
             <Text style={styles.headerInfo}>
-              Siren : {facture.conseiller.siren_facture || facture.conseiller.siren}
+              Siren : {facture.conseiller.siren}
             </Text>
           </View>
           <View>
@@ -193,7 +191,7 @@ export default function FactureCommission({
         </View>
 
         {facture.apporteur && (
-          <Text style={{textAlign: "left", marginTop: 10}}>
+          <Text style={{ textAlign: "left", marginTop: 10 }}>
             Apporteur d&apos;affaire associé à la vente : {facture.apporteur}
           </Text>
         )}
