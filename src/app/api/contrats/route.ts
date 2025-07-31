@@ -1,6 +1,7 @@
 import prisma from "@/lib/db";
 import { Contract, Entries } from "@/lib/types";
 import { NextResponse } from "next/server";
+import { calculRetrocession } from "@/utils/calculs";
 
 export async function GET() {
   try {
@@ -102,6 +103,8 @@ export async function GET() {
               select: {
                 id: true,
                 chiffre_affaires: true,
+                typecontrat: true,
+                auto_parrain: true,
               },
             });
 
@@ -147,13 +150,23 @@ export async function GET() {
                 const honorairesAgent = Number(amount); // On prend uniquement le montant de l'entry
                 const newCA = currentCA + honorairesAgent;
 
+                // Calculer la nouvelle rétrocession en fonction du nouveau chiffre d'affaires
+                const newRetrocession = calculRetrocession(
+                  utilisateur.typecontrat || "",
+                  newCA,
+                  utilisateur.auto_parrain || undefined
+                );
+
                 await prisma.utilisateurs.update({
                   where: { id: utilisateur.id },
-                  data: { chiffre_affaires: newCA },
+                  data: { 
+                    chiffre_affaires: newCA,
+                    retrocession: newRetrocession
+                  },
                 });
 
                 console.log(
-                  `✅ Chiffre d'affaires mis à jour pour l'utilisateur ${utilisateur.id}: ${currentCA} → ${newCA} (+${honorairesAgent})`
+                  `✅ Chiffre d'affaires et rétrocession mis à jour pour l'utilisateur ${utilisateur.id}: CA ${currentCA} → ${newCA} (+${honorairesAgent}), Rétrocession → ${newRetrocession}%`
                 );
               }
             }
