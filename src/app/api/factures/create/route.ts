@@ -311,7 +311,7 @@ async function sendEmailNotification(userId: number, factureType: string, montan
     // Configuration de l'email
     const mailOptions = {
       from: process.env.SMTP_FROM_EMAIL,
-      to: `${email},${process.env.SMTP_TO_EMAIL}`,
+      to: `${email}`,
       subject: `Nouvelle facture ${factureType} créée`,
       text: `Une nouvelle facture de type ${factureType} d'un montant de ${montant.toLocaleString()} € a été créée pour vous.`,
       html: `
@@ -329,7 +329,7 @@ async function sendEmailNotification(userId: number, factureType: string, montan
       `
     };
     
-    console.log("📧 Tentative d'envoi d'email à:", email, process.env.SMTP_TO_EMAIL);
+    console.log("📧 Tentative d'envoi d'email à:", email);
     
     // Envoi de l'email
     const info = await transporter.sendMail(mailOptions);
