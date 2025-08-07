@@ -323,7 +323,7 @@ async function sendEmailNotification(userId: number, factureType: string, montan
             <li><strong>Type :</strong> ${factureType}</li>
             <li><strong>Montant :</strong> ${montant.toLocaleString()} €</li>
           </ul>
-          <p>Vous pouvez consulter cette facture dans votre espace personnel.</p>
+          <p>Vous pouvez consulter cette facture dans votre espace personnel en cliquant ici : ${process.env.NEXT_PUBLIC_BASE_URL}</p>
           <p>Cordialement,<br>L'équipe YouLive</p>
         </div>
       `
