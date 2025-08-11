@@ -66,7 +66,6 @@ async function createFacture() {
         const relationContrat: RelationContrat = {
           honoraires_agent: Number(contrat.honoraires_agent),
           user_id: contrat.user_id,
-          retrocession: Number(contrat.utilisateurs.retrocession),
           relationid: contrat.id
         };
 
@@ -154,13 +153,13 @@ async function createFactureCommission(
     const tauxAvantSeuil = calculRetrocession(
       utilisateur.typecontrat || "",
       currentCA,
-      utilisateur.auto_parrain
+      utilisateur.auto_parrain || undefined
     );
     
     const tauxApresSeuil = calculRetrocession(
       utilisateur.typecontrat || "",
       seuil,
-      utilisateur.auto_parrain
+      utilisateur.auto_parrain || undefined
     );
 
     console.log(`📊 Taux calculés: avant seuil ${tauxAvantSeuil}%, après seuil ${tauxApresSeuil}%`);
@@ -338,10 +337,11 @@ async function createFactureRecrutement(
         // Vérifier si la facture existe déjà
         const existingFacture = await prisma.factures.findUnique({
           where: {
-            relation_id_type_user_id: {
+            relation_id_type_user_id_tranche: {
               relation_id: relationid,
               type: 'recrutement',
-              user_id: parrainId
+              user_id: parrainId,
+              tranche: 'avant_seuil'
             }
           }
         });
@@ -359,6 +359,7 @@ async function createFactureRecrutement(
             user_id: parrainId,
             type: 'recrutement',
             retrocession: retrocessionAmount,
+            tranche: 'avant_seuil',
             statut_paiement: 'non payé',
             statut_envoi: 'non envoyée',
             created_at: new Date(),
