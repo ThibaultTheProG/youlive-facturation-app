@@ -137,6 +137,10 @@ export async function GET(request: Request) {
       vat_rate: 20, // Valeur par défaut si non définie
       apporteur: result.apporteur,
       apporteur_amount: result.apporteur_amount || 0,
+      // Nouveaux champs pour les factures avec tranches
+      montant_honoraires: result.montant_honoraires ? Number(result.montant_honoraires) : undefined,
+      taux_retrocession: result.taux_retrocession ? Number(result.taux_retrocession) : undefined,
+      tranche: result.tranche || undefined,
 
       conseiller: {
         idapimo: utilisateur?.idapimo || 0,

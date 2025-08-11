@@ -72,7 +72,6 @@ export interface Entries {
 export interface RelationContrat {
   honoraires_agent: number;
   user_id: number;
-  retrocession: number;
   relationid: number;
 }
 
@@ -130,6 +129,10 @@ export interface Facture {
   vat_rate: number;
   apporteur: string;
   apporteur_amount: number;
+  // Nouveaux champs pour les factures avec tranches
+  montant_honoraires?: number;
+  taux_retrocession?: number;
+  tranche?: string;
 }
 
 interface Filleul {

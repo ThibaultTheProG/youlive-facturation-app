@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { PrismaClient } from "@prisma/client";
 import { RelationContrat } from "@/lib/types.js";
 import nodemailer from "nodemailer";
+import { calculRetrocession } from "@/utils/calculs";
 
 // Type pour la transaction Prisma
 type PrismaTransaction = Omit<
@@ -72,7 +73,7 @@ async function createFacture() {
         // Collecter les notifications de la création de factures commission
         const commissionNotifications = await createFactureCommission(relationContrat, tx);
         if (commissionNotifications) {
-          notificationsToSend.push(commissionNotifications);
+          notificationsToSend.push(...commissionNotifications);
         }
 
         // Collecter les notifications de la création de factures recrutement
@@ -106,56 +107,154 @@ async function createFacture() {
 async function createFactureCommission(
   contrat: RelationContrat,
   prisma: PrismaTransaction
-): Promise<EmailNotification | null> {
-  const { relationid, user_id, honoraires_agent, retrocession } = contrat;
-
-  // Vérification du taux de rétrocession
-  if (!retrocession || retrocession < 60) {
-    console.log(`⚠️ Pas de facture générée pour l'utilisateur ${user_id} : taux de rétrocession ${retrocession}% < 60%`);
-    return null;
-  }
-
-  const retrocessionAmount = Number((honoraires_agent * (retrocession / 100)).toFixed(2));
+): Promise<EmailNotification[]> {
+  const { relationid, user_id, honoraires_agent } = contrat;
+  const notifications: EmailNotification[] = [];
 
   try {
-    // Vérifier si la facture existe déjà
-    const existingFacture = await prisma.factures.findUnique({
-      where: {
-        relation_id_type_user_id: {
-          relation_id: relationid,
-          type: 'commission',
-          user_id: user_id
-        }
+    // Récupérer les informations de l'utilisateur
+    const utilisateur = await prisma.utilisateurs.findUnique({
+      where: { id: user_id },
+      select: { 
+        chiffre_affaires: true,
+        typecontrat: true,
+        auto_parrain: true
       }
     });
 
-    // Si la facture existe déjà, ne rien faire
-    if (existingFacture) {
-      console.log(`⚠️ Facture commission déjà existante pour l'utilisateur ${user_id}, pas de création`);
-      return null;
+    if (!utilisateur) {
+      console.log(`❌ Utilisateur non trouvé : ${user_id}`);
+      return notifications;
     }
 
-    // Créer la nouvelle facture
-    await prisma.factures.create({
-      data: {
-        relation_id: relationid,
-        user_id: user_id,
-        type: 'commission',
-        retrocession: retrocessionAmount,
-        statut_paiement: 'non payé',
-        statut_envoi: 'non envoyée',
-        created_at: new Date(),
-        added_at: new Date()
-      }
-    });
+    const currentCA = Number(utilisateur.chiffre_affaires || 0);
+    const newCA = currentCA + honoraires_agent;
+    const seuil = 70000;
 
-    console.log(`✅ Nouvelle facture commission créée pour l'utilisateur ${user_id}`);
+    // Calculer les montants pour chaque tranche
+    let montantAvantSeuil = 0;
+    let montantApresSeuil = 0;
+
+    if (currentCA < seuil && newCA > seuil) {
+      // Le CA va dépasser le seuil avec ce contrat
+      montantAvantSeuil = seuil - currentCA;
+      montantApresSeuil = honoraires_agent - montantAvantSeuil;
+      console.log(`📊 CA va dépasser le seuil: ${currentCA}€ → ${newCA}€ (avant: ${montantAvantSeuil}€, après: ${montantApresSeuil}€)`);
+    } else if (currentCA >= seuil) {
+      // Le CA est déjà au-dessus du seuil
+      montantApresSeuil = honoraires_agent;
+      console.log(`📊 CA déjà au-dessus du seuil: ${currentCA}€ (après: ${montantApresSeuil}€)`);
+    } else {
+      // Le CA reste en-dessous du seuil
+      montantAvantSeuil = honoraires_agent;
+      console.log(`📊 CA reste en-dessous du seuil: ${currentCA}€ → ${newCA}€ (avant: ${montantAvantSeuil}€)`);
+    }
+
+    // Calculer les taux de rétrocession pour chaque tranche
+    const tauxAvantSeuil = calculRetrocession(
+      utilisateur.typecontrat || "",
+      currentCA,
+      utilisateur.auto_parrain
+    );
     
-    return {
-      userId: user_id,
-      factureType: 'commission',
-      montant: retrocessionAmount
-    };
+    const tauxApresSeuil = calculRetrocession(
+      utilisateur.typecontrat || "",
+      seuil,
+      utilisateur.auto_parrain
+    );
+
+    console.log(`📊 Taux calculés: avant seuil ${tauxAvantSeuil}%, après seuil ${tauxApresSeuil}%`);
+
+    // Créer les factures pour chaque tranche si nécessaire
+    if (montantAvantSeuil > 0) {
+      const retrocessionAvantSeuil = Number((montantAvantSeuil * (tauxAvantSeuil / 100)).toFixed(2));
+      
+      // Vérifier si la facture existe déjà
+      const existingFactureAvant = await prisma.factures.findUnique({
+        where: {
+          relation_id_type_user_id_tranche: {
+            relation_id: relationid,
+            type: 'commission',
+            user_id: user_id,
+            tranche: 'avant_seuil'
+          }
+        }
+      });
+
+      if (!existingFactureAvant) {
+        await prisma.factures.create({
+          data: {
+            relation_id: relationid,
+            user_id: user_id,
+            type: 'commission',
+            retrocession: retrocessionAvantSeuil,
+            montant_honoraires: montantAvantSeuil,
+            taux_retrocession: tauxAvantSeuil,
+            tranche: 'avant_seuil',
+            statut_paiement: 'non payé',
+            statut_envoi: 'non envoyée',
+            created_at: new Date(),
+            added_at: new Date()
+          }
+        });
+
+        console.log(`✅ Facture commission avant seuil créée pour l'utilisateur ${user_id}: ${retrocessionAvantSeuil}€ (${tauxAvantSeuil}% de ${montantAvantSeuil}€)`);
+        
+        notifications.push({
+          userId: user_id,
+          factureType: 'commission_avant_seuil',
+          montant: retrocessionAvantSeuil
+        });
+      } else {
+        console.log(`⚠️ Facture commission avant seuil déjà existante pour l'utilisateur ${user_id}`);
+      }
+    }
+
+    if (montantApresSeuil > 0) {
+      const retrocessionApresSeuil = Number((montantApresSeuil * (tauxApresSeuil / 100)).toFixed(2));
+      
+      // Vérifier si la facture existe déjà
+      const existingFactureApres = await prisma.factures.findUnique({
+        where: {
+          relation_id_type_user_id_tranche: {
+            relation_id: relationid,
+            type: 'commission',
+            user_id: user_id,
+            tranche: 'apres_seuil'
+          }
+        }
+      });
+
+      if (!existingFactureApres) {
+        await prisma.factures.create({
+          data: {
+            relation_id: relationid,
+            user_id: user_id,
+            type: 'commission',
+            retrocession: retrocessionApresSeuil,
+            montant_honoraires: montantApresSeuil,
+            taux_retrocession: tauxApresSeuil,
+            tranche: 'apres_seuil',
+            statut_paiement: 'non payé',
+            statut_envoi: 'non envoyée',
+            created_at: new Date(),
+            added_at: new Date()
+          }
+        });
+
+        console.log(`✅ Facture commission après seuil créée pour l'utilisateur ${user_id}: ${retrocessionApresSeuil}€ (${tauxApresSeuil}% de ${montantApresSeuil}€)`);
+        
+        notifications.push({
+          userId: user_id,
+          factureType: 'commission_apres_seuil',
+          montant: retrocessionApresSeuil
+        });
+      } else {
+        console.log(`⚠️ Facture commission après seuil déjà existante pour l'utilisateur ${user_id}`);
+      }
+    }
+
+    return notifications;
   } catch (error) {
     console.error("❌ Erreur lors de la création de la facture commission :", error);
     throw error;

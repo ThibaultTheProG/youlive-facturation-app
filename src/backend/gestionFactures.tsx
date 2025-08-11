@@ -17,6 +17,10 @@ export async function getFactures(userId: number) {
       numero: true,
       apporteur: true,
       apporteur_amount: true,
+      // Nouveaux champs pour les factures avec tranches
+      montant_honoraires: true,
+      taux_retrocession: true,
+      tranche: true,
       relations_contrats: {
         select: {
           honoraires_agent: true,
@@ -35,13 +39,17 @@ export async function getFactures(userId: number) {
     }
   });
 
-  return result.map(({ relations_contrats, retrocession, ...rest }) => ({
+  return result.map(({ relations_contrats, retrocession, montant_honoraires, taux_retrocession, tranche, ...rest }) => ({
     ...rest,
     honoraires_agent: relations_contrats?.honoraires_agent?.toString() || "0",
     retrocession: retrocession?.toString() || "0",
     numero_mandat: relations_contrats?.contrats?.property?.numero_mandat || "",
     date_signature: relations_contrats?.contrats?.date_signature?.toISOString() || null,
-    statut_envoi: rest.statut_envoi || "non envoyée"
+    statut_envoi: rest.statut_envoi || "non envoyée",
+    // Nouveaux champs
+    montant_honoraires: montant_honoraires ? Number(montant_honoraires) : undefined,
+    taux_retrocession: taux_retrocession ? Number(taux_retrocession) : undefined,
+    tranche: tranche || undefined
   }));
 }
 

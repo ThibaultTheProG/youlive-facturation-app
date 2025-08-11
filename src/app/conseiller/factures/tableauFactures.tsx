@@ -269,6 +269,7 @@ export default function TableauFactures({ user }: { user: User }) {
               onSort={handleSort} 
             />
             <TableHead>Honoraire Youlive HT</TableHead>
+            <TableHead>Taux Rétrocession</TableHead>
             <SortableHeader 
               title="Rétrocession HT" 
               field="montant" 
@@ -295,8 +296,26 @@ export default function TableauFactures({ user }: { user: User }) {
             currentItems.map((facture, index) => (
               <TableRow key={index}>
                 <TableCell className="font-medium">{facture.numero || "Non défini"}</TableCell>
-                <TableCell className="font-medium">{facture.type}</TableCell>
-                <TableCell>{parseFloat(facture.honoraires_agent).toFixed(2)} €</TableCell>
+                <TableCell className="font-medium">
+                  {facture.type}
+                  {facture.tranche && (
+                    <span className="text-xs text-gray-500 ml-1">
+                      ({facture.tranche === 'avant_seuil' ? 'Avant seuil' : 'Après seuil'})
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {facture.montant_honoraires !== undefined 
+                    ? `${facture.montant_honoraires.toFixed(2)} €`
+                    : `${parseFloat(facture.honoraires_agent).toFixed(2)} €`
+                  }
+                </TableCell>
+                <TableCell>
+                  {facture.taux_retrocession !== undefined 
+                    ? `${facture.taux_retrocession}%`
+                    : "N/A"
+                  }
+                </TableCell>
                 <TableCell>{parseFloat(facture.retrocession).toFixed(2)} €</TableCell>
                 <TableCell className="text-center">{facture.numero_mandat || "N/A"}</TableCell>
                 <TableCell className="text-center">
@@ -345,7 +364,7 @@ export default function TableauFactures({ user }: { user: User }) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={10} className="text-center">
+              <TableCell colSpan={11} className="text-center">
                 {typeFilter !== "tous" 
                   ? `Aucune facture de type "${typeFilter}" disponible.` 
                   : "Aucune facture disponible."}

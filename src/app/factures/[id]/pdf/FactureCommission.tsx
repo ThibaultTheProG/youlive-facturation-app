@@ -50,31 +50,59 @@ export default function FactureCommission({
   let amountTTC: number = 0;
   let apporteurAmount: number = 0;
   let totalAmount: number = 0;
+  let honorairesAgent: number = 0;
+  let tauxRetrocession: number = 0;
 
   // Fonction pour formater les nombres avec 2 décimales
   const formatNumber = (num: number): string => {
     return num.toFixed(2);
   };
 
+  // Déterminer si c'est une nouvelle facture (avec les nouveaux champs) ou une ancienne
+  const isNewFacture = facture.montant_honoraires !== undefined && facture.taux_retrocession !== undefined;
+
+  if (isNewFacture) {
+    // Nouvelle facture : utiliser les champs spécifiques
+    honorairesAgent = Number(facture.montant_honoraires) || 0;
+    tauxRetrocession = Number(facture.taux_retrocession) || 0;
+    console.log(`📄 Nouvelle facture - Tranche: ${facture.tranche}, Honoraires: ${honorairesAgent}€, Taux: ${tauxRetrocession}%`);
+  } else {
+    // Ancienne facture : utiliser les champs traditionnels
+    honorairesAgent = Number(facture.honoraires_agent) || 0;
+    tauxRetrocession = Number(facture.conseiller.retrocession) || 0;
+    console.log(`📄 Ancienne facture - Honoraires: ${honorairesAgent}€, Taux: ${tauxRetrocession}%`);
+  }
+
   console.log(facture.apporteur_amount);
 
+  // Calculer le montant de rétrocession pour le calcul TTC
+  const retrocessionAmount = Number(facture.retrocession) || 0;
+  
   if (facture.apporteur === "oui") {
     apporteurAmount = Number(facture.apporteur_amount) || 0;
-    totalAmount = Number(facture.retrocession) - apporteurAmount;
+    totalAmount = retrocessionAmount - apporteurAmount;
     if (user.tva) {
       amountTTC = totalAmount + (totalAmount * Number(facture.vat_rate)) / 100;
     } else {
       amountTTC = totalAmount;
     }
   } else {
-    const retrocession = Number(facture.retrocession) || 0;
     if (user.tva) {
-      amountTTC =
-        retrocession + (retrocession * Number(facture.vat_rate)) / 100;
+      amountTTC = retrocessionAmount + (retrocessionAmount * Number(facture.vat_rate)) / 100;
     } else {
-      amountTTC = retrocession;
+      amountTTC = retrocessionAmount;
     }
   }
+
+  // Générer le titre de la facture avec la tranche si applicable
+  const getFactureTitle = () => {
+    let title = `FACTURE COMMISSION N°${facture.numero}`;
+    if (isNewFacture && facture.tranche) {
+      const trancheLabel = facture.tranche === 'avant_seuil' ? 'AVANT SEUIL' : 'APRÈS SEUIL';
+      title += ` (${trancheLabel})`;
+    }
+    return title;
+  };
 
   return (
     <Document>
@@ -128,7 +156,7 @@ export default function FactureCommission({
 
         {/* Titre */}
         <Text style={styles.highlight}>
-          FACTURE COMMISSION N°{facture.numero}
+          {getFactureTitle()}
         </Text>
 
         {/* Bloc DÉSIGNATION */}
@@ -212,17 +240,17 @@ export default function FactureCommission({
           </View>
           <View style={styles.tableRow}>
             <Text style={styles.tableCellTotal}>
-              {formatNumber(Number(facture.honoraires_agent))} €
+              {formatNumber(honorairesAgent)} €
             </Text>
             <Text style={styles.tableCellTotal}>
-              {facture.conseiller.retrocession}%
+              {tauxRetrocession}%
             </Text>
             <Text style={styles.tableCellTotal}>
-              {formatNumber(totalAmount || Number(facture.retrocession))} €
+              {formatNumber(totalAmount || retrocessionAmount)} €
             </Text>
             {user.tva && <Text style={styles.tableCellTotal}>20 %</Text>}
             <Text style={styles.tableCell}>
-              {formatNumber(amountTTC || Number(facture.retrocession))} €
+              {formatNumber(amountTTC)} €
             </Text>
           </View>
         </View>
