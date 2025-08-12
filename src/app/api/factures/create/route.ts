@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { PrismaClient } from "@prisma/client";
 import { RelationContrat } from "@/lib/types.js";
-import nodemailer from "nodemailer";
+//import nodemailer from "nodemailer";
 import { calculRetrocession } from "@/utils/calculs";
 
 // Type pour la transaction Prisma
@@ -87,15 +87,15 @@ async function createFacture() {
 
     console.log("✅ Factures créées avec succès.");
 
-    // Envoyer les notifications après la fin de la transaction
-    console.log(`📧 Envoi de ${notificationsToSend.length} notifications...`);
-    for (const notification of notificationsToSend) {
-      await sendEmailNotification(
-        notification.userId,
-        notification.factureType,
-        notification.montant
-      );
-    }
+    // // Envoyer les notifications après la fin de la transaction
+    // console.log(`📧 Envoi de ${notificationsToSend.length} notifications...`);
+    // for (const notification of notificationsToSend) {
+    //   await sendEmailNotification(
+    //     notification.userId,
+    //     notification.factureType,
+    //     notification.montant
+    //   );
+    // }
   } catch (error) {
     console.error("❌ Erreur lors de la création des factures :", error);
     throw error;
@@ -111,6 +111,21 @@ async function createFactureCommission(
   const notifications: EmailNotification[] = [];
 
   try {
+    // Vérifier d'abord si des factures existent déjà pour cette relation
+    const facturesExistantes = await prisma.factures.findMany({
+      where: {
+        relation_id: relationid,
+        user_id: user_id,
+        type: 'commission'
+      }
+    });
+
+    // Si des factures existent déjà, ne rien créer
+    if (facturesExistantes.length > 0) {
+      console.log(`⚠️ Factures commission déjà existantes pour la relation ${relationid}, utilisateur ${user_id}`);
+      return notifications;
+    }
+
     // Récupérer les informations de l'utilisateur
     const utilisateur = await prisma.utilisateurs.findUnique({
       where: { id: user_id },
@@ -168,89 +183,57 @@ async function createFactureCommission(
     if (montantAvantSeuil > 0) {
       const retrocessionAvantSeuil = Number((montantAvantSeuil * (tauxAvantSeuil / 100)).toFixed(2));
       
-      // Vérifier si la facture existe déjà
-      const existingFactureAvant = await prisma.factures.findUnique({
-        where: {
-          relation_id_type_user_id_tranche: {
-            relation_id: relationid,
-            type: 'commission',
-            user_id: user_id,
-            tranche: 'avant_seuil'
-          }
+      await prisma.factures.create({
+        data: {
+          relation_id: relationid,
+          user_id: user_id,
+          type: 'commission',
+          retrocession: retrocessionAvantSeuil,
+          montant_honoraires: montantAvantSeuil,
+          taux_retrocession: tauxAvantSeuil,
+          tranche: 'avant_seuil',
+          statut_paiement: 'non payé',
+          statut_envoi: 'non envoyée',
+          created_at: new Date(),
+          added_at: new Date()
         }
       });
 
-      if (!existingFactureAvant) {
-        await prisma.factures.create({
-          data: {
-            relation_id: relationid,
-            user_id: user_id,
-            type: 'commission',
-            retrocession: retrocessionAvantSeuil,
-            montant_honoraires: montantAvantSeuil,
-            taux_retrocession: tauxAvantSeuil,
-            tranche: 'avant_seuil',
-            statut_paiement: 'non payé',
-            statut_envoi: 'non envoyée',
-            created_at: new Date(),
-            added_at: new Date()
-          }
-        });
-
-        console.log(`✅ Facture commission avant seuil créée pour l'utilisateur ${user_id}: ${retrocessionAvantSeuil}€ (${tauxAvantSeuil}% de ${montantAvantSeuil}€)`);
-        
-        notifications.push({
-          userId: user_id,
-          factureType: 'commission_avant_seuil',
-          montant: retrocessionAvantSeuil
-        });
-      } else {
-        console.log(`⚠️ Facture commission avant seuil déjà existante pour l'utilisateur ${user_id}`);
-      }
+      console.log(`✅ Facture commission avant seuil créée pour l'utilisateur ${user_id}: ${retrocessionAvantSeuil}€ (${tauxAvantSeuil}% de ${montantAvantSeuil}€)`);
+      
+      notifications.push({
+        userId: user_id,
+        factureType: 'commission_avant_seuil',
+        montant: retrocessionAvantSeuil
+      });
     }
 
     if (montantApresSeuil > 0) {
       const retrocessionApresSeuil = Number((montantApresSeuil * (tauxApresSeuil / 100)).toFixed(2));
       
-      // Vérifier si la facture existe déjà
-      const existingFactureApres = await prisma.factures.findUnique({
-        where: {
-          relation_id_type_user_id_tranche: {
-            relation_id: relationid,
-            type: 'commission',
-            user_id: user_id,
-            tranche: 'apres_seuil'
-          }
+      await prisma.factures.create({
+        data: {
+          relation_id: relationid,
+          user_id: user_id,
+          type: 'commission',
+          retrocession: retrocessionApresSeuil,
+          montant_honoraires: montantApresSeuil,
+          taux_retrocession: tauxApresSeuil,
+          tranche: 'apres_seuil',
+          statut_paiement: 'non payé',
+          statut_envoi: 'non envoyée',
+          created_at: new Date(),
+          added_at: new Date()
         }
       });
 
-      if (!existingFactureApres) {
-        await prisma.factures.create({
-          data: {
-            relation_id: relationid,
-            user_id: user_id,
-            type: 'commission',
-            retrocession: retrocessionApresSeuil,
-            montant_honoraires: montantApresSeuil,
-            taux_retrocession: tauxApresSeuil,
-            tranche: 'apres_seuil',
-            statut_paiement: 'non payé',
-            statut_envoi: 'non envoyée',
-            created_at: new Date(),
-            added_at: new Date()
-          }
-        });
-
-        console.log(`✅ Facture commission après seuil créée pour l'utilisateur ${user_id}: ${retrocessionApresSeuil}€ (${tauxApresSeuil}% de ${montantApresSeuil}€)`);
-        
-        notifications.push({
-          userId: user_id,
-          factureType: 'commission_apres_seuil',
-          montant: retrocessionApresSeuil
-        });
-      } else {
-        console.log(`⚠️ Facture commission après seuil déjà existante pour l'utilisateur ${user_id}`);
-      }
+      console.log(`✅ Facture commission après seuil créée pour l'utilisateur ${user_id}: ${retrocessionApresSeuil}€ (${tauxApresSeuil}% de ${montantApresSeuil}€)`);
+      
+      notifications.push({
+        userId: user_id,
+        factureType: 'commission_apres_seuil',
+        montant: retrocessionApresSeuil
+      });
     }
 
     return notifications;
@@ -332,6 +315,18 @@ async function createFactureRecrutement(
       for (const { id: parrainId, percentage } of niveaux) {
         if (!parrainId) continue;
 
+        // Récupérer le taux de rétrocession du parrain depuis la table utilisateurs
+        const parrain = await prisma.utilisateurs.findUnique({
+          where: { id: parrainId },
+          select: { retrocession: true }
+        });
+
+        if (!parrain) {
+          console.log(`❌ Parrain non trouvé : ${parrainId}`);
+          continue;
+        }
+
+        const tauxRetrocessionParrain = Number(parrain.retrocession) || 0;
         const retrocessionAmount = Number(((honoraires_agent * percentage) / 100).toFixed(2));
 
         // Vérifier si la facture existe déjà
@@ -358,7 +353,9 @@ async function createFactureRecrutement(
             relation_id: relationid,
             user_id: parrainId,
             type: 'recrutement',
-            retrocession: retrocessionAmount,
+            retrocession: retrocessionAmount, // Stocker le montant de rétrocession
+            montant_honoraires: honoraires_agent, // Stocker le montant des honoraires pour le calcul
+            taux_retrocession: tauxRetrocessionParrain, // Stocker le taux de rétrocession du parrain
             tranche: 'avant_seuil',
             statut_paiement: 'non payé',
             statut_envoi: 'non envoyée',
@@ -384,59 +381,59 @@ async function createFactureRecrutement(
   }
 }
 
-// // Fonction pour envoyer une notification par email
-async function sendEmailNotification(userId: number, factureType: string, montant: number) {
-  try {
-    // Pour les tests, on envoie toujours à cette adresse
-    // const testEmail = "tuffinthibaultgw@gmail.com";
+// // // Fonction pour envoyer une notification par email
+// async function sendEmailNotification(userId: number, factureType: string, montant: number) {
+//   try {
+//     // Pour les tests, on envoie toujours à cette adresse
+//     // const testEmail = "tuffinthibaultgw@gmail.com";
     
-    // Dans un environnement de production, on récupérerait l'email du conseiller
-    const user = await prisma.utilisateurs.findUnique({
-      where: { id: userId },
-      select: { email: true, prenom: true, nom: true }
-    });
-    const email = user?.email;
+//     // Dans un environnement de production, on récupérerait l'email du conseiller
+//     const user = await prisma.utilisateurs.findUnique({
+//       where: { id: userId },
+//       select: { email: true, prenom: true, nom: true }
+//     });
+//     const email = user?.email;
     
-    // Configuration du transporteur d'emails
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_SERVER_HOST,
-      port: Number(process.env.SMTP_SERVER_PORT),
-      secure: true, // true pour le port 465, false pour 587
-      auth: {
-        user: process.env.SMTP_SERVER_USERNAME,
-        pass: process.env.SMTP_SERVER_PASSWORD,
-      },
-    });
+//     // Configuration du transporteur d'emails
+//     const transporter = nodemailer.createTransport({
+//       host: process.env.SMTP_SERVER_HOST,
+//       port: Number(process.env.SMTP_SERVER_PORT),
+//       secure: true, // true pour le port 465, false pour 587
+//       auth: {
+//         user: process.env.SMTP_SERVER_USERNAME,
+//         pass: process.env.SMTP_SERVER_PASSWORD,
+//       },
+//     });
     
-    // Configuration de l'email
-    const mailOptions = {
-      from: process.env.SMTP_FROM_EMAIL,
-      to: `${email}`,
-      subject: `Nouvelle facture ${factureType} créée`,
-      text: `Une nouvelle facture de type ${factureType} d'un montant de ${montant.toLocaleString()} € a été créée pour vous.`,
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
-          <h2 style="color: #e67e22;">Nouvelle facture créée</h2>
-          <p>Bonjour,</p>
-          <p>Une nouvelle facture a été créée dans votre espace :</p>
-          <ul>
-            <li><strong>Type :</strong> ${factureType}</li>
-            <li><strong>Montant :</strong> ${montant.toLocaleString()} €</li>
-          </ul>
-          <p>Vous pouvez consulter cette facture dans votre espace personnel en cliquant ici : ${process.env.NEXT_PUBLIC_BASE_URL}</p>
-          <p>Cordialement,<br>L'équipe YouLive</p>
-        </div>
-      `
-    };
+//     // Configuration de l'email
+//     const mailOptions = {
+//       from: process.env.SMTP_FROM_EMAIL,
+//       to: `${email}`,
+//       subject: `Nouvelle facture ${factureType} créée`,
+//       text: `Une nouvelle facture de type ${factureType} d'un montant de ${montant.toLocaleString()} € a été créée pour vous.`,
+//       html: `
+//         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
+//           <h2 style="color: #e67e22;">Nouvelle facture créée</h2>
+//           <p>Bonjour,</p>
+//           <p>Une nouvelle facture a été créée dans votre espace :</p>
+//           <ul>
+//             <li><strong>Type :</strong> ${factureType}</li>
+//             <li><strong>Montant :</strong> ${montant.toLocaleString()} €</li>
+//           </ul>
+//           <p>Vous pouvez consulter cette facture dans votre espace personnel en cliquant ici : ${process.env.NEXT_PUBLIC_BASE_URL}</p>
+//           <p>Cordialement,<br>L'équipe YouLive</p>
+//         </div>
+//       `
+//     };
     
-    console.log("📧 Tentative d'envoi d'email à:", email);
+//     console.log("📧 Tentative d'envoi d'email à:", email);
     
-    // Envoi de l'email
-    const info = await transporter.sendMail(mailOptions);
+//     // Envoi de l'email
+//     const info = await transporter.sendMail(mailOptions);
     
-    console.log(`✉️ Notification envoyée pour la facture de type ${factureType}:`, info.messageId);
-  } catch (error) {
-    console.error("❌ Erreur lors de l'envoi de la notification par email:", error);
-    // On ne propage pas l'erreur pour ne pas bloquer la création de facture
-  }
-}
+//     console.log(`✉️ Notification envoyée pour la facture de type ${factureType}:`, info.messageId);
+//   } catch (error) {
+//     console.error("❌ Erreur lors de l'envoi de la notification par email:", error);
+//     // On ne propage pas l'erreur pour ne pas bloquer la création de facture
+//   }
+// }

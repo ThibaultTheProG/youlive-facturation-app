@@ -53,16 +53,32 @@ export default function FactureRecrutement({
   };
 
   let amountTTC: number = 0;
-  const retrocession = Number(facture.retrocession) || 0;
-  const honorairesAgent = Number(facture.honoraires_agent) || 0;
+  let retrocessionAmount: number = 0;
+  let honorairesAgent: number = 0;
+  let tauxRetrocession: number = 0;
+
+  // Déterminer si c'est une nouvelle facture (avec les nouveaux champs) ou une ancienne
+  const isNewFacture = facture.montant_honoraires !== undefined && facture.taux_retrocession !== undefined;
+
+  if (isNewFacture) {
+    // Nouvelle facture : utiliser les champs spécifiques
+    honorairesAgent = Number(facture.montant_honoraires) || 0;
+    tauxRetrocession = Number(facture.taux_retrocession) || 0;
+    retrocessionAmount = Number(facture.retrocession) || 0; // Utiliser le montant stocké dans retrocession
+    console.log(`📄 Nouvelle facture recrutement - Honoraires: ${honorairesAgent}€, Taux: ${tauxRetrocession}%, Montant: ${retrocessionAmount}€`);
+  } else {
+    // Ancienne facture : utiliser les champs traditionnels
+    honorairesAgent = Number(facture.honoraires_agent) || 0;
+    retrocessionAmount = Number(facture.retrocession) || 0;
+    tauxRetrocession = Math.round((retrocessionAmount / honorairesAgent) * 100);
+    console.log(`📄 Ancienne facture recrutement - Honoraires: ${honorairesAgent}€, Montant: ${retrocessionAmount}€, Taux calculé: ${tauxRetrocession}%`);
+  }
   
   if (user.tva) {
-    amountTTC = retrocession + (retrocession * Number(facture.vat_rate)) / 100;
+    amountTTC = retrocessionAmount + (retrocessionAmount * Number(facture.vat_rate)) / 100;
   } else {
-    amountTTC = retrocession;
+    amountTTC = retrocessionAmount;
   }
-
-  const retrocessionPercentage = Math.round((retrocession / honorairesAgent) * 100);
 
   return (
     <Document>
@@ -160,9 +176,9 @@ export default function FactureRecrutement({
             <Text style={styles.tableCellTotal}>
               {formatNumber(honorairesAgent)} €
             </Text>
-            <Text style={styles.tableCellTotal}>{retrocessionPercentage}%</Text>
+            <Text style={styles.tableCellTotal}>{tauxRetrocession}%</Text>
             <Text style={styles.tableCellTotal}>
-              {formatNumber(retrocession)} €
+              {formatNumber(retrocessionAmount)} €
             </Text>
             {user.tva && <Text style={styles.tableCellTotal}>20 %</Text>}
             <Text style={styles.tableCell}>

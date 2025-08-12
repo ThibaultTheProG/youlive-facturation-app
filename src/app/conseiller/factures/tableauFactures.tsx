@@ -298,9 +298,9 @@ export default function TableauFactures({ user }: { user: User }) {
                 <TableCell className="font-medium">{facture.numero || "Non défini"}</TableCell>
                 <TableCell className="font-medium">
                   {facture.type}
-                  {facture.tranche && (
+                  {facture.type === 'commission' && facture.tranche && (
                     <span className="text-xs text-gray-500 ml-1">
-                      ({facture.tranche === 'avant_seuil' ? 'Avant seuil' : 'Après seuil'})
+                      ({facture.tranche})
                     </span>
                   )}
                 </TableCell>
