@@ -42,6 +42,9 @@ async function createFacture() {
 
     // Utiliser une transaction Prisma avec un délai plus long (30 secondes)
     await prisma.$transaction(async (tx) => {
+      // 0. Mettre à jour les factures de recrutement existantes avec le bon taux
+      await updateExistingRecrutementFactures(tx);
+
       // 1. Récupérer les contrats avec leurs relations
       const contrats = await tx.relations_contrats.findMany({
         select: {
@@ -98,6 +101,59 @@ async function createFacture() {
     // }
   } catch (error) {
     console.error("❌ Erreur lors de la création des factures :", error);
+    throw error;
+  }
+}
+
+// Fonction pour mettre à jour les factures de recrutement existantes
+async function updateExistingRecrutementFactures(prisma: PrismaTransaction) {
+  try {
+    console.log("🔄 Mise à jour des factures de recrutement existantes...");
+    
+    // Récupérer toutes les factures de recrutement existantes
+    const facturesRecrutement = await prisma.factures.findMany({
+      where: {
+        type: 'recrutement'
+      },
+      select: {
+        id: true,
+        relation_id: true,
+        user_id: true,
+        retrocession: true,
+        montant_honoraires: true,
+        taux_retrocession: true
+      }
+    });
+
+    let updatedCount = 0;
+
+    for (const facture of facturesRecrutement) {
+      // Calculer le pourcentage de parrainage basé sur le montant de rétrocession et les honoraires
+      if (facture.montant_honoraires && facture.retrocession) {
+        const honoraires = Number(facture.montant_honoraires);
+        const retrocession = Number(facture.retrocession);
+        const tauxCalcule = (retrocession / honoraires) * 100;
+        
+        // Vérifier si le taux actuel est incorrect (70 ou 99)
+        const tauxActuel = Number(facture.taux_retrocession);
+        if (tauxActuel === 70 || tauxActuel === 99) {
+          // Mettre à jour avec le taux calculé
+          await prisma.factures.update({
+            where: { id: facture.id },
+            data: {
+              taux_retrocession: tauxCalcule
+            }
+          });
+          
+          console.log(`✅ Facture recrutement ${facture.id} mise à jour: ${tauxActuel}% → ${tauxCalcule.toFixed(2)}%`);
+          updatedCount++;
+        }
+      }
+    }
+
+    console.log(`✅ ${updatedCount} factures de recrutement mises à jour.`);
+  } catch (error) {
+    console.error("❌ Erreur lors de la mise à jour des factures de recrutement :", error);
     throw error;
   }
 }
@@ -326,7 +382,6 @@ async function createFactureRecrutement(
           continue;
         }
 
-        const tauxRetrocessionParrain = Number(parrain.retrocession) || 0;
         const retrocessionAmount = Number(((honoraires_agent * percentage) / 100).toFixed(2));
 
         // Vérifier si la facture existe déjà
@@ -355,7 +410,7 @@ async function createFactureRecrutement(
             type: 'recrutement',
             retrocession: retrocessionAmount, // Stocker le montant de rétrocession
             montant_honoraires: honoraires_agent, // Stocker le montant des honoraires pour le calcul
-            taux_retrocession: tauxRetrocessionParrain, // Stocker le taux de rétrocession du parrain
+            taux_retrocession: percentage, // Stocker le pourcentage de parrainage (6%, 8%, 2%, 1%)
             tranche: 'avant_seuil',
             statut_paiement: 'non payé',
             statut_envoi: 'non envoyée',

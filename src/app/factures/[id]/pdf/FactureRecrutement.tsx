@@ -63,9 +63,9 @@ export default function FactureRecrutement({
   if (isNewFacture) {
     // Nouvelle facture : utiliser les champs spécifiques
     honorairesAgent = Number(facture.montant_honoraires) || 0;
-    tauxRetrocession = Number(facture.taux_retrocession) || 0;
+    tauxRetrocession = Number(facture.taux_retrocession) || 0; // Pour les factures de recrutement, c'est le pourcentage de parrainage
     retrocessionAmount = Number(facture.retrocession) || 0; // Utiliser le montant stocké dans retrocession
-    console.log(`📄 Nouvelle facture recrutement - Honoraires: ${honorairesAgent}€, Taux: ${tauxRetrocession}%, Montant: ${retrocessionAmount}€`);
+    console.log(`📄 Nouvelle facture recrutement - Honoraires: ${honorairesAgent}€, Taux parrainage: ${tauxRetrocession}%, Montant: ${retrocessionAmount}€`);
   } else {
     // Ancienne facture : utiliser les champs traditionnels
     honorairesAgent = Number(facture.honoraires_agent) || 0;
@@ -167,7 +167,7 @@ export default function FactureRecrutement({
         <View style={[styles.table, { marginTop: 15 }]}>
           <View style={[styles.tableRow, { backgroundColor: "#f28c1e", color: "#fff" }]}>
             <Text style={styles.tableCellTotal}>Honoraires Youlive HT</Text>
-            <Text style={styles.tableCellTotal}>% Rétrocession</Text>
+            <Text style={styles.tableCellTotal}>% Parrainage</Text>
             <Text style={styles.tableCellTotal}>Rétrocession HT</Text>
             {user.tva && <Text style={styles.tableCellTotal}>TVA</Text>}
             <Text style={styles.tableCell}>Montant à régler TTC</Text>
