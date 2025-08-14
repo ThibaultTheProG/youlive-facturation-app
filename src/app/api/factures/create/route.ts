@@ -384,21 +384,18 @@ async function createFactureRecrutement(
 
         const retrocessionAmount = Number(((honoraires_agent * percentage) / 100).toFixed(2));
 
-        // Vérifier si la facture existe déjà
-        const existingFacture = await prisma.factures.findUnique({
+        // Vérifier si une facture de recrutement existe déjà pour cette relation et ce parrain
+        const existingFacture = await prisma.factures.findFirst({
           where: {
-            relation_id_type_user_id_tranche: {
-              relation_id: relationid,
-              type: 'recrutement',
-              user_id: parrainId,
-              tranche: 'avant_seuil'
-            }
+            relation_id: relationid,
+            type: 'recrutement',
+            user_id: parrainId
           }
         });
 
-        // Si la facture existe déjà, passer au suivant
+        // Si une facture de recrutement existe déjà pour cette relation et ce parrain, passer au suivant
         if (existingFacture) {
-          console.log(`⚠️ Facture recrutement déjà existante pour le parrain ${parrainId}, pas de création`);
+          console.log(`⚠️ Facture recrutement déjà existante pour le parrain ${parrainId} et la relation ${relationid}, pas de création`);
           continue;
         }
 
