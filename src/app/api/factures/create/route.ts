@@ -45,6 +45,8 @@ async function createFacture() {
       // 0. Mettre à jour les factures de recrutement existantes avec le bon taux
       //await updateExistingRecrutementFactures(tx);
 
+      //test commit 29/08/25
+
       // 1. Récupérer les contrats avec leurs relations
       const contrats = await tx.relations_contrats.findMany({
         select: {
