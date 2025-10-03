@@ -222,18 +222,25 @@ async function createFactureCommission(
       console.log(`📊 CA reste en-dessous du seuil: ${currentCA}€ → ${newCA}€ (avant: ${montantAvantSeuil}€)`);
     }
 
-    // Calculer les taux de rétrocession pour chaque tranche
-    const tauxAvantSeuil = calculRetrocession(
-      utilisateur.typecontrat || "",
-      currentCA,
-      utilisateur.auto_parrain || undefined
-    );
+    // Calculer les taux de rétrocession seulement si nécessaire
+    let tauxAvantSeuil = 0;
+    let tauxApresSeuil = 0;
     
-    const tauxApresSeuil = calculRetrocession(
-      utilisateur.typecontrat || "",
-      seuil,
-      utilisateur.auto_parrain || undefined
-    );
+    if (montantAvantSeuil > 0) {
+      tauxAvantSeuil = calculRetrocession(
+        utilisateur.typecontrat || "",
+        currentCA,
+        utilisateur.auto_parrain || undefined
+      );
+    }
+    
+    if (montantApresSeuil > 0) {
+      tauxApresSeuil = calculRetrocession(
+        utilisateur.typecontrat || "",
+        seuil,
+        utilisateur.auto_parrain || undefined
+      );
+    }
 
     console.log(`📊 Taux calculés: avant seuil ${tauxAvantSeuil}%, après seuil ${tauxApresSeuil}%`);
 
