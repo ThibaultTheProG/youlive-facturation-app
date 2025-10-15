@@ -34,7 +34,7 @@ export default function FacturePDFPage() {
 
   if (!facture) return <p>Chargement...</p>;
 
-  console.log(facture);
+  console.log("Voici la facture : " + facture.type);
 
   return (
     <PDFViewer style={{ width: "100%", height: "100vh" }}>

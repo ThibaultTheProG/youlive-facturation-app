@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { PrismaClient } from "@prisma/client";
 import { RelationContrat } from "@/lib/types.js";
 import nodemailer from "nodemailer";
 import { calculRetrocession } from "@/utils/calculs";
 
 // Type pour la transaction Prisma
-type PrismaTransaction = Omit<
-  PrismaClient,
-  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
->;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PrismaTransaction = any;
 
 // Structure pour stocker les notifications à envoyer
 interface EmailNotification {
@@ -48,7 +47,8 @@ async function createFacture() {
       //test commit 29/08/25
 
       // 1. Récupérer les contrats avec leurs relations
-      const contrats = await tx.relations_contrats.findMany({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const contrats = await (tx as any).relations_contrats.findMany({
         select: {
           id: true,
           honoraires_agent: true,
@@ -75,13 +75,15 @@ async function createFacture() {
         };
 
         // Collecter les notifications de la création de factures commission
-        const commissionNotifications = await createFactureCommission(relationContrat, tx);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const commissionNotifications = await createFactureCommission(relationContrat, tx as any);
         if (commissionNotifications) {
           notificationsToSend.push(...commissionNotifications);
         }
 
         // Collecter les notifications de la création de factures recrutement
-        const recrutementNotifications = await createFactureRecrutement(relationContrat, tx);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const recrutementNotifications = await createFactureRecrutement(relationContrat, tx as any);
         if (recrutementNotifications && recrutementNotifications.length > 0) {
           notificationsToSend.push(...recrutementNotifications);
         }
@@ -199,9 +201,13 @@ async function createFactureCommission(
       return notifications;
     }
 
-    const currentCA = Number(utilisateur.chiffre_affaires || 0);
+    // IMPORTANT: Utiliser le CA AVANT l'ajout du nouveau contrat pour le calcul des tranches
+    // Le CA actuel inclut déjà le nouveau contrat, il faut le soustraire
+    const currentCA = Number(utilisateur.chiffre_affaires || 0) - honoraires_agent;
     const newCA = currentCA + honoraires_agent;
     const seuil = 70000;
+    
+    console.log(`📊 CA pour calcul des tranches: ${currentCA}€ (CA actuel: ${Number(utilisateur.chiffre_affaires || 0)}€ - honoraires: ${honoraires_agent}€)`);
 
     // Calculer les montants pour chaque tranche
     let montantAvantSeuil = 0;

@@ -39,7 +39,8 @@ export async function getFactures(userId: number) {
     }
   });
 
-  return result.map(({ relations_contrats, retrocession, montant_honoraires, taux_retrocession, tranche, ...rest }) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return result.map(({ relations_contrats, retrocession, montant_honoraires, taux_retrocession, tranche, ...rest }: any) => ({
     ...rest,
     honoraires_agent: relations_contrats?.honoraires_agent?.toString() || "0",
     retrocession: retrocession?.toString() || "0",

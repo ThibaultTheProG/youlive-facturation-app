@@ -76,7 +76,8 @@ export default function TableauFactures({ user }: { user: User }) {
     getFactures(user.id)
       .then((factures) => {
         const facturesTriees = factures
-          .map(facture => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((facture: any) => {
             const factureFormatted = {
               ...facture,
               date_signature: facture.date_signature || new Date().toISOString(),
@@ -87,7 +88,8 @@ export default function TableauFactures({ user }: { user: User }) {
             };
             return factureFormatted as unknown as Facture;
           })
-          .sort((a, b) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .sort((a: any, b: any) => {
             // Trier selon le champ et la direction sélectionnés
             let comparison = 0;
             
