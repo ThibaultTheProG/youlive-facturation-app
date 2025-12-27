@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/auth";
-import { config } from '../middleware.config.mjs';
 
-export { config };
-
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Vérifier si c'est une ressource statique
   const { pathname } = request.nextUrl;
   
