@@ -63,6 +63,61 @@ export default function FormParams() {
   // Ajout de l'état pour la gestion manuelle de la rétrocession
   const [isRetrocessionManuallySet, setIsRetrocessionManuallySet] = useState(false);
 
+  // États pour la gestion des années
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+
+  // Récupérer les années disponibles quand un conseiller est sélectionné
+  useEffect(() => {
+    const fetchYears = async () => {
+      if (!selectedConseiller?.id) return;
+
+      try {
+        const response = await fetch(`/api/conseiller/annees?id=${selectedConseiller.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableYears(data.annees || []);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des années:", error);
+      }
+    };
+
+    fetchYears();
+  }, [selectedConseiller?.id]);
+
+  // Recharger les données du conseiller quand l'année change
+  useEffect(() => {
+    const fetchConseillerData = async () => {
+      if (!selectedConseiller?.id) return;
+
+      try {
+        const currentYear = new Date().getFullYear();
+        const url = selectedYear === currentYear
+          ? `/api/conseiller?id=${selectedConseiller.id}`
+          : `/api/conseiller?id=${selectedConseiller.id}&annee=${selectedYear}`;
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setChiffreAffaires(data.chiffre_affaires || 0);
+          setRetrocession(data.retrocession || 0);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des données:", error);
+      }
+    };
+
+    fetchConseillerData();
+  }, [selectedYear, selectedConseiller?.id]);
+
   // Synchroniser les champs lorsque selectedConseiller change
   useEffect(() => {
     if (selectedConseiller) {
@@ -167,7 +222,12 @@ export default function FormParams() {
         });
 
         // Récupérer les informations à jour du conseiller depuis la base de données
-        const conseillerResponse = await fetch(`/api/conseiller?id=${conseiller.id}`, {
+        const currentYear = new Date().getFullYear();
+        const url = selectedYear === currentYear
+          ? `/api/conseiller?id=${conseiller.id}`
+          : `/api/conseiller?id=${conseiller.id}&annee=${selectedYear}`;
+
+        const conseillerResponse = await fetch(url, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -425,6 +485,9 @@ export default function FormParams() {
             retrocession={retrocession}
             setRetrocession={setRetrocession}
             setIsRetrocessionManuallySet={setIsRetrocessionManuallySet}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+            availableYears={availableYears}
           />
           <ParrainagesManager
             parrains={parrains}

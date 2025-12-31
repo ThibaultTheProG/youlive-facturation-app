@@ -18,25 +18,53 @@ export default function FormParams({ user }: { user: User }) {
   const [retrocession, setRetrocession] = useState<number>(0);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Nouveaux états pour les informations de facture de recrutement
   const [nomSocieteFacture, setNomSocieteFacture] = useState<string>("");
   const [sirenFacture, setSirenFacture] = useState<string>("");
   const [adresseFacture, setAdresseFacture] = useState<string>("");
 
-  // Récupérer les informations du conseiller
+  // États pour la gestion des années
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+
+  // Récupérer les années disponibles
+  useEffect(() => {
+    const fetchYears = async () => {
+      try {
+        const response = await fetch(`/api/conseiller/annees?id=${user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableYears(data.annees || []);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des années:", error);
+      }
+    };
+
+    if (user?.id) {
+      fetchYears();
+    }
+  }, [user?.id]);
+
+  // Récupérer les informations du conseiller (avec l'année sélectionnée)
   useEffect(() => {
     const fetchConseillers = async () => {
       try {
-        const response = await fetch(`/api/conseiller?id=${user.id}`);
-        
+        const currentYear = new Date().getFullYear();
+        const url = selectedYear === currentYear
+          ? `/api/conseiller?id=${user.id}`
+          : `/api/conseiller?id=${user.id}&annee=${selectedYear}`;
+
+        const response = await fetch(url);
+
         if (!response.ok) {
           throw new Error("Erreur lors de la récupération du conseiller")
         }
-        
+
         const data = await response.json();
         setConseiller(data);
-        
+
         if (data) {
           setAssujettiTVA(data.tva ? "oui" : "non");
           setAutoParrain(data.auto_parrain || "non");
@@ -56,7 +84,7 @@ export default function FormParams({ user }: { user: User }) {
     if (user?.id) {
       fetchConseillers();
     }
-  }, [user?.id]);
+  }, [user?.id, selectedYear]);
 
   // Calculer la rétrocession à chaque changement de chiffre d'affaires ou de type de contrat
   useEffect(() => {
@@ -225,10 +253,28 @@ export default function FormParams({ user }: { user: User }) {
               onChange={(val) => setSelectedTypeContrat(String(val))}
             />
           </div>
+
+          {/* Sélecteur d'année */}
+          <div className="flex flex-col space-y-2">
+            <Label htmlFor="year_selector">Consulter l'année</Label>
+            <select
+              id="year_selector"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="border border-gray-300 rounded-md p-2 bg-white"
+            >
+              {availableYears.map((year) => (
+                <option key={year} value={year}>
+                  {year} {year === new Date().getFullYear() && "(Année en cours)"}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <InputCustom
             disable={true}
             name="chiffre_affaire_annuel"
-            label="Honoraires Youlive HT générés"
+            label={`Honoraires Youlive HT générés (${selectedYear})`}
             id="chiffre_affaire_annuel"
             type="number"
             value={chiffreAffaires}
