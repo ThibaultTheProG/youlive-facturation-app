@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { RelationContrat } from "@/lib/types.js";
 import nodemailer from "nodemailer";
 import { calculRetrocession } from "@/utils/calculs";
+import { getCACurrentYear } from "@/utils/historiqueCA";
 
 // Type pour la transaction Prisma
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -202,8 +203,8 @@ async function createFactureCommission(
     }
 
     // IMPORTANT: Utiliser le CA AVANT l'ajout du nouveau contrat pour le calcul des tranches
-    // Le CA actuel inclut déjà le nouveau contrat, il faut le soustraire
-    const currentCA = Number(utilisateur.chiffre_affaires || 0) - honoraires_agent;
+    // Récupérer le CA de l'année en cours depuis l'historique et soustraire le nouveau contrat
+    const currentCA = await getCACurrentYear(user_id) - honoraires_agent;
     const newCA = currentCA + honoraires_agent;
     const seuil = 70000;
     
@@ -335,7 +336,8 @@ async function createFactureRecrutement(
     }
 
     // Si CA >= 70 000€, ne pas générer de facture de parrainage
-    if (Number(utilisateur.chiffre_affaires) >= 70000) {
+    const caAnneeEnCours = await getCACurrentYear(user_id);
+    if (caAnneeEnCours >= 70000) {
       console.log(`CA >= 70 000€ pour l'utilisateur ${user_id}, pas de facture de parrainage.`);
       return notifications;
     }

@@ -50,7 +50,6 @@ model factures {
   type               String?             @db.VarChar(50)
   retrocession       Float?
   statut_paiement    String?             @db.VarChar(50)
-  statut_envoi       String?             @db.VarChar(50) @default("non envoyée")
   created_at         DateTime?           @db.Timestamp(6)
   updated_at         DateTime?           @db.Timestamp(6)
   relation_id        Int?
@@ -58,10 +57,10 @@ model factures {
   apporteur          String              @default("non")
   apporteur_amount   Int?
   added_at           DateTime?           @db.Timestamp(6)
-  // Nouveaux champs pour gérer les factures avec deux tranches
-  montant_honoraires Decimal?            @db.Decimal(10, 2)  // Montant des honoraires pour cette facture
-  taux_retrocession  Decimal?            @db.Decimal(5, 2)   // Taux de rétrocession appliqué
-  tranche            String?             @db.VarChar(20)     // "avant_seuil" ou "apres_seuil"
+  statut_envoi       String?             @default("non envoyée") @db.VarChar(50)
+  montant_honoraires Decimal?            @db.Decimal(10, 2)
+  taux_retrocession  Decimal?            @db.Decimal(5, 2)
+  tranche            String?             @db.VarChar(20)
   utilisateurs       utilisateurs?       @relation(fields: [user_id], references: [id], onUpdate: NoAction)
   relations_contrats relations_contrats? @relation(fields: [relation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_factures_relation_id")
 
@@ -112,29 +111,49 @@ model relations_contrats {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model utilisateurs {
-  id                 Int                  @id @default(autoincrement())
-  motDePasse         String?              @db.Char(60)
-  prenom             String?              @db.VarChar(50)
-  nom                String?              @db.VarChar(50)
-  email              String?              @db.VarChar(255)
-  telephone          String?              @db.VarChar(60)
-  adresse            String?              @db.VarChar(255)
-  role               String?              @db.VarChar(50)
-  created_at         DateTime?            @db.Timestamp(6)
-  updated_at         DateTime?            @db.Timestamp(6)
-  idapimo            Int                  @unique(map: "idapimo_unique")
-  tva                Boolean?
-  typecontrat        String?              @db.VarChar(100)
-  siren              String?              @db.VarChar(255)
-  chiffre_affaires   Decimal?             @db.Decimal(10, 2)
-  retrocession       Decimal?             @db.Decimal(5, 2)
-  auto_parrain       String?              @default("non") @db.VarChar(3)
-  mobile             String?              @db.VarChar(60)
-  // Informations facture de recrutement
-  nom_societe_facture String?             @db.VarChar(255)
-  siren_facture      String?              @db.VarChar(255)
-  adresse_facture    String?              @db.VarChar(255)
-  factures           factures[]
-  parrainages        parrainages?
-  relations_contrats relations_contrats[]
+  id                   Int                    @id @default(autoincrement())
+  motDePasse           String?                @db.Char(60)
+  prenom               String?                @db.VarChar(50)
+  nom                  String?                @db.VarChar(50)
+  email                String?                @db.VarChar(255)
+  telephone            String?                @db.VarChar(60)
+  adresse              String?                @db.VarChar(255)
+  role                 String?                @db.VarChar(50)
+  created_at           DateTime?              @db.Timestamp(6)
+  updated_at           DateTime?              @db.Timestamp(6)
+  idapimo              Int                    @unique(map: "idapimo_unique")
+  tva                  Boolean?
+  typecontrat          String?                @db.VarChar(100)
+  siren                String?                @db.VarChar(255)
+  chiffre_affaires     Decimal?               @db.Decimal(10, 2)
+  retrocession         Decimal?               @db.Decimal(5, 2)
+  auto_parrain         String?                @default("non") @db.VarChar(3)
+  mobile               String?                @db.VarChar(60)
+  adresse_facture      String?                @db.VarChar(255)
+  nom_societe_facture  String?                @db.VarChar(255)
+  siren_facture        String?                @db.VarChar(255)
+  factures             factures[]
+  parrainages          parrainages?
+  relations_contrats   relations_contrats[]
+  historique_ca_annuel historique_ca_annuel[]
+}
+
+model historique_ca_annuel {
+  id                  Int          @id @default(autoincrement())
+  user_id             Int
+  annee               Int
+  chiffre_affaires    Decimal      @db.Decimal(10, 2)
+  retrocession_finale Decimal      @db.Decimal(5, 2)
+  typecontrat         String?      @db.VarChar(100)
+  auto_parrain        String?      @db.VarChar(3)
+  date_cloture        DateTime?    @db.Timestamp(6)
+  created_at          DateTime     @default(now()) @db.Timestamp(6)
+  updated_at          DateTime     @default(now()) @db.Timestamp(6)
+
+  utilisateurs        utilisateurs @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, annee], map: "unique_user_annee")
+  @@index([user_id], map: "idx_historique_ca_user_id")
+  @@index([annee], map: "idx_historique_ca_annee")
+  @@index([date_cloture], map: "idx_historique_ca_date_cloture")
 }

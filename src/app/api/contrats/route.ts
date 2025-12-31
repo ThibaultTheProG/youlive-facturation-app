@@ -1,10 +1,14 @@
 import prisma from "@/lib/db";
 import { Contract, Entries } from "@/lib/types";
 import { NextResponse } from "next/server";
-import { calculRetrocession } from "@/utils/calculs";
+import { checkAndResetYearIfNeeded } from "@/utils/resetCAYear";
+import { updateCACurrentYear } from "@/utils/historiqueCA";
 
 export async function GET() {
   try {
+    // Vérifier si une réinitialisation annuelle est nécessaire
+    await checkAndResetYearIfNeeded();
+
     // Appel à l'API Apimo
     const response = await fetch(
       "https://api.apimo.pro/agencies/24045/contracts",
@@ -102,6 +106,8 @@ export async function GET() {
               where: { idapimo: Number(user) },
               select: {
                 id: true,
+                prenom: true,
+                nom: true,
                 chiffre_affaires: true,
                 typecontrat: true,
                 auto_parrain: true,
@@ -146,27 +152,17 @@ export async function GET() {
               }));
 
               if (isNewRelation) {
-                const currentCA = Number(utilisateur.chiffre_affaires || 0);
                 const honorairesAgent = Number(amount); // On prend uniquement le montant de l'entry
-                const newCA = currentCA + honorairesAgent;
 
-                // Calculer la nouvelle rétrocession en fonction du nouveau chiffre d'affaires
-                const newRetrocession = calculRetrocession(
-                  utilisateur.typecontrat || "",
-                  newCA,
-                  utilisateur.auto_parrain || undefined
+                // Mettre à jour le CA de l'année en cours
+                const { newCA, newRetrocession } = await updateCACurrentYear(
+                  utilisateur.id,
+                  honorairesAgent
                 );
 
-                await prisma.utilisateurs.update({
-                  where: { id: utilisateur.id },
-                  data: { 
-                    chiffre_affaires: newCA,
-                    retrocession: newRetrocession
-                  },
-                });
-
                 console.log(
-                  `✅ Chiffre d'affaires et rétrocession mis à jour pour l'utilisateur ${utilisateur.id}: CA ${currentCA} → ${newCA} (+${honorairesAgent}), Rétrocession → ${newRetrocession}%`
+                  `✅ CA mis à jour pour ${utilisateur.prenom} ${utilisateur.nom}: ` +
+                  `${newCA}€ (+${honorairesAgent}€) - Rétro: ${newRetrocession}%`
                 );
               }
             }
