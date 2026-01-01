@@ -402,11 +402,14 @@ async function createFactureRecrutement(
         const retrocessionAmount = Number(((honoraires_agent * percentage) / 100).toFixed(2));
 
         // Vérifier si une facture de recrutement existe déjà pour cette relation et ce parrain
+        // Important: Les factures de recrutement sont créées UNE SEULE FOIS par contrat,
+        // indépendamment de l'année. On ne vérifie donc PAS de contrainte temporelle.
         const existingFacture = await prisma.factures.findFirst({
           where: {
             relation_id: relationid,
             type: 'recrutement',
-            user_id: parrainId
+            user_id: parrainId,
+            tranche: 'avant_seuil' // Inclure la tranche dans la vérification (contrainte unique)
           }
         });
 
