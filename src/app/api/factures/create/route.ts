@@ -40,70 +40,70 @@ async function createFacture() {
     // Tableau pour stocker les notifications à envoyer après la transaction
     const notificationsToSend: EmailNotification[] = [];
 
-    // Utiliser une transaction Prisma avec un délai plus long (30 secondes)
-    await prisma.$transaction(async (tx) => {
-      // 0. Mettre à jour les factures de recrutement existantes avec le bon taux
-      //await updateExistingRecrutementFactures(tx);
+    // 1. Récupérer UNIQUEMENT les contrats récents (dernières 48h) pour éviter de tout retraiter
+    // Cela évite de parcourir inutilement tous les anciens contrats déjà traités
+    const deuxJoursEnArriere = new Date();
+    deuxJoursEnArriere.setDate(deuxJoursEnArriere.getDate() - 2);
 
-      //test commit 29/08/25
-
-      // 1. Récupérer les contrats avec leurs relations
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contrats = await (tx as any).relations_contrats.findMany({
-        select: {
-          id: true,
-          honoraires_agent: true,
-          user_id: true,
-          contrats: {
-            select: {
-              id: true
-            }
-          },
-          utilisateurs: {
-            select: {
-              retrocession: true
-            }
+    const contrats = await prisma.relations_contrats.findMany({
+      where: {
+        created_at: {
+          gte: deuxJoursEnArriere
+        }
+      },
+      select: {
+        id: true,
+        honoraires_agent: true,
+        user_id: true,
+        created_at: true,
+        contrats: {
+          select: {
+            id: true,
+            date_signature: true
+          }
+        },
+        utilisateurs: {
+          select: {
+            retrocession: true
           }
         }
-      });
-
-      // 2. Créer les factures pour chaque contrat
-      for (const contrat of contrats) {
-        const relationContrat: RelationContrat = {
-          honoraires_agent: Number(contrat.honoraires_agent),
-          user_id: contrat.user_id,
-          relationid: contrat.id
-        };
-
-        // Collecter les notifications de la création de factures commission
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const commissionNotifications = await createFactureCommission(relationContrat, tx as any);
-        if (commissionNotifications) {
-          notificationsToSend.push(...commissionNotifications);
-        }
-
-        // Collecter les notifications de la création de factures recrutement
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const recrutementNotifications = await createFactureRecrutement(relationContrat, tx as any);
-        if (recrutementNotifications && recrutementNotifications.length > 0) {
-          notificationsToSend.push(...recrutementNotifications);
-        }
       }
-    }, {
-      timeout: 30000 // 30 secondes au lieu des 5 secondes par défaut
     });
+
+    console.log(`📊 Traitement de ${contrats.length} contrats récents (créés depuis le ${deuxJoursEnArriere.toISOString()})...`);
+
+    // 2. Traiter chaque contrat individuellement (sans grande transaction globale)
+    for (const contrat of contrats) {
+      const relationContrat: RelationContrat = {
+        honoraires_agent: Number(contrat.honoraires_agent),
+        user_id: contrat.user_id,
+        relationid: contrat.id
+      };
+
+      // Collecter les notifications de la création de factures commission
+      const commissionNotifications = await createFactureCommission(relationContrat, prisma);
+      if (commissionNotifications) {
+        notificationsToSend.push(...commissionNotifications);
+      }
+
+      // Collecter les notifications de la création de factures recrutement
+      const recrutementNotifications = await createFactureRecrutement(relationContrat, prisma);
+      if (recrutementNotifications && recrutementNotifications.length > 0) {
+        notificationsToSend.push(...recrutementNotifications);
+      }
+    }
 
     console.log("✅ Factures créées avec succès.");
 
-    // Envoyer les notifications après la fin de la transaction
-    console.log(`📧 Envoi de ${notificationsToSend.length} notifications...`);
-    for (const notification of notificationsToSend) {
-      await sendEmailNotification(
-        notification.userId,
-        notification.factureType,
-        notification.montant
-      );
-    }
+    // // Envoyer les notifications après la fin de la transaction
+    // console.log(`📧 Envoi de ${notificationsToSend.length} notifications...`);
+    // for (const notification of notificationsToSend) {
+    //   await sendEmailNotification(
+    //     notification.userId,
+    //     notification.factureType,
+    //     notification.montant
+    //   );
+    // }
   } catch (error) {
     console.error("❌ Erreur lors de la création des factures :", error);
     throw error;
@@ -324,6 +324,19 @@ async function createFactureRecrutement(
   const notifications: EmailNotification[] = [];
 
   try {
+    // VÉRIFICATION GLOBALE: Si des factures de recrutement existent déjà pour cette relation, ne rien créer
+    const facturesExistantes = await prisma.factures.findMany({
+      where: {
+        relation_id: relationid,
+        type: 'recrutement'
+      }
+    });
+
+    if (facturesExistantes.length > 0) {
+      console.log(`⚠️ ${facturesExistantes.length} facture(s) recrutement déjà existante(s) pour la relation ${relationid}, pas de création`);
+      return notifications;
+    }
+
     // Vérifier le chiffre d'affaires
     const utilisateur = await prisma.utilisateurs.findUnique({
       where: { id: user_id },
@@ -404,6 +417,8 @@ async function createFactureRecrutement(
         // Vérifier si une facture de recrutement existe déjà pour cette relation et ce parrain
         // Important: Les factures de recrutement sont créées UNE SEULE FOIS par contrat,
         // indépendamment de l'année. On ne vérifie donc PAS de contrainte temporelle.
+        console.log(`🔍 Vérification facture recrutement: relation_id=${relationid}, user_id=${parrainId}, type=recrutement, tranche=avant_seuil`);
+
         const existingFacture = await prisma.factures.findFirst({
           where: {
             relation_id: relationid,
@@ -413,36 +428,48 @@ async function createFactureRecrutement(
           }
         });
 
+        console.log(`🔍 Résultat vérification: ${existingFacture ? `Facture trouvée (ID: ${existingFacture.id})` : 'Aucune facture existante'}`);
+
         // Si une facture de recrutement existe déjà pour cette relation et ce parrain, passer au suivant
         if (existingFacture) {
-          console.log(`⚠️ Facture recrutement déjà existante pour le parrain ${parrainId} et la relation ${relationid}, pas de création`);
+          console.log(`⚠️ Facture recrutement déjà existante (ID: ${existingFacture.id}) pour le parrain ${parrainId} et la relation ${relationid}, pas de création`);
           continue;
         }
 
-        // Créer la nouvelle facture
-        await prisma.factures.create({
-          data: {
-            relation_id: relationid,
-            user_id: parrainId,
-            type: 'recrutement',
-            retrocession: retrocessionAmount, // Stocker le montant de rétrocession
-            montant_honoraires: honoraires_agent, // Stocker le montant des honoraires pour le calcul
-            taux_retrocession: percentage, // Stocker le pourcentage de parrainage (6%, 8%, 2%, 1%)
-            tranche: 'avant_seuil',
-            statut_paiement: 'non payé',
-            statut_envoi: 'non envoyée',
-            created_at: new Date(),
-            added_at: new Date()
-          }
-        });
+        // Double vérification: essayer de créer avec gestion d'erreur si la contrainte unique échoue
+        try {
+          await prisma.factures.create({
+            data: {
+              relation_id: relationid,
+              user_id: parrainId,
+              type: 'recrutement',
+              retrocession: retrocessionAmount, // Stocker le montant de rétrocession
+              montant_honoraires: honoraires_agent, // Stocker le montant des honoraires pour le calcul
+              taux_retrocession: percentage, // Stocker le pourcentage de parrainage (6%, 8%, 2%, 1%)
+              tranche: 'avant_seuil',
+              statut_paiement: 'non payé',
+              statut_envoi: 'non envoyée',
+              created_at: new Date(),
+              added_at: new Date()
+            }
+          });
 
-        console.log(`✅ Nouvelle facture recrutement créée pour le parrain ${parrainId} (${percentage}%)`);
-        
-        notifications.push({
-          userId: parrainId,
-          factureType: 'recrutement',
-          montant: retrocessionAmount
-        });
+          console.log(`✅ Nouvelle facture recrutement créée pour le parrain ${parrainId} (${percentage}%) - relation ${relationid}`);
+
+          notifications.push({
+            userId: parrainId,
+            factureType: 'recrutement',
+            montant: retrocessionAmount
+          });
+        } catch (createError: unknown) {
+          // Si l'erreur est une violation de contrainte unique, ignorer silencieusement
+          if (createError && typeof createError === 'object' && 'code' in createError && createError.code === 'P2002') {
+            console.log(`⚠️ Contrainte unique violée pour le parrain ${parrainId} et la relation ${relationid} - facture déjà existante (ignoré)`);
+          } else {
+            // Pour toute autre erreur, la relancer
+            throw createError;
+          }
+        }
       }
     }
     
@@ -453,59 +480,59 @@ async function createFactureRecrutement(
   }
 }
 
-// // // Fonction pour envoyer une notification par email
-async function sendEmailNotification(userId: number, factureType: string, montant: number) {
-  try {
-    // Pour les tests, on envoie toujours à cette adresse
-    // const testEmail = "tuffinthibaultgw@gmail.com";
+// // // // Fonction pour envoyer une notification par email
+// async function sendEmailNotification(userId: number, factureType: string, montant: number) {
+//   try {
+//     // Pour les tests, on envoie toujours à cette adresse
+//     // const testEmail = "tuffinthibaultgw@gmail.com";
     
-    // Dans un environnement de production, on récupérerait l'email du conseiller
-    const user = await prisma.utilisateurs.findUnique({
-      where: { id: userId },
-      select: { email: true, prenom: true, nom: true }
-    });
-    const email = user?.email;
+//     // Dans un environnement de production, on récupérerait l'email du conseiller
+//     const user = await prisma.utilisateurs.findUnique({
+//       where: { id: userId },
+//       select: { email: true, prenom: true, nom: true }
+//     });
+//     const email = user?.email;
     
-    // Configuration du transporteur d'emails
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_SERVER_HOST,
-      port: Number(process.env.SMTP_SERVER_PORT),
-      secure: true, // true pour le port 465, false pour 587
-      auth: {
-        user: process.env.SMTP_SERVER_USERNAME,
-        pass: process.env.SMTP_SERVER_PASSWORD,
-      },
-    });
+//     // Configuration du transporteur d'emails
+//     const transporter = nodemailer.createTransport({
+//       host: process.env.SMTP_SERVER_HOST,
+//       port: Number(process.env.SMTP_SERVER_PORT),
+//       secure: true, // true pour le port 465, false pour 587
+//       auth: {
+//         user: process.env.SMTP_SERVER_USERNAME,
+//         pass: process.env.SMTP_SERVER_PASSWORD,
+//       },
+//     });
     
-    // Configuration de l'email
-    const mailOptions = {
-      from: process.env.SMTP_FROM_EMAIL,
-      to: `${email}`,
-      subject: `Nouvelle facture ${factureType} créée`,
-      text: `Une nouvelle facture de type ${factureType} d'un montant de ${montant.toLocaleString()} € a été créée pour vous.`,
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
-          <h2 style="color: #e67e22;">Nouvelle facture créée</h2>
-          <p>Bonjour,</p>
-          <p>Une nouvelle facture a été créée dans votre espace :</p>
-          <ul>
-            <li><strong>Type :</strong> ${factureType}</li>
-            <li><strong>Montant :</strong> ${montant.toLocaleString()} €</li>
-          </ul>
-          <p>Vous pouvez consulter cette facture dans votre espace personnel en cliquant ici : ${process.env.NEXT_PUBLIC_BASE_URL}</p>
-          <p>Cordialement,<br>L'équipe YouLive</p>
-        </div>
-      `
-    };
+//     // Configuration de l'email
+//     const mailOptions = {
+//       from: process.env.SMTP_FROM_EMAIL,
+//       to: `${email}`,
+//       subject: `Nouvelle facture ${factureType} créée`,
+//       text: `Une nouvelle facture de type ${factureType} d'un montant de ${montant.toLocaleString()} € a été créée pour vous.`,
+//       html: `
+//         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
+//           <h2 style="color: #e67e22;">Nouvelle facture créée</h2>
+//           <p>Bonjour,</p>
+//           <p>Une nouvelle facture a été créée dans votre espace :</p>
+//           <ul>
+//             <li><strong>Type :</strong> ${factureType}</li>
+//             <li><strong>Montant :</strong> ${montant.toLocaleString()} €</li>
+//           </ul>
+//           <p>Vous pouvez consulter cette facture dans votre espace personnel en cliquant ici : ${process.env.NEXT_PUBLIC_BASE_URL}</p>
+//           <p>Cordialement,<br>L'équipe YouLive</p>
+//         </div>
+//       `
+//     };
     
-    console.log("📧 Tentative d'envoi d'email à:", email);
+//     console.log("📧 Tentative d'envoi d'email à:", email);
     
-    // Envoi de l'email
-    const info = await transporter.sendMail(mailOptions);
+//     // Envoi de l'email
+//     const info = await transporter.sendMail(mailOptions);
     
-    console.log(`✉️ Notification envoyée pour la facture de type ${factureType}:`, info.messageId);
-  } catch (error) {
-    console.error("❌ Erreur lors de l'envoi de la notification par email:", error);
-    // On ne propage pas l'erreur pour ne pas bloquer la création de facture
-  }
-}
+//     console.log(`✉️ Notification envoyée pour la facture de type ${factureType}:`, info.messageId);
+//   } catch (error) {
+//     console.error("❌ Erreur lors de l'envoi de la notification par email:", error);
+//     // On ne propage pas l'erreur pour ne pas bloquer la création de facture
+//   }
+// }
