@@ -111,7 +111,7 @@ export default function FactureRecrutement({
             <Text style={[styles.bold, styles.headerInfo]}>
               SAS JMG &apos;Youlive&apos;
             </Text>
-            <Text style={styles.headerInfo}>2 impasse du Pélican</Text>
+            <Text style={styles.headerInfo}>207 ter Rue du Dr Charcot</Text>
             <Text style={styles.headerInfo}>
               85100 Les Sables d&apos;Olonne
             </Text>
