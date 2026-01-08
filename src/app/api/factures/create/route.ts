@@ -40,15 +40,15 @@ async function createFacture() {
     // Tableau pour stocker les notifications à envoyer après la transaction
     const notificationsToSend: EmailNotification[] = [];
 
-    // 1. Récupérer UNIQUEMENT les contrats récents (dernières 48h) pour éviter de tout retraiter
-    // Cela évite de parcourir inutilement tous les anciens contrats déjà traités
-    const deuxJoursEnArriere = new Date();
-    deuxJoursEnArriere.setDate(deuxJoursEnArriere.getDate() - 2);
+    // 1. Récupérer UNIQUEMENT les contrats récents (derniers 7 jours) pour éviter de tout retraiter
+    // Une fenêtre de 7 jours permet de rattraper d'éventuelles factures de recrutement manquantes
+    const septJoursEnArriere = new Date();
+    septJoursEnArriere.setDate(septJoursEnArriere.getDate() - 7);
 
     const contrats = await prisma.relations_contrats.findMany({
       where: {
         created_at: {
-          gte: deuxJoursEnArriere
+          gte: septJoursEnArriere
         }
       },
       select: {
@@ -70,7 +70,7 @@ async function createFacture() {
       }
     });
 
-    console.log(`📊 Traitement de ${contrats.length} contrats récents (créés depuis le ${deuxJoursEnArriere.toISOString()})...`);
+    console.log(`📊 Traitement de ${contrats.length} contrats récents (créés depuis le ${septJoursEnArriere.toISOString()})...`);
 
     // 2. Traiter chaque contrat individuellement (sans grande transaction globale)
     for (const contrat of contrats) {
@@ -415,16 +415,14 @@ async function createFactureRecrutement(
         const retrocessionAmount = Number(((honoraires_agent * percentage) / 100).toFixed(2));
 
         // Vérifier si une facture de recrutement existe déjà pour cette relation et ce parrain
-        // Important: Les factures de recrutement sont créées UNE SEULE FOIS par contrat,
-        // indépendamment de l'année. On ne vérifie donc PAS de contrainte temporelle.
-        console.log(`🔍 Vérification facture recrutement: relation_id=${relationid}, user_id=${parrainId}, type=recrutement, tranche=avant_seuil`);
+        // Une seule facture de recrutement par (relation_id, user_id), indépendamment de la tranche
+        console.log(`🔍 Vérification facture recrutement: relation_id=${relationid}, user_id=${parrainId}, type=recrutement`);
 
         const existingFacture = await prisma.factures.findFirst({
           where: {
             relation_id: relationid,
             type: 'recrutement',
-            user_id: parrainId,
-            tranche: 'avant_seuil' // Inclure la tranche dans la vérification (contrainte unique)
+            user_id: parrainId
           }
         });
 
@@ -480,7 +478,7 @@ async function createFactureRecrutement(
   }
 }
 
-// // // Fonction pour envoyer une notification par email
+// Fonction pour envoyer une notification par email
 async function sendEmailNotification(userId: number, factureType: string, montant: number) {
   try {
     // Pour les tests, on envoie toujours à cette adresse
