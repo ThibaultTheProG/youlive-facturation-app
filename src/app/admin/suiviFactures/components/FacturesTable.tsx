@@ -47,7 +47,13 @@ export const FacturesTable = ({
             currentSortDirection={sortDirection} 
             onSort={handleSort} 
           />
-          <TableHead>Numéro de mandat</TableHead>
+          <SortableHeader
+            title="N° de mandat"
+            field="numero_mandat"
+            currentSortField={sortField}
+            currentSortDirection={sortDirection}
+            onSort={handleSort}
+          />
           <SortableHeader 
             title="Date de signature" 
             field="date_signature" 

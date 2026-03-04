@@ -55,12 +55,12 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
 
   return (
     <div className="grid gap-4 mb-6 md:grid-cols-4">
-      {/* Filtre par nom de conseiller */}
+      {/* Filtre par nom de conseiller ou numéro de mandat */}
       <div className="space-y-2">
-        <Label htmlFor="search-conseiller">Rechercher un conseiller</Label>
+        <Label htmlFor="search-conseiller">Rechercher un conseiller ou un mandat</Label>
         <Input
           id="search-conseiller"
-          placeholder="Nom du conseiller..."
+          placeholder="Nom du conseiller ou n° de mandat..."
           value={searchTerm}
           onChange={handleSearchChange}
           className="w-full"

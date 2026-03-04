@@ -17,17 +17,26 @@ export async function GET(request: Request) {
     // Construire la condition de recherche
     const where: Prisma.facturesWhereInput = {
       AND: [
-        // Condition de recherche par nom/prénom de conseiller
+        // Condition de recherche par nom/prénom de conseiller ou numéro de mandat
         searchTerm ? {
           OR: [
-            { 
+            {
               utilisateurs: {
                 prenom: { contains: searchTerm, mode: 'insensitive' as Prisma.QueryMode }
               }
             },
-            { 
+            {
               utilisateurs: {
                 nom: { contains: searchTerm, mode: 'insensitive' as Prisma.QueryMode }
+              }
+            },
+            {
+              relations_contrats: {
+                contrats: {
+                  property: {
+                    numero_mandat: { contains: searchTerm, mode: 'insensitive' as Prisma.QueryMode }
+                  }
+                }
               }
             }
           ]
@@ -64,6 +73,14 @@ export async function GET(request: Request) {
       };
     } else if (sortField === 'statut_envoi') {
       orderBy.statut_envoi = sortDirection as Prisma.SortOrder;
+    } else if (sortField === 'numero_mandat') {
+      orderBy.relations_contrats = {
+        contrats: {
+          property: {
+            numero_mandat: sortDirection as Prisma.SortOrder
+          }
+        }
+      };
     } else {
       orderBy[sortField as keyof Prisma.facturesOrderByWithRelationInput] = sortDirection as Prisma.SortOrder;
     }
