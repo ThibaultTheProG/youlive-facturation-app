@@ -180,7 +180,7 @@ export default function FactureRecrutement({
             <Text style={styles.tableCellTotal}>
               {formatNumber(retrocessionAmount)} €
             </Text>
-            {user.tva && <Text style={styles.tableCellTotal}>20 %</Text>}
+            {user.tva && <Text style={styles.tableCellTotal}>{facture.vat_rate} %</Text>}
             <Text style={styles.tableCell}>
               {formatNumber(amountTTC)} €
             </Text>

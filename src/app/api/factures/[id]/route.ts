@@ -134,7 +134,7 @@ export async function GET(request: Request) {
       numero_mandat: result.relations_contrats?.contrats?.property?.numero_mandat || '',
       date_signature: result.relations_contrats?.contrats?.date_signature?.toISOString() || '',
       numero: result.numero || '',
-      vat_rate: 20, // Valeur par défaut si non définie
+      vat_rate: Number(result.relations_contrats?.vat_rate ?? 20),
       apporteur: result.apporteur,
       apporteur_amount: result.apporteur_amount || 0,
       // Nouveaux champs pour les factures avec tranches

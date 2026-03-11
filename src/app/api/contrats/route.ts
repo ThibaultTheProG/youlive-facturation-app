@@ -56,9 +56,9 @@ export async function GET() {
         continue;
       }
 
-      // Vérifier si le contrat appartient à l'année en cours
+      // Accepter les contrats de l'année en cours et de l'année précédente
       const contractYear = new Date(contract_at).getFullYear();
-      if (contractYear !== currentYear) {
+      if (contractYear < currentYear - 1) {
         continue;
       }
 
@@ -154,10 +154,12 @@ export async function GET() {
               if (isNewRelation) {
                 const honorairesAgent = Number(amount); // On prend uniquement le montant de l'entry
 
-                // Mettre à jour le CA de l'année en cours
+                // Mettre à jour le CA de l'année du contrat
                 const { newCA, newRetrocession } = await updateCACurrentYear(
                   utilisateur.id,
-                  honorairesAgent
+                  honorairesAgent,
+                  undefined,
+                  contractYear
                 );
 
                 console.log(

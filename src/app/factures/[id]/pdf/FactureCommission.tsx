@@ -237,7 +237,7 @@ export default function FactureCommission({
             <Text style={styles.tableCellTotal}>
               {formatNumber(totalAmount || retrocessionAmount)} €
             </Text>
-            {user.tva && <Text style={styles.tableCellTotal}>20 %</Text>}
+            {user.tva && <Text style={styles.tableCellTotal}>{facture.vat_rate} %</Text>}
             <Text style={styles.tableCell}>{formatNumber(amountTTC)} €</Text>
           </View>
         </View>
