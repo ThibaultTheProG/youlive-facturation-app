@@ -22,6 +22,7 @@ export default function TableauFactures({ user }: { user: User }) {
   const [actionType, setActionType] = useState<"voir" | "envoyer" | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("tous");
   const [dateFilter, setDateFilter] = useState<string>("tous");
+  const [mandatSearch, setMandatSearch] = useState<string>("");
   
   // États pour le tri
   const [sortField, setSortField] = useState<string | null>("date_signature");
@@ -132,14 +133,21 @@ export default function TableauFactures({ user }: { user: User }) {
         .reduce((total, facture) => total + parseFloat(facture.retrocession), 0)
     : 0;
 
-  // Filtrer les factures par type et par date
+  // Filtrer les factures par type, date et numéro de mandat
   const filteredFactures = facturesList
     ? facturesList.filter(facture => {
         // Filtre par type
         if (typeFilter !== "tous" && facture.type !== typeFilter) {
           return false;
         }
-        
+
+        // Filtre par numéro de mandat
+        if (mandatSearch.trim() !== "") {
+          const search = mandatSearch.trim().toLowerCase();
+          const mandat = (facture.numero_mandat || "").toString().toLowerCase();
+          if (!mandat.includes(search)) return false;
+        }
+
         // Filtre par date de signature
         if (dateFilter !== "tous") {
           const factureDate = facture.date_signature ? new Date(facture.date_signature) : null;
@@ -182,7 +190,7 @@ export default function TableauFactures({ user }: { user: User }) {
   // Réinitialiser la page courante lorsque le filtre change
   useEffect(() => {
     setCurrentPage(1);
-  }, [typeFilter, dateFilter]);
+  }, [typeFilter, dateFilter, mandatSearch]);
 
   // Charger les factures au montage du composant et quand le tri change
   useEffect(() => {
@@ -238,6 +246,26 @@ export default function TableauFactures({ user }: { user: User }) {
             <option value="ce_trimestre">Ce trimestre</option>
             <option value="cette_annee">Cette année</option>
           </select>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <label htmlFor="mandatSearch" className="font-medium">Rechercher par n° de mandat :</label>
+          <input
+            id="mandatSearch"
+            type="text"
+            value={mandatSearch}
+            onChange={(e) => setMandatSearch(e.target.value)}
+            placeholder="Ex : 12345"
+            className="border border-gray-300 rounded-md p-2 w-48"
+          />
+          {mandatSearch && (
+            <button
+              onClick={() => setMandatSearch("")}
+              className="text-sm text-gray-500 hover:text-gray-700 underline"
+            >
+              Effacer
+            </button>
+          )}
         </div>
         
         <div className="flex space-x-6">
@@ -367,8 +395,10 @@ export default function TableauFactures({ user }: { user: User }) {
           ) : (
             <TableRow>
               <TableCell colSpan={11} className="text-center">
-                {typeFilter !== "tous" 
-                  ? `Aucune facture de type "${typeFilter}" disponible.` 
+                {mandatSearch.trim()
+                  ? `Aucune facture avec le n° de mandat "${mandatSearch.trim()}".`
+                  : typeFilter !== "tous"
+                  ? `Aucune facture de type "${typeFilter}" disponible.`
                   : "Aucune facture disponible."}
               </TableCell>
             </TableRow>
