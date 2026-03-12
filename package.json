@@ -58,11 +58,15 @@
     "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3"
   },
+  "overrides": {
+    "@types/pg": "^8.18.0"
+  },
   "pnpm": {
     "overrides": {
       "hono": "^4.12.7",
       "@hono/node-server": "^1.19.11",
-      "lodash": "^4.17.23"
+      "lodash": "^4.17.23",
+      "@types/pg": "^8.18.0"
     },
     "ignoredBuiltDependencies": [
       "@prisma/client",
