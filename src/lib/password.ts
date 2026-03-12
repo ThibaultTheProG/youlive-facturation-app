@@ -1,9 +1,8 @@
-import bcryptjs from 'bcryptjs';
-
 export async function hashPassword(password: string): Promise<string> {
   // Vérifier si nous sommes côté serveur (pas de window)
   if (typeof window === 'undefined') {
     // Côté serveur: utiliser bcryptjs directement
+    const bcryptjs = await import('bcryptjs');
     const salt = bcryptjs.genSaltSync(10);
     return bcryptjs.hashSync(password, salt);
   } else {
@@ -22,6 +21,7 @@ export async function comparePassword(password: string, hash: string): Promise<b
   // Vérifier si nous sommes côté serveur (pas de window)
   if (typeof window === 'undefined') {
     // Côté serveur: utiliser bcryptjs directement
+    const bcryptjs = await import('bcryptjs');
     return bcryptjs.compareSync(password, hash);
   } else {
     // Côté client: utiliser l'API
