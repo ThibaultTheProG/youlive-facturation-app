@@ -49,42 +49,42 @@ import { Button } from "@/components/ui/button";
     };
 
   return (
-    <>
-      <div className="flex flex-col space-y-4">
-      <div className="flex items-center space-x-4">
-        <Lock />
-        <h2>Modifier mon mot de passe</h2>
-      </div>
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <div className="flex flex-col space-y-4">
-          <InputPassword
-            label="Nouveau mot de passe"
-            name="password"
-            id="password"
-            type="password"
-            value={password}
-            onChange={(val) => setPassword(val)}
-          />
-          <InputPassword
-            label="Confirmer le nouveau mot de passe"
-            name="confirmPass"
-            id="confirmPass"
-            type="password"
-            value={confirmPassword}
-            onChange={(val) => setConfirmPassword(val)}
-          />
+    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#fef3e8" }}>
+          <Lock className="w-3.5 h-3.5" style={{ color: "#E07C24" }} />
         </div>
-        {errorMessage && <p className="text-red-600">{errorMessage}</p>}
-        {successMessage && <p className="text-green-600">{successMessage}</p>}
-        <Button
-          className="bg-orange-strong cursor-pointer"
-          type="submit"
-          disabled={loading}
-        >
-          {loading ? "Chargement..." : "Valider"}
-        </Button>
-      </form>
+        <span className="text-sm font-semibold text-gray-700">Modifier mon mot de passe</span>
+      </div>
+      <div className="p-6">
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-2 gap-4">
+            <InputPassword
+              label="Nouveau mot de passe"
+              name="password"
+              id="password"
+              type="password"
+              value={password}
+              onChange={(val) => setPassword(val)}
+            />
+            <InputPassword
+              label="Confirmer le mot de passe"
+              name="confirmPass"
+              id="confirmPass"
+              type="password"
+              value={confirmPassword}
+              onChange={(val) => setConfirmPassword(val)}
+            />
+          </div>
+          {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
+          {successMessage && <p className="text-sm text-green-600">{successMessage}</p>}
+          <div className="flex justify-end">
+            <Button className="bg-orange-strong cursor-pointer" type="submit" disabled={loading}>
+              {loading ? "Enregistrement..." : "Enregistrer"}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
-    </>
   );
 }

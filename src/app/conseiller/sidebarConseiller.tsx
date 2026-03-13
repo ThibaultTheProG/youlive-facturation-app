@@ -9,12 +9,17 @@ import {
   SidebarHeader,
   SidebarGroupContent,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+
+const navItems = [
+  { href: "/conseiller/compte", label: "Mon compte", icon: User },
+  { href: "/conseiller/factures", label: "Mes factures", icon: FileCheck },
+  { href: "/conseiller/filleuls", label: "Mes filleuls", icon: Users },
+];
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -22,15 +27,8 @@ export function AppSidebar() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        router.push("/login"); // Redirige l'utilisateur vers la page de connexion
-      } else {
-        console.error("Échec de la déconnexion");
-      }
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (response.ok) router.push("/login");
     } catch (error) {
       console.error("Erreur lors de la déconnexion :", error);
     }
@@ -38,72 +36,73 @@ export function AppSidebar() {
 
   return (
     <Sidebar side="left">
-      <SidebarHeader />
-      <SidebarContent className="justify-between">
+      {/* Logo */}
+      <SidebarHeader className="px-5 py-5 border-b border-gray-100">
+        <Link href="/conseiller">
+          <Image
+            width={140}
+            height={40}
+            alt="Logo Youlive immobilier"
+            src="/images/logo.svg"
+          />
+        </Link>
+      </SidebarHeader>
+
+      {/* Navigation */}
+      <SidebarContent className="px-3 py-4">
         <SidebarGroup>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-3">
+            Menu
+          </p>
           <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <Link href={"/conseiller"}>
-                  <Image
-                    width={200}
-                    height={400}
-                    alt="Logo Youlive immobiler"
-                    src={"/images/logo.svg"}
-                    className="pl-4"
-                  />
-                </Link>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link
-                    href="/conseiller/compte"
-                    className={`${
-                      pathname === "/compte" ? "text-orangeStrong" : ""
-                    }`}
-                  >
-                    <span className="text-md font-bold">Mon compte</span>
-                    <User />
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link
-                    href="/conseiller/factures"
-                    className={`${
-                      pathname === "/factures" ? "text-orangeStrong" : ""
-                    }`}
-                  >
-                    <span className="text-md font-bold">Mes factures</span>
-                    <FileCheck />
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link
-                    href="/conseiller/filleuls"
-                    className={`${
-                      pathname === "/filleuls" ? "text-orangeStrong" : ""
-                    }`}
-                  >
-                    <span className="text-md font-bold">Mes filleuls</span>
-                    <Users />
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+            <SidebarMenu className="space-y-1">
+              {navItems.map(({ href, label, icon: Icon }) => {
+                const isActive = pathname === href;
+                return (
+                  <SidebarMenuItem key={href}>
+                    <Link
+                      href={href}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
+                      style={
+                        isActive
+                          ? { backgroundColor: "#E07C24", color: "white" }
+                          : { color: "#4B5563" }
+                      }
+                      onMouseEnter={(e) => {
+                        if (!isActive) {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = "#f9fafb";
+                          (e.currentTarget as HTMLElement).style.color = "#111827";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = "";
+                          (e.currentTarget as HTMLElement).style.color = "#4B5563";
+                        }
+                      }}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span>{label}</span>
+                    </Link>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
+
+      {/* Footer */}
+      <SidebarFooter className="px-3 py-4 border-t border-gray-100">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout}>
-              <LogOut />
-              <span className="cursor-pointer">Deconnexion</span>
-            </SidebarMenuButton>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all w-full cursor-pointer"
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span>Déconnexion</span>
+            </button>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

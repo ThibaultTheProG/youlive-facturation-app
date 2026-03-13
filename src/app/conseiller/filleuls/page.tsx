@@ -2,29 +2,47 @@
 
 import TableauFilleuls from "./tableauFilleuls";
 import { useAuth } from "../../context/authContext";
+import { Users } from "lucide-react";
 
 export default function MesFilleulsPage() {
-      const { user, loading } = useAuth();
-    
-      if (loading) {
-        return (
-          <div className="container mx-auto p-4">
-            <p>Chargement en cours...</p>
-          </div>
-        );
-      }
-    
-      if (!user) {
-        return (
-          <div className="container mx-auto p-4">
-            <p>Erreur : utilisateur non connecté.</p>
-          </div>
-        );
-      }
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-500">
+          <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#E07C24", borderTopColor: "transparent" }} />
+          <span className="text-sm">Chargement en cours...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-red-500 text-sm">Erreur : utilisateur non connecté.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      <h1 className="text-2xl font-bold">Mes filleuls</h1>
-      <TableauFilleuls user={user}/>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-6 py-10">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: "#fef3e8" }}>
+            <Users className="w-5 h-5" style={{ color: "#E07C24" }} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Mes filleuls</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Conseillers parrainés et leurs chiffres d&apos;affaires</p>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+          <TableauFilleuls user={user} />
+        </div>
+      </div>
     </div>
   );
 }

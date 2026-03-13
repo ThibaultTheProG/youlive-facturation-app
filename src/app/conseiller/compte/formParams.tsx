@@ -162,146 +162,91 @@ export default function FormParams({ user }: { user: User }) {
   };
 
   return (
-    <form action={handleSubmit} className="space-y-6">
-      <div className="flex flex-col space-y-4">
-        <div className="flex flex-row justify-start space-x-4">
-          <InputCustom
-            disable={true}
-            name="nom"
-            label="Nom"
-            id="nom"
-            type="text"
-            value={conseiller?.nom ?? ""}
-          />
-          <InputCustom
-            disable={true}
-            name="prenom"
-            label="Prénom"
-            id="prenom"
-            type="text"
-            value={conseiller?.prenom ?? ""}
-          />
-          <InputCustom
-            disable={true}
-            name="id_apimo"
-            label="ID Apimo"
-            id="id_apimo"
-            type="number"
-            value={conseiller?.idapimo ?? ""}
-          />
+    <form action={handleSubmit} className="space-y-4">
+
+      {/* Identité */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#fef3e8" }}>
+            <span className="text-xs font-bold" style={{ color: "#E07C24" }}>ID</span>
+          </div>
+          <span className="text-sm font-semibold text-gray-700">Identité</span>
+          {conseiller?.idapimo && (
+            <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Apimo #{conseiller.idapimo}</span>
+          )}
         </div>
-        <div className="flex flex-row justify-start space-x-4">
-          <InputCustom
-            disable={true}
-            name="email"
-            label="Email"
-            id="email"
-            type="email"
-            value={conseiller?.email ?? ""}
-          />
-          {conseiller?.telephone && (
-            <InputCustom
-              disable={true}
-              name="telephone"
-              label="Téléphone"
-              id="telephone"
-              type="tel"
-              value={conseiller?.telephone ?? ""}
-            />
-          )}
-          {conseiller?.mobile && (
-            <InputCustom
-              disable={true}
-              name="mobile"
-              label="Mobile"
-              id="mobile"
-              type="mobile"
-              value={conseiller?.mobile ?? ""}
-            />
-          )}
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <InputCustom disable={true} name="nom" label="Nom" id="nom" type="text" value={conseiller?.nom ?? ""} />
+            <InputCustom disable={true} name="prenom" label="Prénom" id="prenom" type="text" value={conseiller?.prenom ?? ""} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <InputCustom disable={true} name="email" label="Email" id="email" type="email" value={conseiller?.email ?? ""} />
+            {conseiller?.telephone ? (
+              <InputCustom disable={true} name="telephone" label="Téléphone" id="telephone" type="tel" value={conseiller.telephone} />
+            ) : conseiller?.mobile ? (
+              <InputCustom disable={true} name="mobile" label="Mobile" id="mobile" type="tel" value={conseiller.mobile} />
+            ) : null}
+          </div>
           <InputCustom
             disable={false}
             name="localisation"
-            label="Localisation / Adresse"
+            label="Adresse"
             id="localisation"
             value={conseiller?.adresse ?? ""}
-            onChange={(val) =>
-              setConseiller((prev) =>
-                prev ? { ...prev, adresse: String(val) } : prev
-              )
-            }
+            onChange={(val) => setConseiller((prev) => prev ? { ...prev, adresse: String(val) } : prev)}
           />
         </div>
-        <div className="flex flex-row space-x-4">
-          <InputCustom
-            disable={true}
-            name="siren"
-            label="SIREN / RSAC / RCS"
-            id="siren"
-            type="number"
-            value={conseiller?.siren ?? ""}
-            onChange={(val) =>
-              setConseiller((prev) =>
-                prev ? { ...prev, siren: Number(val) } : prev
-              )
-            }
-          />
-          <div className="flex flex-col justify-start space-y-2">
+      </div>
+
+      {/* Contrat & CA */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <span className="text-sm font-semibold text-gray-700">Contrat & Chiffre d&apos;affaires</span>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <InputCustom disable={true} name="siren" label="SIREN / RSAC / RCS" id="siren" type="text" value={conseiller?.siren ?? ""} />
+            <InputCustom disable={true} name="type_contrat" label="Type de contrat" id="type_contrat" type="text" value={selectedTypeContrat} />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="flex flex-col space-y-2">
+              <Label htmlFor="year_selector" className="text-sm text-gray-700">Année consultée</Label>
+              <select
+                id="year_selector"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none"
+              >
+                {availableYears.map((year) => (
+                  <option key={year} value={year}>
+                    {year}{year === new Date().getFullYear() ? " (en cours)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
             <InputCustom
               disable={true}
-              name="type_contrat"
-              label="Type de contrat"
-              id="type_contrat"
-              type="text"
-              value={selectedTypeContrat}
-              onChange={(val) => setSelectedTypeContrat(String(val))}
+              name="chiffre_affaire_annuel"
+              label={`Honoraires HT (${selectedYear})`}
+              id="chiffre_affaire_annuel"
+              type="number"
+              value={chiffreAffaires}
             />
+            <InputCustom disable={true} name="retrocession" label="% de rétrocession" id="retrocession" type="number" value={retrocession} />
           </div>
-
-          {/* Sélecteur d'année */}
-          <div className="flex flex-col space-y-2">
-            <Label htmlFor="year_selector">Consulter l'année</Label>
-            <select
-              id="year_selector"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="border border-gray-300 rounded-md p-2 bg-white"
-            >
-              {availableYears.map((year) => (
-                <option key={year} value={year}>
-                  {year} {year === new Date().getFullYear() && "(Année en cours)"}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <InputCustom
-            disable={true}
-            name="chiffre_affaire_annuel"
-            label={`Honoraires Youlive HT générés (${selectedYear})`}
-            id="chiffre_affaire_annuel"
-            type="number"
-            value={chiffreAffaires}
-            onChange={(val) => setChiffreAffaires(Number(val))}
-          />
-          <InputCustom
-            disable={true}
-            name="retrocession"
-            label="% de rétrocession"
-            id="retrocession"
-            type="number"
-            value={retrocession}
-          />
         </div>
+      </div>
 
-        <div className="flex flex-row items-end space-x-4">
-          <div className="flex flex-col justify-start space-y-2">
-            <Label>Assujéti à la TVA</Label>
-            <RadioCustom
-              onChange={(value) => setAssujettiTVA(value)}
-              value={assujettiTVA}
-              name="tva"
-            />
+      {/* Fiscalité */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <span className="text-sm font-semibold text-gray-700">Fiscalité</span>
+        </div>
+        <div className="p-6 flex flex-wrap gap-10">
+          <div className="flex flex-col space-y-2">
+            <Label className="text-sm text-gray-700">Assujetti à la TVA</Label>
+            <RadioCustom onChange={(value) => setAssujettiTVA(value)} value={assujettiTVA} name="tva" />
           </div>
           {assujettiTVA === "oui" && (
             <InputCustom
@@ -315,29 +260,16 @@ export default function FormParams({ user }: { user: User }) {
             />
           )}
         </div>
-        {/* <div className="flex flex-col justify-start space-y-2">
-          <Label>Auto parrain</Label>
-          <RadioCustom
-            onChange={(value) => setAutoParrain(value)}
-            value={autoParrain}
-            name="auto_parrain"
-          />
-        </div> */}
       </div>
 
-      {/* Section Informations facture de recrutement */}
-      <div className="border-t pt-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Informations facture de recrutement
-          </h3>
-          <p className="text-sm text-gray-600 mb-4">
-            À compléter uniquement si les informations sont différentes des informations déjà renseignées ci-dessus.
-          </p>
+      {/* Informations facture de recrutement */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <span className="text-sm font-semibold text-gray-700">Informations facture de recrutement</span>
+          <p className="text-xs text-gray-400 mt-0.5">À compléter uniquement si différentes des informations ci-dessus</p>
         </div>
-        
-        <div className="flex flex-col space-y-4">
-          <div className="flex flex-row justify-start space-x-4">
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <InputCustom
               disable={false}
               name="nom_societe_facture"
@@ -357,24 +289,28 @@ export default function FormParams({ user }: { user: User }) {
               onChange={(val) => setSirenFacture(String(val))}
             />
           </div>
-          <div className="flex flex-row justify-start space-x-4">
-            <InputCustom
-              disable={false}
-              name="adresse_facture"
-              label="Adresse de facturation"
-              id="adresse_facture"
-              type="text"
-              value={adresseFacture}
-              onChange={(val) => setAdresseFacture(String(val))}
-            />
-          </div>
+          <InputCustom
+            disable={false}
+            name="adresse_facture"
+            label="Adresse de facturation"
+            id="adresse_facture"
+            type="text"
+            value={adresseFacture}
+            onChange={(val) => setAdresseFacture(String(val))}
+          />
         </div>
       </div>
 
-      {successMessage && <p className="text-green-600">{successMessage}</p>}
-      <Button className="bg-orange-strong cursor-pointer" type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Chargement..." : "Valider"}
-      </Button>
+      <div className="flex items-center justify-between pt-2">
+        {successMessage && (
+          <p className="text-sm text-green-600">{successMessage}</p>
+        )}
+        <div className="ml-auto">
+          <Button className="bg-orange-strong cursor-pointer" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Enregistrement..." : "Enregistrer"}
+          </Button>
+        </div>
+      </div>
     </form>
   );
 }

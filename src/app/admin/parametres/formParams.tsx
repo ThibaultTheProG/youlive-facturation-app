@@ -447,7 +447,7 @@ export default function FormParams() {
 
   // Rendu
   return (
-    <form action={handleFormSubmit} className="space-y-8">
+    <form action={handleFormSubmit} className="space-y-4">
       <ConseillerSelector
         conseillersNoms={conseillersNoms}
         selectedConseiller={selectedConseiller}
@@ -455,6 +455,7 @@ export default function FormParams() {
         setOpenConseiller={setOpenConseiller}
         handleSelectConseiller={handleSelectConseiller}
       />
+
       {selectedConseiller && (
         <>
           <ConseillerDetails
@@ -462,37 +463,45 @@ export default function FormParams() {
             adresse={adresse}
             setAdresse={setAdresse}
           />
-          <div className="flex flex-row justify-start space-x-4">
-            <div className="flex flex-col space-y-2">
-              <Label>Assujetti à la TVA</Label>
-              <RadioCustom
-                onChange={(value) => setAssujettiTVA(value)}
-                value={assujettiTVA}
-                name="assujetti_tva"
-              />
+
+          {/* TVA & Auto-parrainage */}
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <span className="text-sm font-semibold text-gray-700">Fiscalité & Options</span>
             </div>
-            {assujettiTVA === "oui" && (
+            <div className="p-6 flex flex-wrap gap-10">
               <div className="flex flex-col space-y-2">
-                <InputCustom
-                  disable={false}
-                  name="taux_tva"
-                  label="Taux de TVA (%)"
-                  id="taux_tva"
-                  type="number"
-                  value={tauxTVA}
-                  onChange={(val) => setTauxTVA(Number(val))}
+                <Label className="text-sm text-gray-700">Assujetti à la TVA</Label>
+                <RadioCustom
+                  onChange={(value) => setAssujettiTVA(value)}
+                  value={assujettiTVA}
+                  name="assujetti_tva"
                 />
               </div>
-            )}
-            <div className="flex flex-col space-y-2">
-              <Label>Auto-parrainage</Label>
-              <RadioCustom
-                onChange={(value) => setAutoParrain(value)}
-                value={autoParrain}
-                name="auto_parrain"
-              />
+              {assujettiTVA === "oui" && (
+                <div className="flex flex-col space-y-2">
+                  <InputCustom
+                    disable={false}
+                    name="taux_tva"
+                    label="Taux de TVA (%)"
+                    id="taux_tva"
+                    type="number"
+                    value={tauxTVA}
+                    onChange={(val) => setTauxTVA(Number(val))}
+                  />
+                </div>
+              )}
+              <div className="flex flex-col space-y-2">
+                <Label className="text-sm text-gray-700">Auto-parrainage</Label>
+                <RadioCustom
+                  onChange={(value) => setAutoParrain(value)}
+                  value={autoParrain}
+                  name="auto_parrain"
+                />
+              </div>
             </div>
           </div>
+
           <ContratManager
             selectedTypeContrat={selectedTypeContrat}
             setSelectedTypeContrat={setSelectedTypeContrat}
@@ -505,6 +514,7 @@ export default function FormParams() {
             setSelectedYear={setSelectedYear}
             availableYears={availableYears}
           />
+
           <ParrainagesManager
             parrains={parrains}
             openParrain1={openParrain1}
@@ -523,8 +533,11 @@ export default function FormParams() {
             handleSelectParrain3={handleSelectParrain3}
             selectedParrain3Id={selectedParrain3Id}
           />
-          <FormStatusMessage status={formStatus} />
-          <SubmitButton isSubmitting={isSubmitting} />
+
+          <div className="flex items-center justify-between pt-2">
+            <FormStatusMessage status={formStatus} />
+            <SubmitButton isSubmitting={isSubmitting} />
+          </div>
         </>
       )}
     </form>

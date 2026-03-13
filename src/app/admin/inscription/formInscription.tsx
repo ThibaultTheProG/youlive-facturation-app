@@ -112,15 +112,15 @@ export default function FormInscription() {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-t-lg">
-        <CardTitle className="text-2xl font-bold">Inscription Conseiller</CardTitle>
-        <CardDescription className="text-white/80">
-          Créez un compte pour un nouveau conseiller
+    <Card className="w-full shadow-sm border border-gray-200 rounded-2xl">
+      <CardHeader className="px-6 pt-6 pb-4 border-b border-gray-100">
+        <CardTitle className="text-base font-semibold text-gray-900">Nouveau conseiller</CardTitle>
+        <CardDescription className="text-sm text-gray-500">
+          Sélectionnez un conseiller et définissez son mot de passe
         </CardDescription>
       </CardHeader>
-      
-      <CardContent className="pt-6 pb-2">
+
+      <CardContent className="px-6 pt-6 pb-2">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="conseiller" className="font-medium">
@@ -241,8 +241,8 @@ export default function FormInscription() {
         </form>
       </CardContent>
       
-      <CardFooter className="flex justify-center text-sm text-gray-500 pt-2 pb-6">
-        Le conseiller recevra ses identifiants par email
+      <CardFooter className="flex justify-center text-xs text-gray-400 px-6 pt-2 pb-6">
+        Le conseiller pourra se connecter avec ces identifiants
       </CardFooter>
     </Card>
   );
