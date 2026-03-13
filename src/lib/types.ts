@@ -19,6 +19,7 @@ export interface Conseiller {
   nom_societe_facture?: string;
   siren_facture?: string;
   adresse_facture?: string;
+  taux_tva?: number;
 }
 
 export type SelectItem = {

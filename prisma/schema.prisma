@@ -132,6 +132,7 @@ model utilisateurs {
   adresse_facture      String?                @db.VarChar(255)
   nom_societe_facture  String?                @db.VarChar(255)
   siren_facture        String?                @db.VarChar(255)
+  taux_tva             Decimal?               @db.Decimal(5, 2)
   factures             factures[]
   parrainages          parrainages?
   relations_contrats   relations_contrats[]

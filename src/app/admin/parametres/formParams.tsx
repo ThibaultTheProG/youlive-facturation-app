@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-// import InputCustom from "@/components/uiCustom/inputCustom";
+import InputCustom from "@/components/uiCustom/inputCustom";
 import { Label } from "@/components/ui/label";
 import RadioCustom from "@/components/uiCustom/radioCustom";
 import { Conseiller } from "@/lib/types";
@@ -29,6 +29,7 @@ export default function FormParams() {
   const [selectedConseiller, setSelectedConseiller] =
     useState<Conseiller | null>(null);
   const [assujettiTVA, setAssujettiTVA] = useState<string>("non");
+  const [tauxTVA, setTauxTVA] = useState<number>(20);
   const [autoParrain, setAutoParrain] = useState<string>("non");
   const [selectedTypeContrat, setSelectedTypeContrat] = useState<string>("");
   const [chiffreAffaires, setChiffreAffaires] = useState<number>(0);
@@ -127,6 +128,7 @@ export default function FormParams() {
       setSelectedTypeContrat(typecontrat || "");
       setChiffreAffaires(chiffre_affaires || 0);
       setAssujettiTVA(tva ? "oui" : "non");
+      setTauxTVA(selectedConseiller.taux_tva ?? 20);
       setAdresse(conseillerAdresse || "");
 
       if (auto_parrain) {
@@ -376,6 +378,7 @@ export default function FormParams() {
         siren: formDataObj.siren as string,
         retrocession: Number(retrocession),
         tva: assujettiTVA === "oui",
+        taux_tva: assujettiTVA === "oui" ? tauxTVA : null,
         typecontrat: selectedTypeContrat,
         auto_parrain: autoParrain,
         chiffre_affaires: Number(chiffreAffaires),
@@ -468,6 +471,19 @@ export default function FormParams() {
                 name="assujetti_tva"
               />
             </div>
+            {assujettiTVA === "oui" && (
+              <div className="flex flex-col space-y-2">
+                <InputCustom
+                  disable={false}
+                  name="taux_tva"
+                  label="Taux de TVA (%)"
+                  id="taux_tva"
+                  type="number"
+                  value={tauxTVA}
+                  onChange={(val) => setTauxTVA(Number(val))}
+                />
+              </div>
+            )}
             <div className="flex flex-col space-y-2">
               <Label>Auto-parrainage</Label>
               <RadioCustom

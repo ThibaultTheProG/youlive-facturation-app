@@ -19,6 +19,8 @@ export default function FormParams({ user }: { user: User }) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [tauxTVA, setTauxTVA] = useState<number>(20);
+
   // Nouveaux états pour les informations de facture de recrutement
   const [nomSocieteFacture, setNomSocieteFacture] = useState<string>("");
   const [sirenFacture, setSirenFacture] = useState<string>("");
@@ -74,6 +76,7 @@ export default function FormParams({ user }: { user: User }) {
           setNomSocieteFacture(data.nom_societe_facture || "");
           setSirenFacture(data.siren_facture || "");
           setAdresseFacture(data.adresse_facture || "");
+          setTauxTVA(data.taux_tva ?? 20);
         }
       } catch (error) {
         console.error("Erreur lors de la récupération du conseiller:", error);
@@ -120,6 +123,7 @@ export default function FormParams({ user }: { user: User }) {
         nom_societe_facture: formData.get("nom_societe_facture")?.toString() || nomSocieteFacture || null,
         siren_facture: formData.get("siren_facture")?.toString() || sirenFacture || null,
         adresse_facture: formData.get("adresse_facture")?.toString() || adresseFacture || null,
+        taux_tva: formData.get("tva") === "oui" ? tauxTVA : null,
       };
       
       //console.log("Données envoyées à l'API:", conseillerData);
@@ -290,13 +294,26 @@ export default function FormParams({ user }: { user: User }) {
           />
         </div>
 
-        <div className="flex flex-col justify-start space-y-2">
-          <Label>Assujéti à la TVA</Label>
-          <RadioCustom
-            onChange={(value) => setAssujettiTVA(value)}
-            value={assujettiTVA}
-            name="tva"
-          />
+        <div className="flex flex-row items-end space-x-4">
+          <div className="flex flex-col justify-start space-y-2">
+            <Label>Assujéti à la TVA</Label>
+            <RadioCustom
+              onChange={(value) => setAssujettiTVA(value)}
+              value={assujettiTVA}
+              name="tva"
+            />
+          </div>
+          {assujettiTVA === "oui" && (
+            <InputCustom
+              disable={false}
+              name="taux_tva"
+              label="Taux de TVA (%)"
+              id="taux_tva"
+              type="number"
+              value={tauxTVA}
+              onChange={(val) => setTauxTVA(Number(val))}
+            />
+          )}
         </div>
         {/* <div className="flex flex-col justify-start space-y-2">
           <Label>Auto parrain</Label>

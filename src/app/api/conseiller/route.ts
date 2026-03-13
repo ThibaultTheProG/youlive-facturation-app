@@ -93,6 +93,7 @@ export async function GET(request: Request) {
       nom_societe_facture: conseiller.nom_societe_facture || "",
       siren_facture: conseiller.siren_facture || "",
       adresse_facture: conseiller.adresse_facture || "",
+      taux_tva: conseiller.taux_tva ? Number(conseiller.taux_tva) : undefined,
     };
 
     return NextResponse.json(conseillerData);

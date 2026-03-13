@@ -74,8 +74,10 @@ export default function FactureRecrutement({
     console.log(`📄 Ancienne facture recrutement - Honoraires: ${honorairesAgent}€, Montant: ${retrocessionAmount}€, Taux calculé: ${tauxRetrocession}%`);
   }
   
+  const tauxTVA = user.taux_tva ?? 20;
+
   if (user.tva) {
-    amountTTC = retrocessionAmount + (retrocessionAmount * Number(facture.vat_rate)) / 100;
+    amountTTC = retrocessionAmount + (retrocessionAmount * tauxTVA) / 100;
   } else {
     amountTTC = retrocessionAmount;
   }
@@ -180,7 +182,7 @@ export default function FactureRecrutement({
             <Text style={styles.tableCellTotal}>
               {formatNumber(retrocessionAmount)} €
             </Text>
-            {user.tva && <Text style={styles.tableCellTotal}>{facture.vat_rate} %</Text>}
+            {user.tva && <Text style={styles.tableCellTotal}>{tauxTVA} %</Text>}
             <Text style={styles.tableCell}>
               {formatNumber(amountTTC)} €
             </Text>
