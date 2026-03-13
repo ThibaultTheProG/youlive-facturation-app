@@ -69,20 +69,19 @@ export default function FactureCommission({
 
   // Calculer le montant de rétrocession pour le calcul TTC
   const retrocessionAmount = Number(facture.retrocession) || 0;
+  const tauxTVA = user.taux_tva ?? 20;
 
   if (facture.apporteur === "oui") {
     apporteurAmount = Number(facture.apporteur_amount) || 0;
     totalAmount = retrocessionAmount - apporteurAmount;
     if (user.tva) {
-      amountTTC = totalAmount + (totalAmount * Number(facture.vat_rate)) / 100;
+      amountTTC = totalAmount + (totalAmount * tauxTVA) / 100;
     } else {
       amountTTC = totalAmount;
     }
   } else {
     if (user.tva) {
-      amountTTC =
-        retrocessionAmount +
-        (retrocessionAmount * Number(facture.vat_rate)) / 100;
+      amountTTC = retrocessionAmount + (retrocessionAmount * tauxTVA) / 100;
     } else {
       amountTTC = retrocessionAmount;
     }
@@ -237,7 +236,7 @@ export default function FactureCommission({
             <Text style={styles.tableCellTotal}>
               {formatNumber(totalAmount || retrocessionAmount)} €
             </Text>
-            {user.tva && <Text style={styles.tableCellTotal}>{facture.vat_rate} %</Text>}
+            {user.tva && <Text style={styles.tableCellTotal}>{tauxTVA} %</Text>}
             <Text style={styles.tableCell}>{formatNumber(amountTTC)} €</Text>
           </View>
         </View>
