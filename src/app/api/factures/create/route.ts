@@ -5,7 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { RelationContrat } from "@/lib/types.js";
 import nodemailer from "nodemailer";
 import { calculRetrocession } from "@/utils/calculs";
-import { getCACurrentYear } from "@/utils/historiqueCA";
+import { getCAForYear, getHistoriqueForYear } from "@/utils/historiqueCA";
 
 // Type pour la transaction Prisma
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,14 +80,18 @@ async function createFacture() {
         relationid: contrat.id
       };
 
+      // Déterminer l'année du contrat à partir de la date de signature
+      const dateSignature = contrat.contrats?.date_signature;
+      const contratYear = dateSignature ? new Date(dateSignature).getFullYear() : new Date().getFullYear();
+
       // Collecter les notifications de la création de factures commission
-      const commissionNotifications = await createFactureCommission(relationContrat, prisma);
+      const commissionNotifications = await createFactureCommission(relationContrat, prisma, contratYear);
       if (commissionNotifications) {
         notificationsToSend.push(...commissionNotifications);
       }
 
       // Collecter les notifications de la création de factures recrutement
-      const recrutementNotifications = await createFactureRecrutement(relationContrat, prisma);
+      const recrutementNotifications = await createFactureRecrutement(relationContrat, prisma, contratYear);
       if (recrutementNotifications && recrutementNotifications.length > 0) {
         notificationsToSend.push(...recrutementNotifications);
       }
@@ -166,10 +170,12 @@ async function createFacture() {
 // Sous-fonction pour créer une facture de type "commission"
 async function createFactureCommission(
   contrat: RelationContrat,
-  prisma: PrismaTransaction
+  prisma: PrismaTransaction,
+  contratYear: number
 ): Promise<EmailNotification[]> {
   const { relationid, user_id, honoraires_agent } = contrat;
   const notifications: EmailNotification[] = [];
+  const currentYear = new Date().getFullYear();
 
   try {
     // Vérifier d'abord si des factures existent déjà pour cette relation
@@ -187,28 +193,52 @@ async function createFactureCommission(
       return notifications;
     }
 
-    // Récupérer les informations de l'utilisateur
-    const utilisateur = await prisma.utilisateurs.findUnique({
-      where: { id: user_id },
-      select: { 
-        chiffre_affaires: true,
-        typecontrat: true,
-        auto_parrain: true
-      }
-    });
+    // Déterminer les données à utiliser selon l'année du contrat
+    let typecontrat: string;
+    let autoParrain: string | undefined;
 
-    if (!utilisateur) {
-      console.log(`❌ Utilisateur non trouvé : ${user_id}`);
-      return notifications;
+    if (contratYear < currentYear) {
+      // Contrat d'une année précédente : utiliser les données historiques
+      const historique = await getHistoriqueForYear(user_id, contratYear);
+      if (historique) {
+        typecontrat = historique.typecontrat || "";
+        autoParrain = historique.auto_parrain || undefined;
+        console.log(`📅 Contrat de ${contratYear}: utilisation des données historiques (typecontrat: ${typecontrat}, auto_parrain: ${autoParrain})`);
+      } else {
+        // Pas d'historique pour cette année, fallback sur les données actuelles
+        const utilisateur = await prisma.utilisateurs.findUnique({
+          where: { id: user_id },
+          select: { typecontrat: true, auto_parrain: true }
+        });
+        if (!utilisateur) {
+          console.log(`❌ Utilisateur non trouvé : ${user_id}`);
+          return notifications;
+        }
+        typecontrat = utilisateur.typecontrat || "";
+        autoParrain = utilisateur.auto_parrain || undefined;
+        console.log(`⚠️ Pas d'historique pour ${contratYear}, utilisation des données actuelles`);
+      }
+    } else {
+      // Contrat de l'année en cours : utiliser les données actuelles
+      const utilisateur = await prisma.utilisateurs.findUnique({
+        where: { id: user_id },
+        select: { typecontrat: true, auto_parrain: true }
+      });
+      if (!utilisateur) {
+        console.log(`❌ Utilisateur non trouvé : ${user_id}`);
+        return notifications;
+      }
+      typecontrat = utilisateur.typecontrat || "";
+      autoParrain = utilisateur.auto_parrain || undefined;
     }
 
     // IMPORTANT: Utiliser le CA AVANT l'ajout du nouveau contrat pour le calcul des tranches
-    // Récupérer le CA de l'année en cours depuis l'historique et soustraire le nouveau contrat
-    const currentCA = await getCACurrentYear(user_id) - honoraires_agent;
+    // Récupérer le CA de l'année du contrat depuis l'historique et soustraire le nouveau contrat
+    const currentCA = await getCAForYear(user_id, contratYear) - honoraires_agent;
     const newCA = currentCA + honoraires_agent;
     const seuil = 70000;
-    
-    console.log(`📊 CA pour calcul des tranches: ${currentCA}€ (CA actuel: ${Number(utilisateur.chiffre_affaires || 0)}€ - honoraires: ${honoraires_agent}€)`);
+
+    console.log(`📊 CA pour calcul des tranches (année ${contratYear}): ${currentCA}€ → ${newCA}€ (honoraires: ${honoraires_agent}€)`);
 
     // Calculer les montants pour chaque tranche
     let montantAvantSeuil = 0;
@@ -232,20 +262,20 @@ async function createFactureCommission(
     // Calculer les taux de rétrocession seulement si nécessaire
     let tauxAvantSeuil = 0;
     let tauxApresSeuil = 0;
-    
+
     if (montantAvantSeuil > 0) {
       tauxAvantSeuil = calculRetrocession(
-        utilisateur.typecontrat || "",
+        typecontrat,
         currentCA,
-        utilisateur.auto_parrain || undefined
+        autoParrain
       );
     }
-    
+
     if (montantApresSeuil > 0) {
       tauxApresSeuil = calculRetrocession(
-        utilisateur.typecontrat || "",
+        typecontrat,
         seuil,
-        utilisateur.auto_parrain || undefined
+        autoParrain
       );
     }
 
@@ -318,7 +348,8 @@ async function createFactureCommission(
 // Sous-fonction pour créer des factures de type "parrainage"
 async function createFactureRecrutement(
   contrat: RelationContrat,
-  prisma: PrismaTransaction
+  prisma: PrismaTransaction,
+  contratYear: number
 ): Promise<EmailNotification[]> {
   const { relationid, user_id, honoraires_agent } = contrat;
   const notifications: EmailNotification[] = [];
@@ -337,21 +368,10 @@ async function createFactureRecrutement(
       return notifications;
     }
 
-    // Vérifier le chiffre d'affaires
-    const utilisateur = await prisma.utilisateurs.findUnique({
-      where: { id: user_id },
-      select: { chiffre_affaires: true }
-    });
-
-    if (!utilisateur) {
-      console.log("❌ Utilisateur non trouvé :", user_id);
-      return notifications;
-    }
-
-    // Si CA >= 70 000€, ne pas générer de facture de parrainage
-    const caAnneeEnCours = await getCACurrentYear(user_id);
-    if (caAnneeEnCours >= 70000) {
-      console.log(`CA >= 70 000€ pour l'utilisateur ${user_id}, pas de facture de parrainage.`);
+    // Si CA >= 70 000€ pour l'année du contrat, ne pas générer de facture de parrainage
+    const caAnneeContrat = await getCAForYear(user_id, contratYear);
+    if (caAnneeContrat >= 70000) {
+      console.log(`CA >= 70 000€ pour l'utilisateur ${user_id} (année ${contratYear}), pas de facture de parrainage.`);
       return notifications;
     }
 

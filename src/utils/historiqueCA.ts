@@ -6,12 +6,18 @@ import { calculRetrocession } from "./calculs";
  */
 export async function getCACurrentYear(userId: number): Promise<number> {
   const currentYear = new Date().getFullYear();
+  return getCAForYear(userId, currentYear);
+}
 
+/**
+ * Récupère le CA d'une année donnée pour un utilisateur
+ */
+export async function getCAForYear(userId: number, year: number): Promise<number> {
   const historique = await prisma.historique_ca_annuel.findUnique({
     where: {
       user_id_annee: {
         user_id: userId,
-        annee: currentYear
+        annee: year
       }
     },
     select: {
@@ -20,6 +26,30 @@ export async function getCACurrentYear(userId: number): Promise<number> {
   });
 
   return historique ? Number(historique.chiffre_affaires) : 0;
+}
+
+/**
+ * Récupère les données historiques d'une année donnée pour un utilisateur
+ * (typecontrat, auto_parrain, retrocession_finale, chiffre_affaires)
+ * Utile pour générer des factures sur des contrats d'années précédentes
+ */
+export async function getHistoriqueForYear(userId: number, year: number) {
+  const historique = await prisma.historique_ca_annuel.findUnique({
+    where: {
+      user_id_annee: {
+        user_id: userId,
+        annee: year
+      }
+    },
+    select: {
+      chiffre_affaires: true,
+      retrocession_finale: true,
+      typecontrat: true,
+      auto_parrain: true
+    }
+  });
+
+  return historique;
 }
 
 /**
