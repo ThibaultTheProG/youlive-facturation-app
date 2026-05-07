@@ -9,6 +9,7 @@ import { Conseiller } from "@/lib/types";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import SubmitButton from "@/components/uiCustom/submitButton";
+import { Button } from "@/components/ui/button";
 import FormStatusMessage, {
   FormStatusType,
 } from "@/components/uiCustom/formStatusMessage";
@@ -63,6 +64,7 @@ export default function FormParams() {
 
   // Ajout de l'état pour la gestion manuelle de la rétrocession
   const [isRetrocessionManuallySet, setIsRetrocessionManuallySet] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
 
   // États pour la gestion des années
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -445,6 +447,40 @@ export default function FormParams() {
     }
   };
 
+  const handleDesactiver = async () => {
+    if (!selectedConseiller) return;
+
+    const confirmed = window.confirm(
+      `Êtes-vous sûr de vouloir désactiver le compte de ${selectedConseiller.prenom} ${selectedConseiller.nom} ?\n\nCette action va :\n- Désactiver son compte\n- Le retirer de tous les parrainages où il apparaît\n- Supprimer son propre enregistrement de parrainage`
+    );
+
+    if (!confirmed) return;
+
+    setIsDeactivating(true);
+    try {
+      const response = await fetch("/api/conseillers/desactiver", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedConseiller.id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erreur lors de la désactivation");
+      }
+
+      toast.success(result.message);
+      setSelectedConseiller(null);
+      router.refresh();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      toast.error(`Erreur : ${msg}`);
+    } finally {
+      setIsDeactivating(false);
+    }
+  };
+
   // Rendu
   return (
     <form action={handleFormSubmit} className="space-y-4">
@@ -535,7 +571,18 @@ export default function FormParams() {
           />
 
           <div className="flex items-center justify-between pt-2">
-            <FormStatusMessage status={formStatus} />
+            <div className="flex items-center gap-4">
+              <FormStatusMessage status={formStatus} />
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDesactiver}
+                disabled={isDeactivating}
+                className="cursor-pointer"
+              >
+                {isDeactivating ? "Désactivation..." : "Désactiver le compte"}
+              </Button>
+            </div>
             <SubmitButton isSubmitting={isSubmitting} />
           </div>
         </>

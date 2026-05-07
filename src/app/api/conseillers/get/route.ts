@@ -10,9 +10,12 @@ export async function GET(request: Request) {
 
     console.log(`📊 Récupération conseillers pour l'année ${annee}${anneeParam ? ' (spécifique)' : ' (en cours)'}`);
 
+    const includeInactifs = searchParams.get("includeInactifs") === "true";
+
     const conseillers = await prisma.utilisateurs.findMany({
       where: {
         role: "conseiller",
+        ...(!includeInactifs && { actif: true }),
       },
       select: {
         id: true,
@@ -30,6 +33,7 @@ export async function GET(request: Request) {
         auto_parrain: true,
         typecontrat: true,
         role: true,
+        actif: true,
         // Informations facture de recrutement
         nom_societe_facture: true,
         siren_facture: true,
@@ -73,6 +77,7 @@ export async function GET(request: Request) {
         siren: c.siren ? c.siren : undefined,
         chiffre_affaires,
         retrocession,
+        actif: c.actif,
         historique_ca_annuel: undefined // Retirer de la réponse finale
       };
     });

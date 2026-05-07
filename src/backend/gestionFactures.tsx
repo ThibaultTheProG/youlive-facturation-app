@@ -21,6 +21,7 @@ export async function getFactures(userId: number) {
       montant_honoraires: true,
       taux_retrocession: true,
       tranche: true,
+      date_paiement: true,
       relations_contrats: {
         select: {
           honoraires_agent: true,
@@ -50,7 +51,8 @@ export async function getFactures(userId: number) {
     // Nouveaux champs
     montant_honoraires: montant_honoraires ? Number(montant_honoraires) : undefined,
     taux_retrocession: taux_retrocession ? Number(taux_retrocession) : undefined,
-    tranche: tranche || undefined
+    tranche: tranche || undefined,
+    date_paiement: rest.date_paiement ? rest.date_paiement.toISOString() : undefined
   }));
 }
 

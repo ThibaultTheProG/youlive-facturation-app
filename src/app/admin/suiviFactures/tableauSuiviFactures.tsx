@@ -5,6 +5,7 @@ import { useFacturesFiltering } from "@/hooks/useFacturesFiltering";
 import FacturesFilters from "./components/FacturesFilters";
 import { FacturesTable } from "./components/FacturesTable";
 import Pagination from "./components/Pagination";
+import ExportExcelButton from "./components/ExportExcelButton";
 import { Loader2 } from "lucide-react";
 
 // Composant principal
@@ -89,6 +90,11 @@ const TableauSuiviFactures: React.FC = () => {
         filterStatutEnvoi={filterStatutEnvoi}
         setFilterStatutEnvoi={setFilterStatutEnvoi}
       />
+
+      {/* Bouton export */}
+      <div className="flex justify-end mb-4">
+        <ExportExcelButton />
+      </div>
 
       {/* État de chargement */}
       {isLoading ? (

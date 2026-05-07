@@ -70,18 +70,21 @@ export default function FactureCommission({
   // Calculer le montant de rétrocession pour le calcul TTC
   const retrocessionAmount = Number(facture.retrocession) || 0;
   const tauxTVA = user.taux_tva ?? 20;
+  let montantTVA: number = 0;
 
   if (facture.apporteur === "oui") {
     apporteurAmount = Number(facture.apporteur_amount) || 0;
     totalAmount = retrocessionAmount - apporteurAmount;
     if (user.tva) {
-      amountTTC = totalAmount + (totalAmount * tauxTVA) / 100;
+      montantTVA = Number(((totalAmount * tauxTVA) / 100).toFixed(2));
+      amountTTC = totalAmount + montantTVA;
     } else {
       amountTTC = totalAmount;
     }
   } else {
     if (user.tva) {
-      amountTTC = retrocessionAmount + (retrocessionAmount * tauxTVA) / 100;
+      montantTVA = facture.montant_tva ?? Number(((retrocessionAmount * tauxTVA) / 100).toFixed(2));
+      amountTTC = retrocessionAmount + montantTVA;
     } else {
       amountTTC = retrocessionAmount;
     }
@@ -225,7 +228,7 @@ export default function FactureCommission({
             <Text style={styles.tableCellTotal}>Honoraires Youlive HT</Text>
             <Text style={styles.tableCellTotal}>% Rétrocession</Text>
             <Text style={styles.tableCellTotal}>Rétrocession HT</Text>
-            {user.tva && <Text style={styles.tableCellTotal}>TVA</Text>}
+            {user.tva && <Text style={styles.tableCellTotal}>TVA ({tauxTVA}%)</Text>}
             <Text style={styles.tableCell}>Montant à régler TTC</Text>
           </View>
           <View style={styles.tableRow}>
@@ -236,7 +239,7 @@ export default function FactureCommission({
             <Text style={styles.tableCellTotal}>
               {formatNumber(totalAmount || retrocessionAmount)} €
             </Text>
-            {user.tva && <Text style={styles.tableCellTotal}>{tauxTVA} %</Text>}
+            {user.tva && <Text style={styles.tableCellTotal}>{formatNumber(montantTVA)} €</Text>}
             <Text style={styles.tableCell}>{formatNumber(amountTTC)} €</Text>
           </View>
         </View>

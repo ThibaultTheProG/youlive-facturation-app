@@ -197,6 +197,19 @@ async function createFactureCommission(
     let typecontrat: string;
     let autoParrain: string | undefined;
 
+    // Récupérer les infos TVA de l'utilisateur
+    const utilisateur = await prisma.utilisateurs.findUnique({
+      where: { id: user_id },
+      select: { typecontrat: true, auto_parrain: true, tva: true, taux_tva: true }
+    });
+    if (!utilisateur) {
+      console.log(`❌ Utilisateur non trouvé : ${user_id}`);
+      return notifications;
+    }
+
+    const userTva = utilisateur.tva || false;
+    const userTauxTva = utilisateur.taux_tva ? Number(utilisateur.taux_tva) : 20;
+
     if (contratYear < currentYear) {
       // Contrat d'une année précédente : utiliser les données historiques
       const historique = await getHistoriqueForYear(user_id, contratYear);
@@ -205,29 +218,12 @@ async function createFactureCommission(
         autoParrain = historique.auto_parrain || undefined;
         console.log(`📅 Contrat de ${contratYear}: utilisation des données historiques (typecontrat: ${typecontrat}, auto_parrain: ${autoParrain})`);
       } else {
-        // Pas d'historique pour cette année, fallback sur les données actuelles
-        const utilisateur = await prisma.utilisateurs.findUnique({
-          where: { id: user_id },
-          select: { typecontrat: true, auto_parrain: true }
-        });
-        if (!utilisateur) {
-          console.log(`❌ Utilisateur non trouvé : ${user_id}`);
-          return notifications;
-        }
         typecontrat = utilisateur.typecontrat || "";
         autoParrain = utilisateur.auto_parrain || undefined;
         console.log(`⚠️ Pas d'historique pour ${contratYear}, utilisation des données actuelles`);
       }
     } else {
       // Contrat de l'année en cours : utiliser les données actuelles
-      const utilisateur = await prisma.utilisateurs.findUnique({
-        where: { id: user_id },
-        select: { typecontrat: true, auto_parrain: true }
-      });
-      if (!utilisateur) {
-        console.log(`❌ Utilisateur non trouvé : ${user_id}`);
-        return notifications;
-      }
       typecontrat = utilisateur.typecontrat || "";
       autoParrain = utilisateur.auto_parrain || undefined;
     }
@@ -284,7 +280,8 @@ async function createFactureCommission(
     // Créer les factures pour chaque tranche si nécessaire
     if (montantAvantSeuil > 0) {
       const retrocessionAvantSeuil = Number((montantAvantSeuil * (tauxAvantSeuil / 100)).toFixed(2));
-      
+      const montantTvaAvantSeuil = userTva ? Number((retrocessionAvantSeuil * userTauxTva / 100).toFixed(2)) : 0;
+
       await prisma.factures.create({
         data: {
           relation_id: relationid,
@@ -294,6 +291,7 @@ async function createFactureCommission(
           montant_honoraires: montantAvantSeuil,
           taux_retrocession: tauxAvantSeuil,
           tranche: 'avant_seuil',
+          montant_tva: montantTvaAvantSeuil,
           statut_paiement: 'non payé',
           statut_envoi: 'non envoyée',
           created_at: new Date(),
@@ -312,7 +310,8 @@ async function createFactureCommission(
 
     if (montantApresSeuil > 0) {
       const retrocessionApresSeuil = Number((montantApresSeuil * (tauxApresSeuil / 100)).toFixed(2));
-      
+      const montantTvaApresSeuil = userTva ? Number((retrocessionApresSeuil * userTauxTva / 100).toFixed(2)) : 0;
+
       await prisma.factures.create({
         data: {
           relation_id: relationid,
@@ -322,6 +321,7 @@ async function createFactureCommission(
           montant_honoraires: montantApresSeuil,
           taux_retrocession: tauxApresSeuil,
           tranche: 'apres_seuil',
+          montant_tva: montantTvaApresSeuil,
           statut_paiement: 'non payé',
           statut_envoi: 'non envoyée',
           created_at: new Date(),
@@ -421,10 +421,10 @@ async function createFactureRecrutement(
       for (const { id: parrainId, percentage } of niveaux) {
         if (!parrainId) continue;
 
-        // Récupérer le taux de rétrocession du parrain depuis la table utilisateurs
+        // Récupérer les infos du parrain depuis la table utilisateurs
         const parrain = await prisma.utilisateurs.findUnique({
           where: { id: parrainId },
-          select: { retrocession: true }
+          select: { retrocession: true, tva: true, taux_tva: true }
         });
 
         if (!parrain) {
@@ -433,6 +433,9 @@ async function createFactureRecrutement(
         }
 
         const retrocessionAmount = Number(((honoraires_agent * percentage) / 100).toFixed(2));
+        const parrainTva = parrain.tva || false;
+        const parrainTauxTva = parrain.taux_tva ? Number(parrain.taux_tva) : 20;
+        const montantTvaRecrutement = parrainTva ? Number((retrocessionAmount * parrainTauxTva / 100).toFixed(2)) : 0;
 
         // Vérifier si une facture de recrutement existe déjà pour cette relation et ce parrain
         // Une seule facture de recrutement par (relation_id, user_id), indépendamment de la tranche
@@ -465,6 +468,7 @@ async function createFactureRecrutement(
               montant_honoraires: honoraires_agent, // Stocker le montant des honoraires pour le calcul
               taux_retrocession: percentage, // Stocker le pourcentage de parrainage (6%, 8%, 2%, 1%)
               tranche: 'avant_seuil',
+              montant_tva: montantTvaRecrutement,
               statut_paiement: 'non payé',
               statut_envoi: 'non envoyée',
               created_at: new Date(),

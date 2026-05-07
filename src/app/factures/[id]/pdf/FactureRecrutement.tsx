@@ -75,9 +75,11 @@ export default function FactureRecrutement({
   }
   
   const tauxTVA = user.taux_tva ?? 20;
+  let montantTVA: number = 0;
 
   if (user.tva) {
-    amountTTC = retrocessionAmount + (retrocessionAmount * tauxTVA) / 100;
+    montantTVA = facture.montant_tva ?? Number(((retrocessionAmount * tauxTVA) / 100).toFixed(2));
+    amountTTC = retrocessionAmount + montantTVA;
   } else {
     amountTTC = retrocessionAmount;
   }
@@ -171,7 +173,7 @@ export default function FactureRecrutement({
             <Text style={styles.tableCellTotal}>Honoraires Youlive HT</Text>
             <Text style={styles.tableCellTotal}>% Parrainage</Text>
             <Text style={styles.tableCellTotal}>Rétrocession HT</Text>
-            {user.tva && <Text style={styles.tableCellTotal}>TVA</Text>}
+            {user.tva && <Text style={styles.tableCellTotal}>TVA ({tauxTVA}%)</Text>}
             <Text style={styles.tableCell}>Montant à régler TTC</Text>
           </View>
           <View style={styles.tableRow}>
@@ -182,7 +184,7 @@ export default function FactureRecrutement({
             <Text style={styles.tableCellTotal}>
               {formatNumber(retrocessionAmount)} €
             </Text>
-            {user.tva && <Text style={styles.tableCellTotal}>{tauxTVA} %</Text>}
+            {user.tva && <Text style={styles.tableCellTotal}>{formatNumber(montantTVA)} €</Text>}
             <Text style={styles.tableCell}>
               {formatNumber(amountTTC)} €
             </Text>

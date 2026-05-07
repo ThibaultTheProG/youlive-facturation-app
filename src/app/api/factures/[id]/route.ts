@@ -141,6 +141,7 @@ export async function GET(request: Request) {
       montant_honoraires: result.montant_honoraires ? Number(result.montant_honoraires) : undefined,
       taux_retrocession: result.taux_retrocession ? Number(result.taux_retrocession) : undefined,
       tranche: result.tranche || undefined,
+      montant_tva: result.montant_tva ? Number(result.montant_tva) : undefined,
 
       conseiller: {
         idapimo: utilisateur?.idapimo || 0,
@@ -231,7 +232,14 @@ export async function PUT(request: Request) {
       updated_at: new Date(),
     };
 
-    if (statut_paiement) updateData.statut_paiement = statut_paiement;
+    if (statut_paiement) {
+      updateData.statut_paiement = statut_paiement;
+      if (statut_paiement === "payé") {
+        updateData.date_paiement = new Date();
+      } else {
+        updateData.date_paiement = null;
+      }
+    }
     if (numero) updateData.numero = numero;
     if (created_at) updateData.created_at = new Date(created_at);
     if (apporteur) updateData.apporteur = apporteur;

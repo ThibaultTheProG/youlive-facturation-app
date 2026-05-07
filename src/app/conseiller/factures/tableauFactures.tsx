@@ -317,6 +317,7 @@ export default function TableauFactures({ user }: { user: User }) {
             />
             <TableHead className="text-center">Date d&apos;ajout</TableHead>
             <TableHead className="text-center">Statut de paiement</TableHead>
+            <TableHead className="text-center">Date de paiement</TableHead>
             <TableHead className="text-center">Générer facture</TableHead>
             <TableHead className="text-center">Envoyer facture</TableHead>
           </TableRow>
@@ -356,6 +357,11 @@ export default function TableauFactures({ user }: { user: User }) {
                 </TableCell>
                 <TableCell className="text-center">{facture.statut_paiement}</TableCell>
                 <TableCell className="text-center">
+                  {facture.date_paiement
+                    ? new Date(facture.date_paiement).toLocaleDateString("fr-FR")
+                    : "-"}
+                </TableCell>
+                <TableCell className="text-center">
                   <button
                     className="px-4 py-2 rounded bg-orange-strong text-white hover:bg-orange-light hover:text-black cursor-pointer"
                     onClick={() => {
@@ -373,20 +379,25 @@ export default function TableauFactures({ user }: { user: User }) {
                         ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                         : facture.statut_envoi === "envoyée"
                         ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                        : !facture.numero
+                        ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                         : "bg-orange-strong text-white hover:bg-orange-light hover:text-black"
                     }`}
                     onClick={() => {
-                      if (facture.statut_paiement !== "payé" && facture.statut_envoi !== "envoyée") {
+                      if (facture.statut_paiement !== "payé" && facture.statut_envoi !== "envoyée" && facture.numero) {
                         setSelectedFacture(facture);
                         setActionType("envoyer");
                       }
                     }}
-                    disabled={facture.statut_paiement === "payé" || facture.statut_envoi === "envoyée"}
+                    disabled={facture.statut_paiement === "payé" || facture.statut_envoi === "envoyée" || !facture.numero}
+                    title={!facture.numero ? "Veuillez d'abord attribuer un numéro de facture" : undefined}
                   >
-                    {facture.statut_paiement === "payé" 
-                      ? "Facture payée" 
-                      : facture.statut_envoi === "envoyée" 
-                      ? "Facture envoyée" 
+                    {facture.statut_paiement === "payé"
+                      ? "Facture payée"
+                      : facture.statut_envoi === "envoyée"
+                      ? "Facture envoyée"
+                      : !facture.numero
+                      ? "N° de facture manquant"
                       : "Envoyer facture"}
                   </button>
                 </TableCell>
@@ -394,7 +405,7 @@ export default function TableauFactures({ user }: { user: User }) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={11} className="text-center">
+              <TableCell colSpan={12} className="text-center">
                 {mandatSearch.trim()
                   ? `Aucune facture avec le n° de mandat "${mandatSearch.trim()}".`
                   : typeFilter !== "tous"

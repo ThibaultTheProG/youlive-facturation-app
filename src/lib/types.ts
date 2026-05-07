@@ -20,6 +20,7 @@ export interface Conseiller {
   siren_facture?: string;
   adresse_facture?: string;
   taux_tva?: number;
+  actif?: boolean;
 }
 
 export type SelectItem = {
@@ -134,6 +135,8 @@ export interface Facture {
   montant_honoraires?: number;
   taux_retrocession?: number;
   tranche?: string;
+  montant_tva?: number;
+  date_paiement?: string;
 }
 
 interface Filleul {
