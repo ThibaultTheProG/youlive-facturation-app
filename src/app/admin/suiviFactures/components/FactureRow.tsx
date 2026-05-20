@@ -26,6 +26,12 @@ export const FactureRow = ({ facture, updateStatut }: FactureRowProps) => {
       <TableCell>{facture.statut_envoi || "non envoyée"}</TableCell>
       <TableCell>{facture.statut_paiement}</TableCell>
       <TableCell>
+        {facture.date_paiement
+          ? new Date(facture.date_paiement).toLocaleDateString('fr-FR')
+          : "N/A"
+        }
+      </TableCell>
+      <TableCell>
         <div className="flex space-x-2">
           {facture.statut_paiement !== "payé" ? (
             <Button

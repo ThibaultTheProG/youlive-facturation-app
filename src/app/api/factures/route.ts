@@ -73,6 +73,8 @@ export async function GET(request: Request) {
       };
     } else if (sortField === 'statut_envoi') {
       orderBy.statut_envoi = sortDirection as Prisma.SortOrder;
+    } else if (sortField === 'date_paiement') {
+      orderBy.date_paiement = { sort: sortDirection as Prisma.SortOrder, nulls: 'last' };
     } else if (sortField === 'numero_mandat') {
       orderBy.relations_contrats = {
         contrats: {
