@@ -74,10 +74,11 @@ export default function FactureRecrutement({
     console.log(`📄 Ancienne facture recrutement - Honoraires: ${honorairesAgent}€, Montant: ${retrocessionAmount}€, Taux calculé: ${tauxRetrocession}%`);
   }
   
-  const tauxTVA = user.taux_tva ?? 20;
+  const tvaActive = facture.apply_tva ?? user.tva ?? false;
+  const tauxTVA = facture.taux_tva != null ? Number(facture.taux_tva) : user.taux_tva ?? 20;
   let montantTVA: number = 0;
 
-  if (user.tva) {
+  if (tvaActive) {
     montantTVA = facture.montant_tva ?? Number(((retrocessionAmount * tauxTVA) / 100).toFixed(2));
     amountTTC = retrocessionAmount + montantTVA;
   } else {
@@ -173,7 +174,7 @@ export default function FactureRecrutement({
             <Text style={styles.tableCellTotal}>Honoraires Youlive HT</Text>
             <Text style={styles.tableCellTotal}>% Parrainage</Text>
             <Text style={styles.tableCellTotal}>Rétrocession HT</Text>
-            {user.tva && <Text style={styles.tableCellTotal}>TVA ({tauxTVA}%)</Text>}
+            {tvaActive && <Text style={styles.tableCellTotal}>TVA ({tauxTVA}%)</Text>}
             <Text style={styles.tableCell}>Montant à régler TTC</Text>
           </View>
           <View style={styles.tableRow}>
@@ -184,7 +185,7 @@ export default function FactureRecrutement({
             <Text style={styles.tableCellTotal}>
               {formatNumber(retrocessionAmount)} €
             </Text>
-            {user.tva && <Text style={styles.tableCellTotal}>{formatNumber(montantTVA)} €</Text>}
+            {tvaActive && <Text style={styles.tableCellTotal}>{formatNumber(montantTVA)} €</Text>}
             <Text style={styles.tableCell}>
               {formatNumber(amountTTC)} €
             </Text>
@@ -194,7 +195,7 @@ export default function FactureRecrutement({
         {/* Mode de paiement & TVA */}
         <Text style={{ marginTop: 10 }}>Mode de Règlement : Virement</Text>
 
-        {!user.tva && (
+        {!tvaActive && (
           <Text style={{ fontSize: 10, marginTop: 10 }}>
             TVA non applicable - article 293 B du CGI
           </Text>

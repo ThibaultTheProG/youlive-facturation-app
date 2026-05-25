@@ -96,7 +96,9 @@ export async function GET(request: Request) {
         utilisateurs: {
           select: {
             prenom: true,
-            nom: true
+            nom: true,
+            tva: true,
+            taux_tva: true
           }
         },
         relations_contrats: {
@@ -121,7 +123,9 @@ export async function GET(request: Request) {
       ...facture,
       conseiller: {
         prenom: facture.utilisateurs?.prenom || "",
-        nom: facture.utilisateurs?.nom || ""
+        nom: facture.utilisateurs?.nom || "",
+        tva: facture.utilisateurs?.tva ?? false,
+        taux_tva: facture.utilisateurs?.taux_tva ? Number(facture.utilisateurs.taux_tva) : null
       },
       propriete: {
         numero_mandat: facture.relations_contrats?.contrats?.property?.numero_mandat || ""

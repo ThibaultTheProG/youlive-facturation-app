@@ -17,6 +17,7 @@ interface FacturesTableProps {
   sortDirection: SortDirection;
   handleSort: (field: string) => void;
   updateStatut: (factureId: number, newStatut: string, numero: string, created_at: string) => Promise<void>;
+  onEditTva: (facture: FactureDetaillee) => void;
 }
 
 export const FacturesTable = ({
@@ -24,7 +25,8 @@ export const FacturesTable = ({
   sortField,
   sortDirection,
   handleSort,
-  updateStatut
+  updateStatut,
+  onEditTva
 }: FacturesTableProps) => {
   return (
     <Table>
@@ -88,10 +90,11 @@ export const FacturesTable = ({
           </TableRow>
         ) : (
           currentFactures.map((facture) => (
-            <FactureRow 
-              key={facture.id} 
-              facture={facture} 
-              updateStatut={updateStatut} 
+            <FactureRow
+              key={facture.id}
+              facture={facture}
+              updateStatut={updateStatut}
+              onEditTva={onEditTva}
             />
           ))
         )}

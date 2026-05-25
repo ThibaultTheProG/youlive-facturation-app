@@ -142,6 +142,8 @@ export async function GET(request: Request) {
       taux_retrocession: result.taux_retrocession ? Number(result.taux_retrocession) : undefined,
       tranche: result.tranche || undefined,
       montant_tva: result.montant_tva ? Number(result.montant_tva) : undefined,
+      apply_tva: result.apply_tva ?? null,
+      taux_tva: result.taux_tva != null ? Number(result.taux_tva) : null,
 
       conseiller: {
         idapimo: utilisateur?.idapimo || 0,
@@ -212,8 +214,15 @@ export async function PUT(request: Request) {
       );
     }
 
-    const { statut_paiement, numero, created_at, apporteur, apporteur_amount } =
-      await request.json();
+    const {
+      statut_paiement,
+      numero,
+      created_at,
+      apporteur,
+      apporteur_amount,
+      apply_tva,
+      taux_tva,
+    } = await request.json();
 
 
       console.log(statut_paiement, numero, created_at, apporteur, apporteur_amount);
@@ -244,6 +253,53 @@ export async function PUT(request: Request) {
     if (created_at) updateData.created_at = new Date(created_at);
     if (apporteur) updateData.apporteur = apporteur;
     if (apporteur_amount) updateData.apporteur_amount = apporteur_amount;
+
+    const tvaTouched = apply_tva !== undefined || taux_tva !== undefined;
+    if (tvaTouched) {
+      const current = await prisma.factures.findUnique({
+        where: { id: factureId },
+        select: {
+          retrocession: true,
+          user_id: true,
+          utilisateurs: { select: { tva: true, taux_tva: true } },
+        },
+      });
+
+      if (!current) {
+        return NextResponse.json(
+          { error: "Facture introuvable" },
+          { status: 404 }
+        );
+      }
+
+      const nextApply =
+        apply_tva === undefined
+          ? null
+          : apply_tva === null
+          ? null
+          : Boolean(apply_tva);
+      const nextTaux =
+        taux_tva === undefined
+          ? null
+          : taux_tva === null || taux_tva === ""
+          ? null
+          : Number(taux_tva);
+
+      updateData.apply_tva = nextApply;
+      updateData.taux_tva = nextTaux;
+
+      const effectiveApply = nextApply ?? current.utilisateurs?.tva ?? false;
+      const effectiveTaux =
+        nextTaux ??
+        (current.utilisateurs?.taux_tva
+          ? Number(current.utilisateurs.taux_tva)
+          : 20);
+      const base = current.retrocession ? Number(current.retrocession) : 0;
+
+      updateData.montant_tva = effectiveApply
+        ? Number(((base * effectiveTaux) / 100).toFixed(2))
+        : 0;
+    }
 
     const result = await prisma.factures.update({
       where: {

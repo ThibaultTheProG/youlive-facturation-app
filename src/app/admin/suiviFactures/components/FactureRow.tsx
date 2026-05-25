@@ -5,9 +5,10 @@ import { FactureDetaillee } from "@/lib/types";
 interface FactureRowProps {
   facture: FactureDetaillee;
   updateStatut: (factureId: number, newStatut: string, numero: string, created_at: string) => Promise<void>;
+  onEditTva: (facture: FactureDetaillee) => void;
 }
 
-export const FactureRow = ({ facture, updateStatut }: FactureRowProps) => {
+export const FactureRow = ({ facture, updateStatut, onEditTva }: FactureRowProps) => {
   return (
     <TableRow key={facture.id}>
       <TableCell>
@@ -58,6 +59,14 @@ export const FactureRow = ({ facture, updateStatut }: FactureRowProps) => {
             }}
           >
             Voir PDF
+          </Button>
+
+          <Button
+            variant="outline"
+            className="cursor-pointer"
+            onClick={() => onEditTva(facture)}
+          >
+            Modifier TVA
           </Button>
         </div>
       </TableCell>

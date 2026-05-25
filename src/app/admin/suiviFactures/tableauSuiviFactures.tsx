@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useFacturesFiltering } from "@/hooks/useFacturesFiltering";
 import FacturesFilters from "./components/FacturesFilters";
 import { FacturesTable } from "./components/FacturesTable";
 import Pagination from "./components/Pagination";
 import ExportExcelButton from "./components/ExportExcelButton";
+import EditTvaDialog from "./components/EditTvaDialog";
 import { Loader2 } from "lucide-react";
+import { FactureDetaillee } from "@/lib/types";
 
 // Composant principal
 const TableauSuiviFactures: React.FC = () => {
@@ -30,6 +32,15 @@ const TableauSuiviFactures: React.FC = () => {
     isLoading,
     mutate
   } = useFacturesFiltering();
+
+  // État pour la popup d'édition TVA
+  const [tvaDialogOpen, setTvaDialogOpen] = useState(false);
+  const [editingFacture, setEditingFacture] = useState<FactureDetaillee | null>(null);
+
+  const handleEditTva = (facture: FactureDetaillee) => {
+    setEditingFacture(facture);
+    setTvaDialogOpen(true);
+  };
 
   // Effet pour s'assurer que la pagination est correctement gérée
   useEffect(() => {
@@ -113,6 +124,7 @@ const TableauSuiviFactures: React.FC = () => {
             sortDirection={sortDirection}
             handleSort={handleSort}
             updateStatut={updateStatut}
+            onEditTva={handleEditTva}
           />
 
           {/* Pagination */}
@@ -123,6 +135,15 @@ const TableauSuiviFactures: React.FC = () => {
           />
         </>
       )}
+
+      <EditTvaDialog
+        facture={editingFacture}
+        open={tvaDialogOpen}
+        onOpenChange={setTvaDialogOpen}
+        onSaved={async () => {
+          await mutate();
+        }}
+      />
     </div>
   );
 };
