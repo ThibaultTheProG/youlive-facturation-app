@@ -60,7 +60,7 @@ export async function GET(request: Request) {
       let retrocession = 0;
 
       // Si c'est l'année en cours et aucun paramètre année spécifié, utiliser les champs directs
-      // (synchronisés avec l'année en cours par updateCACurrentYear)
+      // (synchronisés avec l'année en cours par recomputeCAForYear)
       if (annee === currentYear && !anneeParam) {
         chiffre_affaires = c.chiffre_affaires ? Number(c.chiffre_affaires) : 0;
         retrocession = c.retrocession ? Number(c.retrocession) : 0;

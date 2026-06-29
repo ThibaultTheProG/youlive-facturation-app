@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import { calculRetrocession } from "./calculs";
+import { round2 } from "./decoupageSeuil";
 
 /**
  * Récupère le CA de l'année en cours pour un utilisateur
@@ -53,20 +54,27 @@ export async function getHistoriqueForYear(userId: number, year: number) {
 }
 
 /**
- * Met à jour le CA de l'année en cours pour un utilisateur
- * Synchronise automatiquement avec utilisateurs.chiffre_affaires
+ * Recalcule (idempotent) le CA d'une année pour un utilisateur en fixant
+ * directement le total (SET) au lieu de l'incrémenter.
+ *
+ * `totalHonoraires` doit être la SOMME des honoraires_agent de toutes les
+ * relations type 9 du conseiller pour l'année considérée (source de vérité Apimo).
+ * Recalcule la rétrocession finale et synchronise le cache `utilisateurs`
+ * uniquement pour l'année en cours.
+ *
+ * Une année déjà clôturée (date_cloture renseignée) n'est jamais réécrite.
+ * Retourne null si l'année est clôturée (recalcul ignoré).
  */
-export async function updateCACurrentYear(
+export async function recomputeCAForYear(
   userId: number,
-  montantToAdd: number,
-  tx?: any,
-  year?: number
-): Promise<{ newCA: number; newRetrocession: number }> {
+  year: number,
+  totalHonoraires: number,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tx?: any
+): Promise<{ newCA: number; newRetrocession: number } | null> {
   const prismaClient = tx || prisma;
   const currentYear = new Date().getFullYear();
-  const targetYear = year ?? currentYear;
 
-  // Récupérer les infos utilisateur
   const user = await prismaClient.utilisateurs.findUnique({
     where: { id: userId },
     select: {
@@ -79,65 +87,53 @@ export async function updateCACurrentYear(
     throw new Error(`Utilisateur ${userId} non trouvé`);
   }
 
-  // Upsert de l'historique pour l'année cible
-  const targetYearCA = await prismaClient.historique_ca_annuel.upsert({
-    where: {
-      user_id_annee: {
-        user_id: userId,
-        annee: targetYear
-      }
-    },
+  // Ne pas réécrire une année déjà clôturée (figée par le reset annuel)
+  const existing = await prismaClient.historique_ca_annuel.findUnique({
+    where: { user_id_annee: { user_id: userId, annee: year } },
+    select: { date_cloture: true }
+  });
+
+  if (existing?.date_cloture) {
+    return null;
+  }
+
+  // Arrondi à 2 décimales AVANT toute comparaison au seuil (artefacts flottants
+  // type 103999.98000000001 accumulés en sommant les honoraires).
+  const totalCA = round2(totalHonoraires);
+
+  const newRetrocession = calculRetrocession(
+    user.typecontrat || "",
+    totalCA,
+    user.auto_parrain || undefined
+  );
+
+  await prismaClient.historique_ca_annuel.upsert({
+    where: { user_id_annee: { user_id: userId, annee: year } },
     update: {
-      chiffre_affaires: {
-        increment: montantToAdd
-      },
+      chiffre_affaires: totalCA,
+      retrocession_finale: newRetrocession,
       updated_at: new Date()
     },
     create: {
       user_id: userId,
-      annee: targetYear,
-      chiffre_affaires: montantToAdd,
-      retrocession_finale: 0,
+      annee: year,
+      chiffre_affaires: totalCA,
+      retrocession_finale: newRetrocession,
       typecontrat: user.typecontrat,
       auto_parrain: user.auto_parrain
-    },
-    select: {
-      chiffre_affaires: true
     }
   });
 
-  const newCA = Number(targetYearCA.chiffre_affaires);
-
-  // Calculer la nouvelle rétrocession
-  const newRetrocession = calculRetrocession(
-    user.typecontrat || "",
-    newCA,
-    user.auto_parrain || undefined
-  );
-
-  // Mettre à jour la rétrocession dans l'historique
-  await prismaClient.historique_ca_annuel.update({
-    where: {
-      user_id_annee: {
-        user_id: userId,
-        annee: targetYear
-      }
-    },
-    data: {
-      retrocession_finale: newRetrocession
-    }
-  });
-
-  // Synchroniser avec utilisateurs (cache) uniquement pour l'année en cours
-  if (targetYear === currentYear) {
+  // Synchroniser le cache utilisateurs uniquement pour l'année en cours
+  if (year === currentYear) {
     await prismaClient.utilisateurs.update({
       where: { id: userId },
       data: {
-        chiffre_affaires: newCA,
+        chiffre_affaires: totalCA,
         retrocession: newRetrocession
       }
     });
   }
 
-  return { newCA, newRetrocession };
+  return { newCA: totalCA, newRetrocession };
 }

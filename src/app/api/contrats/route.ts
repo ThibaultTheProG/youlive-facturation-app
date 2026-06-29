@@ -2,7 +2,7 @@ import prisma from "@/lib/db";
 import { Contract, Entries } from "@/lib/types";
 import { NextResponse } from "next/server";
 import { checkAndResetYearIfNeeded } from "@/utils/resetCAYear";
-import { updateCACurrentYear } from "@/utils/historiqueCA";
+import { recomputeCAForYear } from "@/utils/historiqueCA";
 
 export async function GET() {
   try {
@@ -42,6 +42,14 @@ export async function GET() {
     // Insérer les contrats directement avec Prisma
     const currentYear = new Date().getFullYear();
     const insertedContracts = [];
+
+    // Accumulateur du CA par (utilisateur, année) : on recompose le CA comme la
+    // SOMME des honoraires_agent des relations type 9 vues dans ce run, puis on
+    // fixe (SET) historique_ca_annuel. Recalcul idempotent (cf. recomputeCAForYear).
+    const caAccumulator = new Map<
+      string,
+      { userId: number; year: number; total: number; label: string }
+    >();
 
     for (const contrat of filteredContracts) {
       const { id, step, property, commission_agency, contract_at, entries } =
@@ -97,7 +105,11 @@ export async function GET() {
           for (const entry of sortEntries) {
             const { id, user, amount, vat, vat_rate, type } = entry;
 
-            if (!id || !user || !amount || !vat || !vat_rate) {
+            // Seuls id, user et amount sont réellement obligatoires.
+            // vat / vat_rate = 0 (conseillers non assujettis à la TVA) sont valides :
+            // on ne doit donc PAS les rejeter, sinon la relation n'est jamais créée
+            // ni comptée dans le CA.
+            if (!id || !user || amount === undefined || amount === null) {
               continue;
             }
 
@@ -125,48 +137,33 @@ export async function GET() {
               },
               update: {
                 honoraires_agent: Number(amount),
-                vat: Number(vat),
-                vat_rate: Number(vat_rate),
+                vat: Number(vat ?? 0),
+                vat_rate: Number(vat_rate ?? 0),
               },
               create: {
                 idrelationapimo: Number(id),
                 contrat_id: createdContrat.id,
                 user_id: utilisateur.id,
                 honoraires_agent: Number(amount),
-                vat: Number(vat),
-                vat_rate: Number(vat_rate),
+                vat: Number(vat ?? 0),
+                vat_rate: Number(vat_rate ?? 0),
               },
             });
 
-            // Mise à jour du chiffre d'affaires uniquement pour les conseillers (type 9) et pour les nouvelles relations
+            // CA uniquement pour les conseillers (type 9) : on accumule la somme
+            // des honoraires_agent par (utilisateur, année du contrat). Le CA sera
+            // recomposé (SET) après la boucle — recalcul idempotent qui rattrape
+            // automatiquement les montants révisés et les relations manquantes.
             if (type === "9" && relationResult) {
-              // Vérifier si c'est une création ou une mise à jour
-              const isNewRelation = !(await prisma.relations_contrats.findFirst({
-                where: {
-                  contrat_id: createdContrat.id,
-                  user_id: utilisateur.id,
-                  created_at: {
-                    lt: new Date(new Date().getTime() - 5000), // Créé il y a plus de 5 secondes
-                  },
-                },
-              }));
-
-              if (isNewRelation) {
-                const honorairesAgent = Number(amount); // On prend uniquement le montant de l'entry
-
-                // Mettre à jour le CA de l'année du contrat
-                const { newCA, newRetrocession } = await updateCACurrentYear(
-                  utilisateur.id,
-                  honorairesAgent,
-                  undefined,
-                  contractYear
-                );
-
-                console.log(
-                  `✅ CA mis à jour pour ${utilisateur.prenom} ${utilisateur.nom}: ` +
-                  `${newCA}€ (+${honorairesAgent}€) - Rétro: ${newRetrocession}%`
-                );
-              }
+              const key = `${utilisateur.id}-${contractYear}`;
+              const acc = caAccumulator.get(key) ?? {
+                userId: utilisateur.id,
+                year: contractYear,
+                total: 0,
+                label: `${utilisateur.prenom} ${utilisateur.nom}`,
+              };
+              acc.total += Number(amount);
+              caAccumulator.set(key, acc);
             }
           }
         }
@@ -205,6 +202,19 @@ export async function GET() {
     }
 
     console.log(`${insertedContracts.length} contrats insérés avec succès`);
+
+    // Recomposer le CA (SET) pour chaque (utilisateur, année) touché dans ce run.
+    // Idempotent : rejoue la somme complète sans jamais double-compter.
+    for (const { userId, year, total, label } of caAccumulator.values()) {
+      const result = await recomputeCAForYear(userId, year, total);
+      if (result) {
+        console.log(
+          `✅ CA recalculé pour ${label} (${year}): ${result.newCA}€ - Rétro: ${result.newRetrocession}%`
+        );
+      } else {
+        console.log(`⏭️ CA non recalculé pour ${label} (${year}): année clôturée`);
+      }
+    }
 
     return NextResponse.json({
       success: true,

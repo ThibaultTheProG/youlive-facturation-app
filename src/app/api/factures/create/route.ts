@@ -4,7 +4,7 @@ import prisma from "@/lib/db";
 import { PrismaClient } from "@prisma/client";
 import { RelationContrat } from "@/lib/types.js";
 import nodemailer from "nodemailer";
-import { calculRetrocession } from "@/utils/calculs";
+import { decoupageSeuil, round2 } from "@/utils/decoupageSeuil";
 import { getCAForYear, getHistoriqueForYear } from "@/utils/historiqueCA";
 
 // Type pour la transaction Prisma
@@ -72,8 +72,49 @@ async function createFacture() {
 
     console.log(`📊 Traitement de ${contrats.length} contrats récents (créés depuis le ${septJoursEnArriere.toISOString()})...`);
 
+    // Trier les contrats par date de signature croissante : le découpage au seuil
+    // doit être appliqué chronologiquement (le 1er contrat de l'année consomme la
+    // tranche < seuil avant les suivants).
+    const contratsTries = [...contrats].sort((a, b) => {
+      const da = a.contrats?.date_signature ? new Date(a.contrats.date_signature).getTime() : 0;
+      const db = b.contrats?.date_signature ? new Date(b.contrats.date_signature).getTime() : 0;
+      return da - db;
+    });
+
+    // CA accumulé par (utilisateur, année), initialisé à partir du « CA déjà facturé »
+    // (somme des montant_honoraires des factures commission existantes de l'année),
+    // puis incrémenté contrat par contrat. Sert de base fiable au découpage au seuil.
+    const caAccumule = new Map<string, number>();
+
+    const getCAAvantContrat = async (userId: number, year: number): Promise<number> => {
+      const key = `${userId}-${year}`;
+      if (caAccumule.has(key)) {
+        return caAccumule.get(key)!;
+      }
+      const debutAnnee = new Date(Date.UTC(year, 0, 1));
+      const finAnnee = new Date(Date.UTC(year + 1, 0, 1));
+      const facturesAnnee = await prisma.factures.findMany({
+        where: {
+          user_id: userId,
+          type: 'commission',
+          relations_contrats: {
+            contrats: {
+              date_signature: { gte: debutAnnee, lt: finAnnee }
+            }
+          }
+        },
+        select: { montant_honoraires: true }
+      });
+      const base = round2(facturesAnnee.reduce(
+        (sum: number, f: { montant_honoraires: unknown }) => sum + Number(f.montant_honoraires ?? 0),
+        0
+      ));
+      caAccumule.set(key, base);
+      return base;
+    };
+
     // 2. Traiter chaque contrat individuellement (sans grande transaction globale)
-    for (const contrat of contrats) {
+    for (const contrat of contratsTries) {
       const relationContrat: RelationContrat = {
         honoraires_agent: Number(contrat.honoraires_agent),
         user_id: contrat.user_id,
@@ -83,11 +124,19 @@ async function createFacture() {
       // Déterminer l'année du contrat à partir de la date de signature
       const dateSignature = contrat.contrats?.date_signature;
       const contratYear = dateSignature ? new Date(dateSignature).getFullYear() : new Date().getFullYear();
+      const key = `${contrat.user_id}-${contratYear}`;
+
+      // CA du conseiller AVANT ce contrat (base + contrats déjà traités ce run)
+      const currentCA = await getCAAvantContrat(contrat.user_id, contratYear);
 
       // Collecter les notifications de la création de factures commission
-      const commissionNotifications = await createFactureCommission(relationContrat, prisma, contratYear);
-      if (commissionNotifications) {
-        notificationsToSend.push(...commissionNotifications);
+      const { notifications: commissionNotifications, invoicedHonoraires } =
+        await createFactureCommission(relationContrat, prisma, contratYear, currentCA);
+      notificationsToSend.push(...commissionNotifications);
+
+      // Si des factures ont réellement été créées, le CA facturé augmente
+      if (invoicedHonoraires > 0) {
+        caAccumule.set(key, round2(currentCA + invoicedHonoraires));
       }
 
       // Collecter les notifications de la création de factures recrutement
@@ -171,8 +220,9 @@ async function createFacture() {
 async function createFactureCommission(
   contrat: RelationContrat,
   prisma: PrismaTransaction,
-  contratYear: number
-): Promise<EmailNotification[]> {
+  contratYear: number,
+  currentCA: number
+): Promise<{ notifications: EmailNotification[]; invoicedHonoraires: number }> {
   const { relationid, user_id, honoraires_agent } = contrat;
   const notifications: EmailNotification[] = [];
   const currentYear = new Date().getFullYear();
@@ -187,10 +237,10 @@ async function createFactureCommission(
       }
     });
 
-    // Si des factures existent déjà, ne rien créer
+    // Si des factures existent déjà, ne rien créer (et ne pas incrémenter le CA accumulé)
     if (facturesExistantes.length > 0) {
       console.log(`⚠️ Factures commission déjà existantes pour la relation ${relationid}, utilisateur ${user_id}`);
-      return notifications;
+      return { notifications, invoicedHonoraires: 0 };
     }
 
     // Déterminer les données à utiliser selon l'année du contrat
@@ -204,7 +254,7 @@ async function createFactureCommission(
     });
     if (!utilisateur) {
       console.log(`❌ Utilisateur non trouvé : ${user_id}`);
-      return notifications;
+      return { notifications, invoicedHonoraires: 0 };
     }
 
     const userTva = utilisateur.tva || false;
@@ -228,54 +278,23 @@ async function createFactureCommission(
       autoParrain = utilisateur.auto_parrain || undefined;
     }
 
-    // IMPORTANT: Utiliser le CA AVANT l'ajout du nouveau contrat pour le calcul des tranches
-    // Récupérer le CA de l'année du contrat depuis l'historique et soustraire le nouveau contrat
-    const currentCA = await getCAForYear(user_id, contratYear) - honoraires_agent;
-    const newCA = currentCA + honoraires_agent;
-    const seuil = 70000;
+    // IMPORTANT: currentCA est le « CA avant ce contrat » fourni par l'appelant
+    // (CA déjà facturé de l'année + contrats plus anciens déjà traités ce run).
+    // On NE recalcule PAS depuis getCAForYear, qui inclut déjà tous les contrats
+    // récents et fausserait l'attribution du franchissement de seuil entre
+    // plusieurs contrats d'un même conseiller.
+    // Découpage au seuil délégué à la fonction pure et testée `decoupageSeuil`
+    // (arrondi 2 décimales inclus pour neutraliser les artefacts flottants avant
+    // comparaison au seuil de 70 000 €).
+    const {
+      montantAvant: montantAvantSeuil,
+      tauxAvant: tauxAvantSeuil,
+      montantApres: montantApresSeuil,
+      tauxApres: tauxApresSeuil,
+    } = decoupageSeuil(currentCA, honoraires_agent, typecontrat, autoParrain);
 
-    console.log(`📊 CA pour calcul des tranches (année ${contratYear}): ${currentCA}€ → ${newCA}€ (honoraires: ${honoraires_agent}€)`);
-
-    // Calculer les montants pour chaque tranche
-    let montantAvantSeuil = 0;
-    let montantApresSeuil = 0;
-
-    if (currentCA < seuil && newCA > seuil) {
-      // Le CA va dépasser le seuil avec ce contrat
-      montantAvantSeuil = seuil - currentCA;
-      montantApresSeuil = honoraires_agent - montantAvantSeuil;
-      console.log(`📊 CA va dépasser le seuil: ${currentCA}€ → ${newCA}€ (avant: ${montantAvantSeuil}€, après: ${montantApresSeuil}€)`);
-    } else if (currentCA >= seuil) {
-      // Le CA est déjà au-dessus du seuil
-      montantApresSeuil = honoraires_agent;
-      console.log(`📊 CA déjà au-dessus du seuil: ${currentCA}€ (après: ${montantApresSeuil}€)`);
-    } else {
-      // Le CA reste en-dessous du seuil
-      montantAvantSeuil = honoraires_agent;
-      console.log(`📊 CA reste en-dessous du seuil: ${currentCA}€ → ${newCA}€ (avant: ${montantAvantSeuil}€)`);
-    }
-
-    // Calculer les taux de rétrocession seulement si nécessaire
-    let tauxAvantSeuil = 0;
-    let tauxApresSeuil = 0;
-
-    if (montantAvantSeuil > 0) {
-      tauxAvantSeuil = calculRetrocession(
-        typecontrat,
-        currentCA,
-        autoParrain
-      );
-    }
-
-    if (montantApresSeuil > 0) {
-      tauxApresSeuil = calculRetrocession(
-        typecontrat,
-        seuil,
-        autoParrain
-      );
-    }
-
-    console.log(`📊 Taux calculés: avant seuil ${tauxAvantSeuil}%, après seuil ${tauxApresSeuil}%`);
+    console.log(`📊 CA pour calcul des tranches (année ${contratYear}): ${round2(currentCA)}€ → ${round2(currentCA + honoraires_agent)}€ (honoraires: ${honoraires_agent}€)`);
+    console.log(`📊 Tranches: avant ${montantAvantSeuil}€ @${tauxAvantSeuil}%, après ${montantApresSeuil}€ @${tauxApresSeuil}%`);
 
     // Créer les factures pour chaque tranche si nécessaire
     if (montantAvantSeuil > 0) {
@@ -338,7 +357,9 @@ async function createFactureCommission(
       });
     }
 
-    return notifications;
+    // Des factures ont été créées : on signale le total des honoraires facturés
+    // pour que l'appelant incrémente le CA accumulé du conseiller.
+    return { notifications, invoicedHonoraires: honoraires_agent };
   } catch (error) {
     console.error("❌ Erreur lors de la création de la facture commission :", error);
     throw error;

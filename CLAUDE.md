@@ -63,7 +63,7 @@ The main invoice creation logic is in `src/app/api/factures/create/route.ts`.
 - "Offre Découverte": 60% below, 99% above
 - `auto_parrain = "oui"` adds +6%, capped at 99%
 
-**Threshold splitting:** When a new contract crosses the €70k annual CA threshold, the commission is split into two invoices: `tranche: "avant_seuil"` and `tranche: "apres_seuil"`, each at the appropriate rate.
+**Threshold splitting:** When a new contract crosses the €70k annual CA threshold, the commission is split into two invoices: `tranche: "avant_seuil"` and `tranche: "apres_seuil"`, each at the appropriate rate. The split is computed **chronologically**: in `factures/create`, recent contracts are sorted by `date_signature` ascending, and the threshold is applied against an **accumulated CA** that starts from the conseiller's already-invoiced CA for the year (sum of `montant_honoraires` of existing commission invoices) and grows contract by contract. Never derive the per-contract "CA before" from `getCAForYear` minus the contract — that total already includes all recent contracts and misattributes the crossing when a conseiller has several new contracts at once.
 
 **Sponsorship fees** (recrutement invoices):
 - niveau1: 6% (or 8% if parrain has ≥5 filleuls)
@@ -72,6 +72,15 @@ The main invoice creation logic is in `src/app/api/factures/create/route.ts`.
 - Capped: no recrutement invoices generated if the filleul's CA ≥ €70k
 
 Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `utilisateurs.chiffre_affaires`. See `src/utils/historiqueCA.ts`.
+
+**CA recomputation (idempotent, not incremental):** On each `/api/contrats` sync, `historique_ca_annuel.chiffre_affaires` is **recomputed by SUM** (set, not incremented) as the total of `honoraires_agent` of all type-9 entries of the conseiller for the contract year, via `recomputeCAForYear`. This is idempotent: it self-heals when Apimo revises an amount or when a relation was previously missed, and it never double-counts across runs. `recomputeCAForYear` skips any year already closed (`date_cloture` set), recomputes `retrocession_finale`, and syncs the `utilisateurs` cache only for the current year. The old incremental `updateCACurrentYear` is no longer used by the sync.
+
+**vat / vat_rate = 0 are valid:** In `/api/contrats`, an entry is imported when `id`, `user`, and `amount` are present. `vat`/`vat_rate` of `0` (conseillers not subject to VAT) are valid and must NOT be rejected — otherwise the relation is never created and its CA is silently lost.
+
+#### Known pitfalls (regression guards)
+- **Under-counted CA at import:** Do not reintroduce truthiness checks like `if (!vat || !vat_rate) continue` — they drop `0` (non-VAT conseillers). Only `id`, `user`, `amount` are mandatory. Likewise, do not resurrect the incremental `updateCACurrentYear` / the 5-second `created_at` "isNewRelation" heuristic in the sync: it double-counts on repeated runs and never catches revised amounts. CA is recomputed by SUM.
+- **Mis-split threshold across multiple contracts:** Do not compute the per-contract "CA before" as `getCAForYear(...) - honoraires_agent`. Sort the contracts to invoice by `date_signature` ascending and accumulate CA from the already-invoiced base; pass that `currentCA` into `createFactureCommission`. The core split logic in `factures/create` (the `montantAvantSeuil` / `montantApresSeuil` branches) is correct and must not be altered.
+- One-shot recompute + audit script: `scripts/migrate-ca-2026.ts` (re-fetches Apimo, sets `historique_ca_annuel` for 2026, and reports — without modifying — inconsistent commission invoices to regenerate).
 
 ### Key Files
 - `src/lib/types.ts` — all shared TypeScript interfaces (`Conseiller`, `Facture`, `FactureDetaillee`, `Contract`, etc.)
