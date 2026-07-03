@@ -133,6 +133,12 @@ export default function TableauFactures({ user }: { user: User }) {
         .reduce((total, facture) => total + parseFloat(facture.retrocession), 0)
     : 0;
 
+  const totalAvoir = facturesList
+    ? facturesList
+        .filter(facture => facture.type === "avoir")
+        .reduce((total, facture) => total + parseFloat(facture.retrocession), 0)
+    : 0;
+
   // Filtrer les factures par type, date et numéro de mandat
   const filteredFactures = facturesList
     ? facturesList.filter(facture => {
@@ -230,6 +236,7 @@ export default function TableauFactures({ user }: { user: User }) {
             <option value="tous">Tous les types</option>
             <option value="commission">Commission</option>
             <option value="recrutement">Recrutement</option>
+            <option value="avoir">Avoir / Ajustement</option>
           </select>
           
           <label htmlFor="dateFilter" className="font-medium ml-4">Filtrer par date de signature :</label>
@@ -277,6 +284,12 @@ export default function TableauFactures({ user }: { user: User }) {
             <h3 className="font-semibold text-orange-800 mb-2">Total des rétrocessions (Recrutement)</h3>
             <p className="text-lg font-bold">{totalRetrocessionRecrutement.toFixed(2)} €</p>
           </div>
+          {totalAvoir !== 0 && (
+            <div className="bg-orange-50 p-4 rounded-md border border-orange-200">
+              <h3 className="font-semibold text-orange-800 mb-2">Total des avoirs / ajustements</h3>
+              <p className="text-lg font-bold">{totalAvoir.toFixed(2)} €</p>
+            </div>
+          )}
         </div>
       </div>
 

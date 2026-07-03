@@ -7,7 +7,9 @@ import { FacturesTable } from "./components/FacturesTable";
 import Pagination from "./components/Pagination";
 import ExportExcelButton from "./components/ExportExcelButton";
 import EditTvaDialog from "./components/EditTvaDialog";
-import { Loader2 } from "lucide-react";
+import CreateAvoirDialog from "./components/CreateAvoirDialog";
+import { Button } from "@/components/ui/button";
+import { Loader2, Plus } from "lucide-react";
 import { FactureDetaillee } from "@/lib/types";
 
 // Composant principal
@@ -36,6 +38,9 @@ const TableauSuiviFactures: React.FC = () => {
   // État pour la popup d'édition TVA
   const [tvaDialogOpen, setTvaDialogOpen] = useState(false);
   const [editingFacture, setEditingFacture] = useState<FactureDetaillee | null>(null);
+
+  // État pour la popup de création d'avoir / ajustement
+  const [avoirDialogOpen, setAvoirDialogOpen] = useState(false);
 
   const handleEditTva = (facture: FactureDetaillee) => {
     setEditingFacture(facture);
@@ -102,8 +107,15 @@ const TableauSuiviFactures: React.FC = () => {
         setFilterStatutEnvoi={setFilterStatutEnvoi}
       />
 
-      {/* Bouton export */}
-      <div className="flex justify-end mb-4">
+      {/* Actions */}
+      <div className="flex justify-end gap-2 mb-4">
+        <Button
+          onClick={() => setAvoirDialogOpen(true)}
+          className="bg-orange-strong text-white hover:bg-orange-light hover:text-black cursor-pointer"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Créer un avoir / ajustement
+        </Button>
         <ExportExcelButton />
       </div>
 
@@ -141,6 +153,14 @@ const TableauSuiviFactures: React.FC = () => {
         open={tvaDialogOpen}
         onOpenChange={setTvaDialogOpen}
         onSaved={async () => {
+          await mutate();
+        }}
+      />
+
+      <CreateAvoirDialog
+        open={avoirDialogOpen}
+        onOpenChange={setAvoirDialogOpen}
+        onCreated={async () => {
           await mutate();
         }}
       />

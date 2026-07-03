@@ -65,6 +65,7 @@ model factures {
   date_paiement      DateTime?           @db.Timestamp(6)
   apply_tva          Boolean?
   taux_tva           Decimal?            @db.Decimal(5, 2)
+  motif              String?             @db.VarChar(500)
   utilisateurs       utilisateurs?       @relation(fields: [user_id], references: [id], onUpdate: NoAction)
   relations_contrats relations_contrats? @relation(fields: [relation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_factures_relation_id")
 

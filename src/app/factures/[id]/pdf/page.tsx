@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { PDFViewer } from "@react-pdf/renderer";
 import FactureCommission from "./FactureCommission";
 import FactureRecrutement from "./FactureRecrutement";
+import FactureAvoir from "./FactureAvoir";
 import { FactureDetaillee } from "@/lib/types";
 
 export default function FacturePDFPage() {
@@ -40,6 +41,8 @@ export default function FacturePDFPage() {
     <PDFViewer style={{ width: "100%", height: "100vh" }}>
       {facture.type === "commission" ? (
         <FactureCommission facture={facture} />
+      ) : facture.type === "avoir" ? (
+        <FactureAvoir facture={facture} />
       ) : (
         <FactureRecrutement facture={facture} />
       )}

@@ -9,13 +9,19 @@ interface FactureRowProps {
 }
 
 export const FactureRow = ({ facture, updateStatut, onEditTva }: FactureRowProps) => {
+  const typeLabel =
+    facture.type === "avoir"
+      ? Number(facture.retrocession) < 0
+        ? "Avoir"
+        : "Ajustement"
+      : facture.type;
   return (
     <TableRow key={facture.id}>
       <TableCell>
         {facture.conseiller.prenom} {facture.conseiller.nom}
       </TableCell>
       <TableCell>{facture.numero}</TableCell>
-      <TableCell>{facture.type}</TableCell>
+      <TableCell>{typeLabel}</TableCell>
       <TableCell>{facture.retrocession.toLocaleString()} €</TableCell>
       <TableCell>{facture.propriete?.numero_mandat ? String(facture.propriete.numero_mandat).trim() : "N/A"}</TableCell>
       <TableCell>

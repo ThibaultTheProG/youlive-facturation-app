@@ -28,6 +28,7 @@ export async function GET(request: Request) {
         adresse: true,
         siren: true,
         tva: true,
+        taux_tva: true,
         chiffre_affaires: true,
         retrocession: true,
         auto_parrain: true,
@@ -75,6 +76,7 @@ export async function GET(request: Request) {
       return {
         ...c,
         siren: c.siren ? c.siren : undefined,
+        taux_tva: c.taux_tva != null ? Number(c.taux_tva) : null,
         chiffre_affaires,
         retrocession,
         actif: c.actif,

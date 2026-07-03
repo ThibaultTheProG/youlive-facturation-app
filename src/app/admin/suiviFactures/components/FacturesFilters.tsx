@@ -99,6 +99,7 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
             <SelectItem value="tous_types">Tous les types</SelectItem>
             <SelectItem value="recrutement">Recrutement</SelectItem>
             <SelectItem value="commission">Commission</SelectItem>
+            <SelectItem value="avoir">Avoir / Ajustement</SelectItem>
           </SelectContent>
         </Select>
       </div>

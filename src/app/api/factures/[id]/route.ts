@@ -144,6 +144,7 @@ export async function GET(request: Request) {
       montant_tva: result.montant_tva ? Number(result.montant_tva) : undefined,
       apply_tva: result.apply_tva ?? null,
       taux_tva: result.taux_tva != null ? Number(result.taux_tva) : null,
+      motif: result.motif ?? null,
 
       conseiller: {
         idapimo: utilisateur?.idapimo || 0,

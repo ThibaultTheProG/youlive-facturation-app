@@ -139,6 +139,8 @@ export interface Facture {
   date_paiement?: string;
   apply_tva?: boolean | null;
   taux_tva?: number | null;
+  // Avoir / ajustement : désignation libre (facultatif pour les autres types)
+  motif?: string | null;
 }
 
 interface Filleul {
