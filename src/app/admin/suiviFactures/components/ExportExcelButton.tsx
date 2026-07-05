@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import ExcelJS from "exceljs";
+import { toast } from "react-hot-toast";
 
 export default function ExportExcelButton() {
   const [isExporting, setIsExporting] = useState(false);
@@ -88,7 +89,7 @@ export default function ExportExcelButton() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Erreur lors de l'export :", error);
-      alert("Erreur lors de l'export Excel");
+      toast.error("Erreur lors de l'export Excel");
     } finally {
       setIsExporting(false);
     }

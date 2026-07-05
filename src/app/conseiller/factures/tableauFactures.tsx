@@ -14,6 +14,7 @@ import { User, Facture } from "@/lib/types";
 import { getFactures } from "@/backend/gestionFactures";
 import Popin from "./popin";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export default function TableauFactures({ user }: { user: User }) {
   const [facturesList, setFacturesList] = useState<Facture[] | null>(null);
@@ -204,6 +205,7 @@ export default function TableauFactures({ user }: { user: User }) {
   }, [loadFactures]);
 
   const sendFacture = async (factureId: number) => {
+    const toastId = toast.loading("Envoi de la facture en cours...");
     try {
       const response = await fetch("/api/factures/send", {
         method: "POST",
@@ -213,12 +215,14 @@ export default function TableauFactures({ user }: { user: User }) {
 
       const data = await response.json();
       if (response.ok) {
-        alert("Facture envoyée avec succès !");
+        toast.success("Facture envoyée avec succès !", { id: toastId });
+        loadFactures();
       } else {
-        alert(`Erreur : ${data.error}`);
+        toast.error(`Erreur : ${data.error}`, { id: toastId });
       }
     } catch (error) {
       console.error("Erreur lors de l'envoi de la facture :", error);
+      toast.error("Erreur lors de l'envoi de la facture.", { id: toastId });
     }
   };
 

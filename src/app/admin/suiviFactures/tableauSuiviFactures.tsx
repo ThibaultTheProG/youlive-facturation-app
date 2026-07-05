@@ -11,6 +11,7 @@ import CreateAvoirDialog from "./components/CreateAvoirDialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus } from "lucide-react";
 import { FactureDetaillee } from "@/lib/types";
+import { toast } from "react-hot-toast";
 
 // Composant principal
 const TableauSuiviFactures: React.FC = () => {
@@ -85,7 +86,7 @@ const TableauSuiviFactures: React.FC = () => {
       console.log(`Statut de la facture mis à jour avec succès: ${newStatut}`);
     } catch (error) {
       console.error("Erreur lors de la mise à jour :", error);
-      alert(
+      toast.error(
         `Erreur lors de la mise à jour : ${
           error instanceof Error ? error.message : String(error)
         }`

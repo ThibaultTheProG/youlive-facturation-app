@@ -10,12 +10,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "L'ID de la facture est requis" }, { status: 400 });
     }
 
-    // Mettre à jour le statut d'envoi de la facture
-    await prisma.factures.update({
-      where: { id: factureId },
-      data: { statut_envoi: 'envoyée' }
-    });
-
     // Générer l'URL de la facture
     const factureUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/factures/${factureId}/pdf`;
 
@@ -33,7 +27,9 @@ export async function POST(req: Request) {
     // Configuration de l'email
     const mailOptions = {
       from: `"Application facturation" <${process.env.SMTP_FROM_EMAIL}>`,
-      to: process.env.SMTP_TO_EMAIL,
+      to: [process.env.SMTP_TO_EMAIL, "thibault.tuffin@websmith.fr"]
+        .filter(Boolean)
+        .join(", "),
       subject: "Une nouvelle facture est disponible",
       html: `<p>Bonjour,</p>
              <p>Une nouvelle facture est disponible.</p>
@@ -46,6 +42,12 @@ export async function POST(req: Request) {
 
     // Envoi de l'email
     await transporter.sendMail(mailOptions);
+
+    // Marquer la facture comme envoyée uniquement si l'email est bien parti
+    await prisma.factures.update({
+      where: { id: factureId },
+      data: { statut_envoi: 'envoyée' }
+    });
 
     return NextResponse.json({ message: "Email envoyé avec succès" }, { status: 200 });
   } catch (error) {
