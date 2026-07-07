@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     // Configuration de l'email
     const mailOptions = {
       from: `"Application facturation" <${process.env.SMTP_FROM_EMAIL}>`,
-      to: [process.env.SMTP_TO_EMAIL, "thibault.tuffin@websmith.fr"]
+      to: [process.env.SMTP_TO_EMAIL, "laura.zanetta@youlive-immobilier.fr", "thibault.tuffin@websmith.fr"]
         .filter(Boolean)
         .join(", "),
       subject: "Une nouvelle facture est disponible",
