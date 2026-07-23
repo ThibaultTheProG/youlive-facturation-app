@@ -8,8 +8,8 @@ interface ContratManagerProps {
   chiffreAffaires: number;
   setChiffreAffaires: (val: number) => void;
   retrocession: number;
+  /** Saisie manuelle du taux : elle prend le pas sur la valeur calculée. */
   setRetrocession: (val: number) => void;
-  setIsRetrocessionManuallySet: (val: boolean) => void;
   selectedYear: number;
   setSelectedYear: (val: number) => void;
   availableYears: number[];
@@ -22,7 +22,6 @@ export default function ContratManager({
   setChiffreAffaires,
   retrocession,
   setRetrocession,
-  setIsRetrocessionManuallySet,
   selectedYear,
   setSelectedYear,
   availableYears
@@ -89,10 +88,7 @@ export default function ContratManager({
             id="retrocession"
             type="number"
             value={retrocession}
-            onChange={val => {
-              setRetrocession(Number(val));
-              setIsRetrocessionManuallySet(true);
-            }}
+            onChange={val => setRetrocession(Number(val))}
           />
         </div>
       </div>

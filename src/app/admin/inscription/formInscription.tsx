@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { 
@@ -24,10 +25,15 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from "@/lib/utils";
 import { Conseiller } from "@/lib/types";
 
+const fetchConseillers = async (url: string): Promise<Conseiller[]> => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+};
+
 export default function FormInscription() {
   const router = useRouter();
-  const [conseillers, setConseillers] = useState<Conseiller[]>([]);
-  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     conseillerId: "",
@@ -35,23 +41,18 @@ export default function FormInscription() {
     confirmPassword: "",
   });
 
-  useEffect(() => {
-    fetchConseillers();
-  }, []);
-
-  const fetchConseillers = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/conseillers/get");
-      const data = await response.json();
-      setConseillers(data);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des conseillers :", error);
-      toast.error("Impossible de charger la liste des conseillers");
-    } finally {
-      setLoading(false);
+  // SWR gère le chargement et le cache : pas d'effet ni d'état de chargement
+  // à piloter à la main.
+  const { data: conseillers = [], isLoading: loading } = useSWR<Conseiller[]>(
+    "/api/conseillers/get",
+    fetchConseillers,
+    {
+      onError: (error) => {
+        console.error("Erreur lors de la récupération des conseillers :", error);
+        toast.error("Impossible de charger la liste des conseillers");
+      },
     }
-  };
+  );
 
   const handleSelectConseiller = async (val: string) => {
     setFormData({

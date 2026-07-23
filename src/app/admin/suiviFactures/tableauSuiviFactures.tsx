@@ -43,9 +43,22 @@ const TableauSuiviFactures: React.FC = () => {
   // État pour la popup de création d'avoir / ajustement
   const [avoirDialogOpen, setAvoirDialogOpen] = useState(false);
 
+  // Compteurs d'ouverture : servent de `key` aux dialogues pour qu'ils
+  // repartent d'un état neuf à chaque ouverture. Incrémentés à l'ouverture
+  // seulement, pour ne pas les démonter à la fermeture (ce qui couperait
+  // l'animation de sortie).
+  const [tvaOpenCount, setTvaOpenCount] = useState(0);
+  const [avoirOpenCount, setAvoirOpenCount] = useState(0);
+
   const handleEditTva = (facture: FactureDetaillee) => {
     setEditingFacture(facture);
+    setTvaOpenCount((count) => count + 1);
     setTvaDialogOpen(true);
+  };
+
+  const handleCreateAvoir = () => {
+    setAvoirOpenCount((count) => count + 1);
+    setAvoirDialogOpen(true);
   };
 
   // Effet pour s'assurer que la pagination est correctement gérée
@@ -111,7 +124,7 @@ const TableauSuiviFactures: React.FC = () => {
       {/* Actions */}
       <div className="flex justify-end gap-2 mb-4">
         <Button
-          onClick={() => setAvoirDialogOpen(true)}
+          onClick={handleCreateAvoir}
           className="bg-orange-strong text-white hover:bg-orange-light hover:text-black cursor-pointer"
         >
           <Plus className="h-4 w-4 mr-1" />
@@ -149,7 +162,10 @@ const TableauSuiviFactures: React.FC = () => {
         </>
       )}
 
+      {/* `key` liée au compteur d'ouvertures : réinitialise l'état local du
+          dialogue à chaque ouverture, sans effet de resynchronisation. */}
       <EditTvaDialog
+        key={`tva-${tvaOpenCount}`}
         facture={editingFacture}
         open={tvaDialogOpen}
         onOpenChange={setTvaDialogOpen}
@@ -159,6 +175,7 @@ const TableauSuiviFactures: React.FC = () => {
       />
 
       <CreateAvoirDialog
+        key={`avoir-${avoirOpenCount}`}
         open={avoirDialogOpen}
         onOpenChange={setAvoirDialogOpen}
         onCreated={async () => {

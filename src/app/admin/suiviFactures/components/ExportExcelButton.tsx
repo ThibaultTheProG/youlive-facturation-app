@@ -53,7 +53,6 @@ export default function ExportExcelButton() {
       worksheet.getRow(1).font = { bold: true };
 
       // Ajouter les lignes
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       for (const f of data.factures) {
         worksheet.addRow({
           conseiller: `${f.conseiller?.prenom || ""} ${f.conseiller?.nom || ""}`.trim(),

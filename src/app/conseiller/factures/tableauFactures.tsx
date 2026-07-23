@@ -16,6 +16,39 @@ import Popin from "./popin";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "react-hot-toast";
 
+// En-tête de colonne triable. Défini au niveau module : une définition à
+// l'intérieur du composant recrée le type à chaque rendu et force React à
+// démonter/remonter la colonne.
+function SortableHeader({
+  title,
+  field,
+  currentSortField,
+  currentSortDirection,
+  onSort,
+}: {
+  title: string;
+  field: string;
+  currentSortField: string | null;
+  currentSortDirection: "asc" | "desc";
+  onSort: (field: string) => void;
+}) {
+  return (
+    <TableHead
+      className="cursor-pointer hover:bg-gray-100 transition-colors text-center"
+      onClick={() => onSort(field)}
+    >
+      <div className="flex items-center gap-1 justify-center">
+        {title}
+        {currentSortField === field ? (
+          currentSortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+        ) : (
+          <ArrowUpDown className="h-4 w-4 text-gray-400" />
+        )}
+      </div>
+    </TableHead>
+  );
+}
+
 export default function TableauFactures({ user }: { user: User }) {
   const [facturesList, setFacturesList] = useState<Facture[] | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,35 +63,6 @@ export default function TableauFactures({ user }: { user: User }) {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   
   const itemsPerPage = 10;
-
-  // Composant pour l'en-tête de colonne triable
-  const SortableHeader = ({ 
-    title, 
-    field, 
-    currentSortField, 
-    currentSortDirection, 
-    onSort 
-  }: {
-    title: string;
-    field: string;
-    currentSortField: string | null;
-    currentSortDirection: "asc" | "desc";
-    onSort: (field: string) => void;
-  }) => (
-    <TableHead 
-      className="cursor-pointer hover:bg-gray-100 transition-colors text-center" 
-      onClick={() => onSort(field)}
-    >
-      <div className="flex items-center gap-1 justify-center">
-        {title}
-        {currentSortField === field ? (
-          currentSortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
-        ) : (
-          <ArrowUpDown className="h-4 w-4 text-gray-400" />
-        )}
-      </div>
-    </TableHead>
-  );
 
   // Fonction pour gérer le tri
   const handleSort = (field: string) => {
@@ -194,10 +198,23 @@ export default function TableauFactures({ user }: { user: User }) {
     totalPages = Math.ceil(filteredFactures.length / itemsPerPage);
   }
 
-  // Réinitialiser la page courante lorsque le filtre change
-  useEffect(() => {
+  // Tout changement de filtre ramène à la première page. Fait dans les
+  // handlers plutôt que dans un effet, pour éviter un rendu intermédiaire
+  // affichant la nouvelle liste sur l'ancien numéro de page.
+  const handleTypeFilterChange = (value: string) => {
+    setTypeFilter(value);
     setCurrentPage(1);
-  }, [typeFilter, dateFilter, mandatSearch]);
+  };
+
+  const handleDateFilterChange = (value: string) => {
+    setDateFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleMandatSearchChange = (value: string) => {
+    setMandatSearch(value);
+    setCurrentPage(1);
+  };
 
   // Charger les factures au montage du composant et quand le tri change
   useEffect(() => {
@@ -234,7 +251,7 @@ export default function TableauFactures({ user }: { user: User }) {
           <select
             id="typeFilter"
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
+            onChange={(e) => handleTypeFilterChange(e.target.value)}
             className="border border-gray-300 rounded-md p-2"
           >
             <option value="tous">Tous les types</option>
@@ -247,7 +264,7 @@ export default function TableauFactures({ user }: { user: User }) {
           <select
             id="dateFilter"
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
+            onChange={(e) => handleDateFilterChange(e.target.value)}
             className="border border-gray-300 rounded-md p-2"
           >
             <option value="tous">Toutes les dates</option>
@@ -265,13 +282,13 @@ export default function TableauFactures({ user }: { user: User }) {
             id="mandatSearch"
             type="text"
             value={mandatSearch}
-            onChange={(e) => setMandatSearch(e.target.value)}
+            onChange={(e) => handleMandatSearchChange(e.target.value)}
             placeholder="Ex : 12345"
             className="border border-gray-300 rounded-md p-2 w-48"
           />
           {mandatSearch && (
             <button
-              onClick={() => setMandatSearch("")}
+              onClick={() => handleMandatSearchChange("")}
               className="text-sm text-gray-500 hover:text-gray-700 underline"
             >
               Effacer

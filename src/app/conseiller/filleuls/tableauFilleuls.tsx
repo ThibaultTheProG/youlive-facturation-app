@@ -95,7 +95,7 @@ export default function TableauFilleuls({ user }: { user: User }) {
       {/* Sélecteur d'année */}
       <div className="mb-4 flex items-center gap-3">
         <label htmlFor="year_selector_filleuls" className="font-medium text-sm">
-          Consulter l'année :
+          Consulter l&apos;année :
         </label>
         <select
           id="year_selector_filleuls"

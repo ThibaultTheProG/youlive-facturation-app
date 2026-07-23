@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import InputCustom from "@/components/uiCustom/inputCustom";
 import { Label } from "@/components/ui/label";
 import RadioCustom from "@/components/uiCustom/radioCustom";
@@ -15,7 +15,6 @@ export default function FormParams({ user }: { user: User }) {
   const [autoParrain, setAutoParrain] = useState<string>("non");
   const [selectedTypeContrat, setSelectedTypeContrat] = useState<string>("");
   const [chiffreAffaires, setChiffreAffaires] = useState<number>(0);
-  const [retrocession, setRetrocession] = useState<number>(0);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -89,16 +88,15 @@ export default function FormParams({ user }: { user: User }) {
     }
   }, [user?.id, selectedYear]);
 
-  // Calculer la rétrocession à chaque changement de chiffre d'affaires ou de type de contrat
-  useEffect(() => {
-    if (chiffreAffaires >= 0 && selectedTypeContrat) {
-      setRetrocession(
-        calculRetrocession(selectedTypeContrat, chiffreAffaires, autoParrain)
-      );
-    } else {
-      setRetrocession(0); // Réinitialiser si une des conditions n'est pas remplie
-    }
-  }, [chiffreAffaires, selectedTypeContrat, autoParrain]);
+  // La rétrocession est entièrement dérivée du CA, du type de contrat et de
+  // l'auto-parrainage : calculée au rendu plutôt que stockée dans un état.
+  const retrocession = useMemo(
+    () =>
+      chiffreAffaires >= 0 && selectedTypeContrat
+        ? calculRetrocession(selectedTypeContrat, chiffreAffaires, autoParrain)
+        : 0,
+    [chiffreAffaires, selectedTypeContrat, autoParrain]
+  );
 
   const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true);

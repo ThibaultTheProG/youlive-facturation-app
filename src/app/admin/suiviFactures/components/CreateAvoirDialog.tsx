@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,13 @@ interface ConseillerLite {
   taux_tva: number | null;
 }
 
+const fetchConseillers = async (url: string): Promise<ConseillerLite[]> => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+};
+
 interface CreateAvoirDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -40,9 +48,8 @@ export default function CreateAvoirDialog({
   onOpenChange,
   onCreated,
 }: CreateAvoirDialogProps) {
-  const [conseillers, setConseillers] = useState<ConseillerLite[]>([]);
-  const [loadingConseillers, setLoadingConseillers] = useState(false);
-
+  // Le parent remonte ce dialogue à chaque ouverture (via une `key`), donc
+  // l'état local repart de zéro sans effet de réinitialisation.
   const [userId, setUserId] = useState<string>("");
   const [montant, setMontant] = useState<string>("");
   const [motif, setMotif] = useState<string>("");
@@ -52,44 +59,20 @@ export default function CreateAvoirDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Charger la liste des conseillers à l'ouverture
-  useEffect(() => {
-    if (!open) return;
-    setLoadingConseillers(true);
-    fetch("/api/conseillers/get?includeInactifs=true")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setConseillers(data);
-      })
-      .catch((e) => console.error("Erreur chargement conseillers :", e))
-      .finally(() => setLoadingConseillers(false));
-  }, [open]);
+  // Liste des conseillers : SWR gère le chargement et le cache, sans effet.
+  const { data: conseillers = [], isLoading: loadingConseillers } = useSWR<
+    ConseillerLite[]
+  >(open ? "/api/conseillers/get?includeInactifs=true" : null, fetchConseillers);
 
-  // Réinitialiser à l'ouverture
-  useEffect(() => {
-    if (open) {
-      setUserId("");
-      setMontant("");
-      setMotif("");
-      setAssujetti("non");
-      setTaux(20);
-      setError(null);
+  // Le choix du conseiller préremplit la TVA depuis son profil.
+  const handleConseillerChange = (value: string) => {
+    setUserId(value);
+    const conseiller = conseillers.find((c) => String(c.id) === value);
+    if (conseiller) {
+      setAssujetti(conseiller.tva ? "oui" : "non");
+      setTaux(conseiller.taux_tva != null ? conseiller.taux_tva : 20);
     }
-  }, [open]);
-
-  const selectedConseiller = useMemo(
-    () => conseillers.find((c) => String(c.id) === userId) || null,
-    [conseillers, userId],
-  );
-
-  // Préremplir la TVA depuis le profil du conseiller sélectionné
-  useEffect(() => {
-    if (!selectedConseiller) return;
-    setAssujetti(selectedConseiller.tva ? "oui" : "non");
-    setTaux(
-      selectedConseiller.taux_tva != null ? selectedConseiller.taux_tva : 20,
-    );
-  }, [selectedConseiller]);
+  };
 
   const montantNum = Number(montant);
   const montantValide =
@@ -165,7 +148,7 @@ export default function CreateAvoirDialog({
           {/* Conseiller */}
           <div className="flex flex-col space-y-2">
             <Label htmlFor="avoir-conseiller">Conseiller</Label>
-            <Select value={userId} onValueChange={setUserId}>
+            <Select value={userId} onValueChange={handleConseillerChange}>
               <SelectTrigger id="avoir-conseiller" className="w-full">
                 <SelectValue
                   placeholder={

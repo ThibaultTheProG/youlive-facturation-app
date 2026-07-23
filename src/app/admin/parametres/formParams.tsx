@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import InputCustom from "@/components/uiCustom/inputCustom";
 import { Label } from "@/components/ui/label";
 import RadioCustom from "@/components/uiCustom/radioCustom";
@@ -34,7 +34,10 @@ export default function FormParams() {
   const [autoParrain, setAutoParrain] = useState<string>("non");
   const [selectedTypeContrat, setSelectedTypeContrat] = useState<string>("");
   const [chiffreAffaires, setChiffreAffaires] = useState<number>(0);
-  const [retrocession, setRetrocession] = useState<number>(0);
+  // Rétrocession saisie manuellement ; `null` = on garde la valeur calculée.
+  const [retrocessionManuelle, setRetrocessionManuelle] = useState<number | null>(
+    null
+  );
   const [adresse, setAdresse] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStatus, setFormStatus] = useState<FormStatusType>({
@@ -62,8 +65,6 @@ export default function FormParams() {
     null
   );
 
-  // Ajout de l'état pour la gestion manuelle de la rétrocession
-  const [isRetrocessionManuallySet, setIsRetrocessionManuallySet] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
 
   // États pour la gestion des années
@@ -111,7 +112,6 @@ export default function FormParams() {
         if (response.ok) {
           const data = await response.json();
           setChiffreAffaires(data.chiffre_affaires || 0);
-          setRetrocession(data.retrocession || 0);
         }
       } catch (error) {
         console.error("Erreur lors de la récupération des données:", error);
@@ -121,56 +121,44 @@ export default function FormParams() {
     fetchConseillerData();
   }, [selectedYear, selectedConseiller?.id]);
 
-  // Synchroniser les champs lorsque selectedConseiller change
-  useEffect(() => {
-    if (selectedConseiller) {
-      const { tva, auto_parrain, typecontrat, chiffre_affaires, adresse: conseillerAdresse } =
-        selectedConseiller;
+  // Charge un conseiller dans le formulaire : sélection + synchronisation de
+  // tous les champs qui en dépendent. Regroupé ici plutôt que dans un effet
+  // déclenché par `selectedConseiller`, qui imposait un rendu supplémentaire
+  // et rendait l'ordre des mises à jour difficile à suivre.
+  const appliquerConseiller = useCallback((conseiller: Conseiller | null) => {
+    setSelectedConseiller(conseiller);
+    // Un nouveau conseiller annule toute saisie manuelle de rétrocession.
+    setRetrocessionManuelle(null);
 
-      setSelectedTypeContrat(typecontrat || "");
-      setChiffreAffaires(chiffre_affaires || 0);
-      setAssujettiTVA(tva ? "oui" : "non");
-      setTauxTVA(selectedConseiller.taux_tva ?? 20);
-      setAdresse(conseillerAdresse || "");
+    if (!conseiller) return;
 
-      if (auto_parrain) {
-        setAutoParrain(auto_parrain);
-      }
+    setSelectedTypeContrat(conseiller.typecontrat || "");
+    setChiffreAffaires(conseiller.chiffre_affaires || 0);
+    setAssujettiTVA(conseiller.tva ? "oui" : "non");
+    setTauxTVA(conseiller.taux_tva ?? 20);
+    setAdresse(conseiller.adresse || "");
+
+    if (conseiller.auto_parrain) {
+      setAutoParrain(conseiller.auto_parrain);
     }
-  }, [selectedConseiller]);
+  }, []);
 
-  // Calculer la rétrocession à chaque changement de chiffre d'affaires ou de type de contrat
-  useEffect(() => {
-    if (!isRetrocessionManuallySet) {
-      if (selectedTypeContrat) {
-        const calculatedRetrocession = calculRetrocession(
-          selectedTypeContrat,
-          chiffreAffaires,
-          autoParrain
-        );
-        setRetrocession(calculatedRetrocession);
-      } else {
-        setRetrocession(0);
-      }
-    }
-  }, [chiffreAffaires, selectedTypeContrat, autoParrain, isRetrocessionManuallySet]);
+  // Rétrocession : valeur calculée par défaut, éventuellement surchargée à la
+  // main. Dérivée au rendu au lieu d'être maintenue par un effet.
+  const retrocessionCalculee = useMemo(
+    () =>
+      selectedTypeContrat
+        ? calculRetrocession(selectedTypeContrat, chiffreAffaires, autoParrain)
+        : 0,
+    [selectedTypeContrat, chiffreAffaires, autoParrain]
+  );
+  const retrocession = retrocessionManuelle ?? retrocessionCalculee;
 
-  // Remise à zéro du flag manuel lors du changement de conseiller
-  useEffect(() => {
-    setIsRetrocessionManuallySet(false);
-  }, [selectedConseiller]);
-
-  // Afficher un état de chargement pendant le chargement des conseillers
-  useEffect(() => {
-    if (isLoadingConseillers) {
-      setFormStatus({
-        type: "loading",
-        message: "Chargement des conseillers...",
-      });
-    } else {
-      setFormStatus({ type: null, message: null });
-    }
-  }, [isLoadingConseillers]);
+  // Le chargement des conseillers prime sur le statut du formulaire, sans
+  // écraser les messages de succès / erreur de la soumission.
+  const statutAffiche: FormStatusType = isLoadingConseillers
+    ? { type: "loading", message: "Chargement des conseillers..." }
+    : formStatus;
 
   // Définir un type pour les éléments de la liste
   type SelectItemWithKey = {
@@ -246,7 +234,7 @@ export default function FormParams() {
 
         // Mettre à jour le conseiller sélectionné avec les données fraîches de la BDD
         const conseillerData = await conseillerResponse.json();
-        setSelectedConseiller(conseillerData);
+        appliquerConseiller(conseillerData);
 
         // Récupération de tous les parrains en une seule requête
         const parrainagesResponse = await fetch(
@@ -288,7 +276,7 @@ export default function FormParams() {
         });
 
         // En cas d'erreur, utiliser les données locales comme fallback
-        setSelectedConseiller(conseiller || null);
+        appliquerConseiller(conseiller || null);
         
         // Réinitialiser les valeurs des parrains
         setSelectedParrain("Aucun");
@@ -300,7 +288,7 @@ export default function FormParams() {
       }
     } else {
       // Réinitialiser les valeurs si aucun conseiller n'est sélectionné
-      setSelectedConseiller(null);
+      appliquerConseiller(null);
       setSelectedParrain("Aucun");
       setSelectedParrainId(null);
       setSelectedParrain2("Aucun");
@@ -418,7 +406,7 @@ export default function FormParams() {
 
         if (conseillerResponse.ok) {
           const updatedConseillerData = await conseillerResponse.json();
-          setSelectedConseiller(updatedConseillerData);
+          appliquerConseiller(updatedConseillerData);
         }
       } catch (refreshError) {
         console.error("Erreur lors du rafraîchissement des données du conseiller:", refreshError);
@@ -471,7 +459,7 @@ export default function FormParams() {
       }
 
       toast.success(result.message);
-      setSelectedConseiller(null);
+      appliquerConseiller(null);
       router.refresh();
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -544,8 +532,7 @@ export default function FormParams() {
             chiffreAffaires={chiffreAffaires}
             setChiffreAffaires={setChiffreAffaires}
             retrocession={retrocession}
-            setRetrocession={setRetrocession}
-            setIsRetrocessionManuallySet={setIsRetrocessionManuallySet}
+            setRetrocession={setRetrocessionManuelle}
             selectedYear={selectedYear}
             setSelectedYear={setSelectedYear}
             availableYears={availableYears}
@@ -572,7 +559,7 @@ export default function FormParams() {
 
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-4">
-              <FormStatusMessage status={formStatus} />
+              <FormStatusMessage status={statutAffiche} />
               <Button
                 type="button"
                 variant="destructive"

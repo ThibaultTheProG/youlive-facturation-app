@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -44,17 +44,9 @@ export default function EditTvaDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (open && facture) {
-      const apply =
-        facture.apply_tva === null || facture.apply_tva === undefined
-          ? userTva
-          : facture.apply_tva;
-      setAssujetti(apply ? "oui" : "non");
-      setTaux(Number(facture.taux_tva ?? userTaux));
-      setError(null);
-    }
-  }, [open, facture, userTva, userTaux]);
+  // Pas d'effet de resynchronisation : le parent remonte ce composant via une
+  // `key` dépendant de la facture et de l'ouverture, donc les initialisateurs
+  // de `useState` ci-dessus repartent des bonnes valeurs à chaque ouverture.
 
   const handleSubmit = async () => {
     if (!facture) return;

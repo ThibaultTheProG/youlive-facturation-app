@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { SortDirection, SortField } from "../app/admin/suiviFactures/components/SortableHeader";
 import useSWR from 'swr';
 
@@ -11,11 +11,11 @@ const fetcher = async (url: string) => {
 
 export const useFacturesFiltering = () => {
   // États pour les filtres
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatut, setFilterStatut] = useState("");
-  const [filterType, setFilterType] = useState("");
-  const [filterStatutEnvoi, setFilterStatutEnvoi] = useState("");
-  
+  const [searchTerm, setSearchTermState] = useState("");
+  const [filterStatut, setFilterStatutState] = useState("");
+  const [filterType, setFilterTypeState] = useState("");
+  const [filterStatutEnvoi, setFilterStatutEnvoiState] = useState("");
+
   // États pour la pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -47,6 +47,29 @@ export const useFacturesFiltering = () => {
     dedupingInterval: 60000 // Cache pendant 1 minute
   });
 
+  // Tout changement de filtre ou de tri ramène à la première page. C'est fait
+  // dans les setters plutôt que dans un effet : la page est remise à 1 dans le
+  // même rendu, ce qui évite une requête intermédiaire sur l'ancienne page.
+  const setSearchTerm = useCallback((value: string) => {
+    setSearchTermState(value);
+    setCurrentPage(1);
+  }, []);
+
+  const setFilterStatut = useCallback((value: string) => {
+    setFilterStatutState(value);
+    setCurrentPage(1);
+  }, []);
+
+  const setFilterType = useCallback((value: string) => {
+    setFilterTypeState(value);
+    setCurrentPage(1);
+  }, []);
+
+  const setFilterStatutEnvoi = useCallback((value: string) => {
+    setFilterStatutEnvoiState(value);
+    setCurrentPage(1);
+  }, []);
+
   // Gestion du tri
   const handleSort = useCallback((field: string) => {
     if (sortField === field) {
@@ -58,13 +81,8 @@ export const useFacturesFiltering = () => {
       setSortField(field as SortField);
       setSortDirection('asc');
     }
-  }, [sortField, sortDirection]);
-
-  // Réinitialiser la page courante lorsque les filtres ou le tri changent
-  useEffect(() => {
-    // Réinitialiser la page à 1 quand les filtres ou le tri changent
     setCurrentPage(1);
-  }, [searchTerm, filterStatut, filterType, filterStatutEnvoi, sortField, sortDirection]);
+  }, [sortField, sortDirection]);
 
   return {
     searchTerm,

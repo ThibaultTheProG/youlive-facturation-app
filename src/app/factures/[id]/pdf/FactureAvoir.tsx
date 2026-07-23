@@ -2,6 +2,7 @@
 
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { FactureDetaillee } from "@/lib/types";
+import { computeMontantsFacture } from "@/utils/montantsFacture";
 
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 12 },
@@ -49,17 +50,15 @@ export default function FactureAvoir({
 
   // Montant HT signé : positif = complément dû au conseiller (ajustement),
   // négatif = trop-perçu à rembourser (avoir).
-  const montantHT = Number(facture.retrocession) || 0;
+  const {
+    retrocessionHT: montantHT,
+    tvaActive,
+    tauxTVA,
+    montantTVA,
+    montantTTC,
+  } = computeMontantsFacture(facture, user);
+
   const isAvoir = montantHT < 0;
-
-  const tvaActive = facture.apply_tva ?? user.tva ?? false;
-  const tauxTVA =
-    facture.taux_tva != null ? Number(facture.taux_tva) : user.taux_tva ?? 20;
-
-  const montantTVA = tvaActive
-    ? facture.montant_tva ?? Number(((montantHT * tauxTVA) / 100).toFixed(2))
-    : 0;
-  const montantTTC = montantHT + montantTVA;
 
   const documentLabel = isAvoir ? "AVOIR" : "FACTURE D'AJUSTEMENT";
   const montantLabel = isAvoir

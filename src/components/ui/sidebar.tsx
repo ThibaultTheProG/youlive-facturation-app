@@ -650,10 +650,17 @@ const SidebarMenuSkeleton = React.forwardRef<
     showIcon?: boolean
   }
 >(({ className, showIcon = false, ...props }, ref) => {
-  // Random width between 50 to 90%.
+  // Largeur pseudo-aléatoire entre 50 et 90%, dérivée de l'id du composant.
+  // `Math.random()` rendait le rendu impur et faisait diverger le HTML serveur
+  // du HTML client à l'hydratation ; `useId` est stable des deux côtés.
+  const id = React.useId()
   const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`
-  }, [])
+    let hash = 0
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash * 31 + id.charCodeAt(i)) | 0
+    }
+    return `${(Math.abs(hash) % 40) + 50}%`
+  }, [id])
 
   return (
     <div

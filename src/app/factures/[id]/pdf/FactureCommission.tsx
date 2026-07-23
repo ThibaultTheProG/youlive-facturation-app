@@ -2,6 +2,7 @@
 
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { FactureDetaillee } from "@/lib/types"; // Import du type de facture
+import { computeMontantsFacture } from "@/utils/montantsFacture";
 
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 12 },
@@ -47,49 +48,21 @@ export default function FactureCommission({
 }) {
   const user = facture.conseiller;
 
-  let amountTTC: number = 0;
-  let apporteurAmount: number = 0;
-  let totalAmount: number = 0;
-  let honorairesAgent: number = 0;
-  let tauxRetrocession: number = 0;
-
   // Fonction pour formater les nombres avec 2 décimales
   const formatNumber = (num: number): string => {
     return num.toFixed(2);
   };
 
-  // Nouvelle facture : utiliser les champs spécifiques
-  honorairesAgent = Number(facture.montant_honoraires) || 0;
-  tauxRetrocession = Number(facture.taux_retrocession) || 0;
-  console.log(
-    `📄 Nouvelle facture - Tranche: ${facture.tranche}, Honoraires: ${honorairesAgent}€, Taux: ${tauxRetrocession}%`
-  );
-
-  console.log(facture.apporteur_amount);
-
-  // Calculer le montant de rétrocession pour le calcul TTC
-  const retrocessionAmount = Number(facture.retrocession) || 0;
-  const tvaActive = facture.apply_tva ?? user.tva ?? false;
-  const tauxTVA = facture.taux_tva != null ? Number(facture.taux_tva) : user.taux_tva ?? 20;
-  let montantTVA: number = 0;
-
-  if (facture.apporteur === "oui") {
-    apporteurAmount = Number(facture.apporteur_amount) || 0;
-    totalAmount = retrocessionAmount - apporteurAmount;
-    if (tvaActive) {
-      montantTVA = Number(((totalAmount * tauxTVA) / 100).toFixed(2));
-      amountTTC = totalAmount + montantTVA;
-    } else {
-      amountTTC = totalAmount;
-    }
-  } else {
-    if (tvaActive) {
-      montantTVA = facture.montant_tva ?? Number(((retrocessionAmount * tauxTVA) / 100).toFixed(2));
-      amountTTC = retrocessionAmount + montantTVA;
-    } else {
-      amountTTC = retrocessionAmount;
-    }
-  }
+  const {
+    honorairesAgence: honorairesAgent,
+    tauxRetrocession,
+    retrocessionHT: retrocessionAmount,
+    totalHT,
+    tvaActive,
+    tauxTVA,
+    montantTVA,
+    montantTTC: amountTTC,
+  } = computeMontantsFacture(facture, user);
 
   // Générer le titre de la facture avec la tranche si applicable
   const getFactureTitle = () => {
@@ -238,7 +211,7 @@ export default function FactureCommission({
             </Text>
             <Text style={styles.tableCellTotal}>{tauxRetrocession}%</Text>
             <Text style={styles.tableCellTotal}>
-              {formatNumber(totalAmount || retrocessionAmount)} €
+              {formatNumber(totalHT || retrocessionAmount)} €
             </Text>
             {tvaActive && <Text style={styles.tableCellTotal}>{formatNumber(montantTVA)} €</Text>}
             <Text style={styles.tableCell}>{formatNumber(amountTTC)} €</Text>
