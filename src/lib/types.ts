@@ -58,8 +58,14 @@ export interface Contract {
   vat?: string;
   vat_rate?: string;
   entries?: Entries[];
+  contacts?: ContactContrat[];
   contract_at?: string;
   date_signature: string;
+}
+
+export interface ContactContrat {
+  contact: number | string;
+  type: number | string;
 }
 
 export interface Entries {

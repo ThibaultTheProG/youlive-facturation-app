@@ -12,9 +12,11 @@ const connectionString = process.env.DATABASE_URL;
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 
+// En production, ne pas logger chaque requête : sur les crons de synchro
+// (centaines de requêtes), l'écriture des logs devient un coût mesurable.
 const prisma = global.prisma || new PrismaClient({
   adapter,
-  log: ['query', 'error', 'warn'],
+  log: process.env.NODE_ENV === 'production' ? ['error', 'warn'] : ['query', 'error', 'warn'],
 });
 
 if (process.env.NODE_ENV !== 'production') {
