@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { ApimoError, fetchApimoAll } from "@/utils/apimo";
+import { memeTexte, runChunked } from "@/utils/sync";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 type ConseillerInput = {
   id: number;
@@ -13,85 +18,174 @@ type ConseillerInput = {
 };
 
 export async function GET() {
+  const debut = Date.now();
   try {
-    // Récupération des conseillers depuis l'API externe
-    const response = await fetch("https://api.apimo.pro/agencies/24045/users", {
-      headers: {
-        Authorization: `Basic ${Buffer.from(
-          `${process.env.USERNAME}:${process.env.PASSWORD}`
-        ).toString("base64")}`,
-        cache: "force-cache",
-      },
-    });
+    const conseillers = await fetchApimoAll<ConseillerInput>("users", "users");
 
-    const brut = await response.json();
-    const conseillers: ConseillerInput[] = brut.users;
-
-    // Insertion des conseillers dans la BDD
     if (!Array.isArray(conseillers)) {
       throw new Error("Les données conseillers ne sont pas valides.");
     }
 
+    // ---------------------------------------------------------------------
+    // Préchargement : 2 SELECT au lieu de 2 requêtes par conseiller.
+    // ---------------------------------------------------------------------
+    const [existants, parrainages] = await Promise.all([
+      prisma.utilisateurs.findMany({
+        select: {
+          id: true,
+          idapimo: true,
+          prenom: true,
+          nom: true,
+          email: true,
+          telephone: true,
+          mobile: true,
+          siren: true,
+        },
+      }),
+      prisma.parrainages.findMany({ select: { user_id: true } }),
+    ]);
+    const existantParApimo = new Map(existants.map((u) => [u.idapimo, u]));
+    const avecParrainage = new Set(parrainages.map((p) => p.user_id));
+
+    // ---------------------------------------------------------------------
+    // Diff en mémoire.
+    // ---------------------------------------------------------------------
+    type Cible = {
+      idapimo: number;
+      prenom: string;
+      nom: string;
+      email: string | null;
+      telephone: string | null;
+      mobile: string | null;
+      siren: string | null;
+      adresse: string | null;
+    };
+    const aCreer: Cible[] = [];
+    const aMaj: Cible[] = [];
+    let ignores = 0;
+
     for (const conseiller of conseillers) {
       const { id, firstname, lastname, email, phone, mobile, city, partners } =
         conseiller;
-      const adresse = city?.name || null;
-      const siren = partners?.[0]?.reference;
-      const idToNumber = Number(id);
 
-      if (!firstname || !lastname) continue;
+      if (!firstname || !lastname) {
+        ignores++;
+        continue;
+      }
 
-      // Créer ou mettre à jour le conseiller
-      const utilisateur = await prisma.utilisateurs.upsert({
-        where: {
-          idapimo: idToNumber,
-        },
-        update: {
-          prenom: firstname,
-          nom: lastname,
-          email: email || null,
-          telephone: phone || null,
-          mobile: mobile || null,
-          siren: siren || null,
-        },
-        create: {
-          idapimo: idToNumber,
-          prenom: firstname,
-          nom: lastname,
-          email: email || null,
-          telephone: phone || null,
-          mobile: mobile || null,
-          adresse,
-          siren: siren || null,
-          role: "conseiller",
-        },
-      });
+      const cible: Cible = {
+        idapimo: Number(id),
+        prenom: firstname,
+        nom: lastname,
+        email: email || null,
+        telephone: phone || null,
+        mobile: mobile || null,
+        siren: partners?.[0]?.reference || null,
+        // `adresse` n'est renseignée qu'à la création : elle est ensuite
+        // modifiable dans l'app et ne doit pas être écrasée par Apimo.
+        adresse: city?.name || null,
+      };
 
-      // Vérifier si un parrainage existe déjà pour cet utilisateur
-      const existingParrainage = await prisma.parrainages.findFirst({
-        where: { user_id: utilisateur.id },
-      });
-
-      // Créer ou mettre à jour le parrainage
-      if (!existingParrainage) {
-        await prisma.parrainages.create({
-          data: {
-            user_id: utilisateur.id,
-            niveau1: null,
-            niveau2: null,
-            niveau3: null,
-          },
-        });
+      const existant = existantParApimo.get(cible.idapimo);
+      if (!existant) {
+        aCreer.push(cible);
+      } else if (
+        !memeTexte(existant.prenom, cible.prenom) ||
+        !memeTexte(existant.nom, cible.nom) ||
+        !memeTexte(existant.email, cible.email) ||
+        !memeTexte(existant.telephone, cible.telephone) ||
+        !memeTexte(existant.mobile, cible.mobile) ||
+        !memeTexte(existant.siren, cible.siren)
+      ) {
+        aMaj.push(cible);
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Conseillers synchronisés avec succès",
-      count: conseillers.length,
+    let erreurs = 0;
+    const idsSansParrainage: number[] = [];
+
+    await runChunked(aCreer, async (cible) => {
+      try {
+        const cree = await prisma.utilisateurs.create({
+          data: { ...cible, role: "conseiller" },
+        });
+        idsSansParrainage.push(cree.id);
+      } catch (error) {
+        erreurs++;
+        console.error(`❌ Conseiller ${cible.idapimo} non créé :`, error);
+      }
     });
+
+    await runChunked(aMaj, async (cible) => {
+      const { idapimo, prenom, nom, email, telephone, mobile, siren } = cible;
+      try {
+        await prisma.utilisateurs.update({
+          where: { idapimo },
+          // `adresse` volontairement absente : cf. commentaire plus haut
+          data: {
+            prenom,
+            nom,
+            email,
+            telephone,
+            mobile,
+            siren,
+            updated_at: new Date(),
+          },
+        });
+      } catch (error) {
+        erreurs++;
+        console.error(`❌ Conseiller ${idapimo} non mis à jour :`, error);
+      }
+    });
+
+    // Parrainage vide pour les conseillers Apimo qui n'en ont pas encore.
+    // Volontairement limité aux utilisateurs remontés par Apimo : les comptes
+    // créés depuis l'app ont leur propre parcours d'inscription.
+    const idsApimoVus = new Set(
+      conseillers
+        .filter((c) => c.firstname && c.lastname)
+        .map((c) => Number(c.id))
+    );
+    for (const utilisateur of existants) {
+      if (
+        idsApimoVus.has(utilisateur.idapimo) &&
+        !avecParrainage.has(utilisateur.id)
+      ) {
+        idsSansParrainage.push(utilisateur.id);
+      }
+    }
+
+    let parrainagesCrees = 0;
+    if (idsSansParrainage.length > 0) {
+      const resultat = await prisma.parrainages.createMany({
+        data: idsSansParrainage.map((user_id) => ({
+          user_id,
+          niveau1: null,
+          niveau2: null,
+          niveau3: null,
+        })),
+        skipDuplicates: true,
+      });
+      parrainagesCrees = resultat.count;
+    }
+
+    const resume = {
+      conseillers_apimo: conseillers.length,
+      crees: aCreer.length,
+      mis_a_jour: aMaj.length,
+      ignores_sans_nom: ignores,
+      parrainages_crees: parrainagesCrees,
+      erreurs,
+      duree_ms: Date.now() - debut,
+    };
+    console.log("✅ Sync conseillers terminée", resume);
+
+    return NextResponse.json({ success: true, ...resume });
   } catch (error) {
     console.error("Erreur lors de la synchronisation des conseillers :", error);
+    if (error instanceof ApimoError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Erreur lors de la synchronisation des conseillers" },
       { status: 500 }

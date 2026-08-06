@@ -7,6 +7,11 @@ import nodemailer from "nodemailer";
 import { decoupageSeuil, round2 } from "@/utils/decoupageSeuil";
 import { getCAForYear, getHistoriqueForYear } from "@/utils/historiqueCA";
 
+export const dynamic = "force-dynamic";
+// La fenêtre de 7 jours borne naturellement le volume traité, mais un rattrapage
+// après plusieurs jours d'arrêt peut enchaîner de nombreux envois SMTP (lents).
+export const maxDuration = 300;
+
 // Type pour la transaction Prisma
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PrismaTransaction = any;

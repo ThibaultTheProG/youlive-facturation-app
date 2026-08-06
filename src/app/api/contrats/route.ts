@@ -5,49 +5,13 @@ import { checkAndResetYearIfNeeded } from "@/utils/resetCAYear";
 import { recomputeCAForYear } from "@/utils/historiqueCA";
 import { calculRetrocession } from "@/utils/calculs";
 import { round2 } from "@/utils/decoupageSeuil";
+import { ApimoError, fetchApimoAll } from "@/utils/apimo";
+import { memeJour, memeMontant, runChunked } from "@/utils/sync";
 
 export const dynamic = "force-dynamic";
 // Cron Vercel : la route doit pouvoir dépasser la durée par défaut si un gros
 // rattrapage est nécessaire (ex. première exécution après plusieurs jours d'arrêt).
 export const maxDuration = 300;
-
-// Nombre d'écritures Prisma menées en parallèle. Reste sous la taille du pool pg
-// (max 10 par défaut) pour ne pas saturer les connexions.
-const WRITE_CONCURRENCY = 5;
-
-/**
- * Exécute `fn` sur tous les items par lots de WRITE_CONCURRENCY.
- * Sérialiser ~1500 allers-retours Prisma était la cause des timeouts 504 :
- * le volume de contrats step 4 grandit en continu, donc le temps d'exécution
- * aussi, jusqu'à dépasser la limite de la fonction Vercel.
- */
-async function runChunked<T>(
-  items: T[],
-  fn: (item: T) => Promise<void>
-): Promise<void> {
-  for (let i = 0; i < items.length; i += WRITE_CONCURRENCY) {
-    await Promise.all(items.slice(i, i + WRITE_CONCURRENCY).map(fn));
-  }
-}
-
-/** Compare deux montants décimaux (Decimal Prisma / number / null). */
-function memeMontant(
-  a: { toString(): string } | number | null | undefined,
-  b: number
-): boolean {
-  if (a === null || a === undefined) return false;
-  return round2(Number(a)) === round2(b);
-}
-
-/**
- * `date_signature` est un `timestamp` sans fuseau, alimenté depuis `contract_at`
- * (une date seule, ex. "2026-07-30"). On compare donc uniquement le jour, en
- * composantes UTC : le résultat ne dépend pas du fuseau du serveur.
- */
-function memeJour(a: Date | null | undefined, contractAt: string): boolean {
-  if (!a) return false;
-  return a.toISOString().slice(0, 10) === contractAt.slice(0, 10);
-}
 
 export async function GET() {
   const debut = Date.now();
@@ -55,29 +19,7 @@ export async function GET() {
     // Vérifier si une réinitialisation annuelle est nécessaire
     await checkAndResetYearIfNeeded();
 
-    // Appel à l'API Apimo
-    const response = await fetch(
-      "https://api.apimo.pro/agencies/24045/contracts",
-      {
-        headers: {
-          Authorization: `Basic ${Buffer.from(
-            `${process.env.USERNAME}:${process.env.PASSWORD}`
-          ).toString("base64")}`,
-        },
-        cache: "no-store",
-      }
-    );
-
-    // Vérification de la réponse
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: "Échec de la récupération des contrats" },
-        { status: response.status }
-      );
-    }
-
-    const brut = await response.json();
-    const contracts: Contract[] = brut.contracts || [];
+    const contracts = await fetchApimoAll<Contract>("contracts", "contracts");
     const currentYear = new Date().getFullYear();
 
     // Contrats retenus : step 4, champs obligatoires présents, année en cours
@@ -451,6 +393,9 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Erreur lors de la récupération des contrats :", error);
+    if (error instanceof ApimoError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Erreur interne du serveur" },
       { status: 500 }

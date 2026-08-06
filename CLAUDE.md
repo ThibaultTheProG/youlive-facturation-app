@@ -45,6 +45,8 @@ Auth is handled in `src/lib/auth.ts`. The `NEXT_PUBLIC_AUTH_DISABLED=true` env v
 Public routes: `/login`, `/factures/[id]/pdf` (PDF viewer)
 
 ### Invoice Generation (Core Business Logic)
+Toutes les routes de synchronisation partagent le même socle : `src/utils/apimo.ts` (`fetchApimoAll`, pagination) et `src/utils/sync.ts` (`runChunked`, `memeMontant`, `memeJour`, `memeTexte`). Le schéma imposé est **précharger en quelques SELECT → diff en mémoire → n'écrire que le delta**, jamais une requête Prisma par élément Apimo (cf. Known pitfalls).
+
 Invoices are auto-created nightly via Vercel cron jobs (`vercel.json`) in this sequence:
 1. `/api/conseillers` → sync agents from Apimo
 2. `/api/contrats` → sync contracts from Apimo
@@ -80,6 +82,7 @@ Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `
 #### Known pitfalls (regression guards)
 - **Under-counted CA at import:** Do not reintroduce truthiness checks like `if (!vat || !vat_rate) continue` — they drop `0` (non-VAT conseillers). Only `id`, `user`, `amount` are mandatory. Likewise, do not resurrect the incremental `updateCACurrentYear` / the 5-second `created_at` "isNewRelation" heuristic in the sync: it double-counts on repeated runs and never catches revised amounts. CA is recomputed by SUM.
 - **Mis-split threshold across multiple contracts:** Do not compute the per-contract "CA before" as `getCAForYear(...) - honoraires_agent`. Sort the contracts to invoice by `date_signature` ascending and accumulate CA from the already-invoiced base; pass that `currentCA` into `createFactureCommission`. The core split logic in `factures/create` (the `montantAvantSeuil` / `montantApresSeuil` branches) is correct and must not be altered.
+- **Pagination Apimo (plafond 10 000):** les endpoints Apimo sont paginés et une requête sans `limit`/`offset` est plafonnée à 10 000 éléments — au-delà, la troncature est **silencieuse**. C'est ce qui privait `/api/contacts` de 4 583 contacts (14 583 au total), laissant 236 contacts référencés par des contrats absents de la base. Toujours passer par `fetchApimoAll` (`src/utils/apimo.ts`), qui déroule les pages jusqu'à `total_items`. Ne jamais réintroduire un `fetch` direct sur `api.apimo.pro`.
 - **Timeout 504 du cron `/api/contrats`:** la route ne doit jamais refaire une requête Prisma par contrat/entry. Elle précharge en 4 SELECT (`utilisateurs`, `contrats`, `relations_contrats`, `historique_ca_annuel`), calcule le diff en mémoire et n'écrit que le delta, via `runChunked` (concurrence 5, sous la taille du pool pg). Le volume de contrats step 4 croît en continu : une boucle séquentielle finit fatalement par dépasser `maxDuration`. Le recalcul du CA étant en fin de route, un timeout partiel le saute silencieusement et laisse `historique_ca_annuel` périmé — donc des taux de rétrocession faux.
 - **`contrats.date_signature` est un `timestamp` sans fuseau:** comparer deux valeurs avec `getTime()` fait diverger toutes les lignes selon le fuseau du process. Comparer le jour en composantes UTC (`toISOString().slice(0, 10)` vs `contract_at`).
 - One-shot recompute + audit script: `scripts/migrate-ca-2026.ts` (re-fetches Apimo, sets `historique_ca_annuel` for 2026, and reports — without modifying — inconsistent commission invoices to regenerate).

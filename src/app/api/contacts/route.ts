@@ -1,5 +1,11 @@
 import prisma from "@/lib/db";
 import { Contact, ContactApi } from "@/lib/types";
+import { NextResponse } from "next/server";
+import { ApimoError, fetchApimoAll } from "@/utils/apimo";
+import { memeTexte, runChunked } from "@/utils/sync";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 function mapApiContact(apiContact: ContactApi): Contact {
   return {
@@ -18,138 +24,145 @@ function mapApiContact(apiContact: ContactApi): Contact {
 }
 
 export async function GET() {
+  const debut = Date.now();
   try {
-    // Récupérer les IDs de contacts depuis la base de données
-    let contactIds: number[] = [];
-    try {
-      const contacts = await prisma.contacts_contrats.findMany({
-        distinct: ['contact_id'],
-        select: {
-          contact_id: true
-        }
+    // Contacts effectivement rattachés à un contrat : seuls ceux-là nous intéressent
+    const references = await prisma.contacts_contrats.findMany({
+      distinct: ["contact_id"],
+      select: { contact_id: true },
+    });
+    const idsAttendus = new Set(references.map((row) => row.contact_id));
+
+    if (idsAttendus.size === 0) {
+      return NextResponse.json({
+        success: true,
+        message: "Aucun contact rattaché à un contrat.",
+        duree_ms: Date.now() - debut,
       });
-      contactIds = contacts.map((row) => row.contact_id);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des contact IDs :", error);
-      return new Response(
-        JSON.stringify({ error: "Erreur lors de la récupération des contact IDs" }),
-        { status: 500 }
-      );
     }
 
-    if (!contactIds || contactIds.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Aucun contact à récupérer." }),
-        { status: 404 }
-      );
-    }
-
-    // Appeler l'API pour récupérer tous les contacts
-    const response = await fetch(
-      "https://api.apimo.pro/agencies/24045/contacts",
-      {
-        headers: {
-          Authorization: `Basic ${Buffer.from(
-            `${process.env.USERNAME}:${process.env.PASSWORD}`
-          ).toString("base64")}`,
-          cache: "force-cache",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      return new Response(
-        JSON.stringify({ error: "Échec de la récupération des contacts" }),
-        { status: response.status }
-      );
-    }
-
-    const brut = await response.json();
-    const contactsApi = brut.contacts || [];
+    // Apimo plafonne une requête à 10 000 éléments : sans pagination, les
+    // contacts au-delà du plafond n'étaient jamais importés (14 583 au total),
+    // laissant des contrats sans contact associé.
+    const contactsApi = await fetchApimoAll<ContactApi>("contacts", "contacts");
 
     // 🔄 Convertir les champs anglais → français avant insertion
-    const contactsMapped: Contact[] = contactsApi.map(mapApiContact);
+    const contactsCibles = contactsApi
+      .map(mapApiContact)
+      .filter((contact) => contact.id !== undefined && idsAttendus.has(contact.id));
 
-    // Filtrer les contacts dont l'ID est présent dans la base de données
-    const filteredContacts = contactsMapped.filter((contact) =>
-      contact.id !== undefined && contactIds.includes(contact.id)
+    console.log(
+      `📊 ${contactsApi.length} contacts Apimo → ${contactsCibles.length} rattachés à un contrat (${idsAttendus.size} attendus)`
     );
 
-    console.log(filteredContacts);
+    // ---------------------------------------------------------------------
+    // Préchargement + diff : une seule lecture, puis on n'écrit que le delta.
+    // ---------------------------------------------------------------------
+    const existants = await prisma.contacts.findMany({
+      where: { contact_apimo_id: { in: [...idsAttendus] } },
+      select: {
+        contact_apimo_id: true,
+        prenom: true,
+        nom: true,
+        email: true,
+        mobile: true,
+        adresse: true,
+        ville: true,
+        cp: true,
+      },
+    });
+    const existantParApimo = new Map(
+      existants.map((c) => [c.contact_apimo_id, c])
+    );
 
-    if (filteredContacts.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "Aucun contact correspondant trouvé." }),
-        { status: 200 }
+    type Cible = {
+      contactApimoId: number;
+      prenom: string | null;
+      nom: string | null;
+      email: string | null;
+      mobile: string | null;
+      adresse: string | null;
+      ville: string | null;
+      cp: string | null;
+    };
+    const aCreer: Cible[] = [];
+    const aMaj: Cible[] = [];
+
+    for (const contact of contactsCibles) {
+      const cible: Cible = {
+        contactApimoId: contact.id as number,
+        prenom: contact.prenom || null,
+        nom: contact.nom || null,
+        email: contact.email || null,
+        mobile: contact.mobile || contact.phone || null,
+        adresse: contact.adresse || null,
+        ville: contact.ville?.name || null,
+        cp: contact.ville?.zipcode || null,
+      };
+
+      const existant = existantParApimo.get(cible.contactApimoId);
+      if (!existant) {
+        aCreer.push(cible);
+      } else if (
+        !memeTexte(existant.prenom, cible.prenom) ||
+        !memeTexte(existant.nom, cible.nom) ||
+        !memeTexte(existant.email, cible.email) ||
+        !memeTexte(existant.mobile, cible.mobile) ||
+        !memeTexte(existant.adresse, cible.adresse) ||
+        !memeTexte(existant.ville, cible.ville) ||
+        !memeTexte(existant.cp, cible.cp)
+      ) {
+        aMaj.push(cible);
+      }
+    }
+
+    let erreurs = 0;
+    const ecrire = async ({ contactApimoId, ...donnees }: Cible) => {
+      try {
+        await prisma.contacts.upsert({
+          where: { contact_apimo_id: contactApimoId },
+          update: { ...donnees, updated_at: new Date() },
+          create: { contact_apimo_id: contactApimoId, ...donnees },
+        });
+      } catch (error) {
+        erreurs++;
+        console.error(`❌ Contact ${contactApimoId} non enregistré :`, error);
+      }
+    };
+
+    await runChunked(aCreer, ecrire);
+    await runChunked(aMaj, ecrire);
+
+    // Contacts référencés par un contrat mais introuvables côté Apimo :
+    // utile à surveiller, c'est ce qui laisse un contrat sans nom de client.
+    const idsTrouves = new Set(contactsCibles.map((c) => c.id));
+    const introuvables = [...idsAttendus].filter((id) => !idsTrouves.has(id));
+    if (introuvables.length > 0) {
+      console.warn(
+        `⚠️ ${introuvables.length} contact(s) référencés par un contrat sont absents d'Apimo :`,
+        introuvables.slice(0, 20)
       );
     }
 
-    // Insertion des contacts directement dans la base de données
-    try {
-      for (const contact of filteredContacts) {
-        const {
-          id: contactApimoId,
-          prenom,
-          nom,
-          email,
-          mobile,
-          phone,
-          adresse,
-          ville,
-        } = contact;
+    const resume = {
+      contacts_apimo: contactsApi.length,
+      attendus: idsAttendus.size,
+      crees: aCreer.length,
+      mis_a_jour: aMaj.length,
+      introuvables_apimo: introuvables.length,
+      erreurs,
+      duree_ms: Date.now() - debut,
+    };
+    console.log("✅ Sync contacts terminée", resume);
 
-        const villeName = ville?.name;
-        const cp = ville?.zipcode;
-
-        if (!contactApimoId) {
-          console.warn(
-            "Contact invalide : contact_apimo_id manquant. Contact ignoré.",
-            contact
-          );
-          continue;
-        }
-
-        await prisma.contacts.upsert({
-          where: {
-            contact_apimo_id: contactApimoId
-          },
-          update: {
-            prenom: prenom || null,
-            nom: nom || null,
-            email: email || null,
-            mobile: mobile || phone || null,
-            adresse: adresse || null,
-            ville: villeName || null,
-            cp: cp || null,
-            updated_at: new Date()
-          },
-          create: {
-            contact_apimo_id: contactApimoId,
-            prenom: prenom || null,
-            nom: nom || null,
-            email: email || null,
-            mobile: mobile || phone || null,
-            adresse: adresse || null,
-            ville: villeName || null,
-            cp: cp || null
-          }
-        });
-      }
-
-      console.log("✅ Contacts insérés ou mis à jour avec succès.");
-    } catch (error) {
-      console.error("❌ Erreur lors de l'insertion des contacts :", error);
-      throw error;
-    }
-
-    return new Response(JSON.stringify({ data: filteredContacts }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return NextResponse.json({ success: true, ...resume });
   } catch (error) {
     console.error("Erreur lors de la récupération des contacts :", error);
-    return new Response(
-      JSON.stringify({ error: "Erreur interne du serveur." }),
+    if (error instanceof ApimoError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json(
+      { error: "Erreur interne du serveur." },
       { status: 500 }
     );
   }
