@@ -4,6 +4,7 @@ import { AppSidebar } from "./sidebarConseiller";
 import "../globals.css";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
+import { devUser } from "@/lib/devAuth";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -14,18 +15,9 @@ export default async function ConseillerLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const isAuthDisabled = process.env.NEXT_PUBLIC_AUTH_DISABLED === "true";
+  let user = devUser();
 
-  let user = null;
-
-  if (isAuthDisabled) {
-    user = {
-      id: Number(process.env.NEXT_PUBLIC_TEST_USER_ID || 999),
-      name: process.env.NEXT_PUBLIC_TEST_USER_NAME || "Utilisateur Test",
-      email: process.env.NEXT_PUBLIC_TEST_USER_EMAIL || "test@example.com",
-      role: (process.env.NEXT_PUBLIC_TEST_USER_ROLE as "admin" | "conseiller") || "conseiller",
-    };
-  } else {
+  if (!user) {
     const cookieStore = await cookies();
     const token = cookieStore.get("authToken")?.value;
 

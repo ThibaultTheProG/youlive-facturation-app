@@ -3,6 +3,7 @@ import { Contact, ContactApi } from "@/lib/types";
 import { NextResponse } from "next/server";
 import { ApimoError, fetchApimoAll } from "@/utils/apimo";
 import { memeTexte, runChunked } from "@/utils/sync";
+import { requireCronOrAdmin } from "@/lib/apiAuth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -23,7 +24,10 @@ function mapApiContact(apiContact: ContactApi): Contact {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireCronOrAdmin(request);
+  if ("error" in auth) return auth.error;
+
   const debut = Date.now();
   try {
     // Contacts effectivement rattachés à un contrat : seuls ceux-là nous intéressent

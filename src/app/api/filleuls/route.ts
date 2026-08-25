@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { requireSelfOrAdmin } from "@/lib/apiAuth";
 
 export async function GET(req: Request) {
   try {
@@ -15,6 +16,9 @@ export async function GET(req: Request) {
         { status: 400 }
       );
     }
+
+    const auth = await requireSelfOrAdmin(conseillerId);
+    if ("error" in auth) return auth.error;
 
     // Déterminer l'année à consulter (par défaut: année en cours)
     const annee = anneeParam ? Number(anneeParam) : new Date().getFullYear();

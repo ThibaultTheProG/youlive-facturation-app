@@ -13,26 +13,35 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-export async function sendPasswordEmail(email: string, password: string, prenom: string, nom: string) {
+/**
+ * Email d'invitation : ne contient aucun mot de passe, uniquement un lien signé
+ * valable 48h vers `/definir-mot-de-passe`. Remplace l'ancien
+ * `sendPasswordEmail`, qui envoyait le mot de passe en clair.
+ */
+export async function sendInvitationEmail(
+  email: string,
+  lien: string,
+  prenom: string,
+  nom: string
+) {
   try {
     await transporter.sendMail({
       from: `"Youlive" <${process.env.SMTP_SERVER_USERNAME}>`,
       to: email,
-      subject: 'Tes identifiants de connexion sont disponibles',
+      subject: 'Active ton espace de facturation Youlive',
       html: `
         <h1>Bienvenue ${prenom} ${nom} !</h1>
-        <p>Nous t'avons attribué un mot de passe pour accéder à ton espace de factures en ligne pour le paiement et le suivi de tes commissions.</p>
-        <p>Tu pourras également suivre l'évolution de ton chiffre d'affaires et celui des conseillers que tu auras recrutés.</p>
-        <p>Voici tes identifiants de connexion :</p>
-        <p><strong>Email :</strong> ${email}</p>
-        <p><strong>Mot de passe :</strong> ${password}</p>
-        <p>Pour des raisons de sécurité, nous te recommandons de changer ton mot de passe lors de ta première connexion.</p>
-        <p>Merci de te connecter ici : <a href="${process.env.NEXT_PUBLIC_BASE_URL}">${process.env.NEXT_PUBLIC_BASE_URL}</a></p>
+        <p>Ton espace de factures en ligne est prêt : tu pourras y suivre le paiement de tes commissions, l'évolution de ton chiffre d'affaires et celui des conseillers que tu auras recrutés.</p>
+        <p>Pour l'activer, choisis ton mot de passe en cliquant sur le lien ci-dessous :</p>
+        <p><a href="${lien}" style="display:inline-block;padding:12px 20px;background:#f97316;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold;">Définir mon mot de passe</a></p>
+        <p>Ce lien est personnel et valable <strong>48 heures</strong>. Il ne fonctionnera qu'une seule fois.</p>
+        <p>Tu te connecteras ensuite avec ton adresse email : <strong>${email}</strong></p>
+        <p style="color:#666;font-size:13px;">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br>${lien}</p>
       `,
     });
     return true;
   } catch (error) {
-    console.error('Erreur lors de l\'envoi de l\'email :', error);
+    console.error('Erreur lors de l\'envoi de l\'email d\'invitation :', error);
     return false;
   }
-} 
+}

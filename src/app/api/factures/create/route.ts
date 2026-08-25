@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { requireCronOrAdmin } from "@/lib/apiAuth";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { PrismaClient } from "@prisma/client";
 import { RelationContrat } from "@/lib/types.js";
@@ -24,6 +25,9 @@ interface EmailNotification {
 }
 
 export async function GET(request: Request) {
+  const auth = await requireCronOrAdmin(request);
+  if ("error" in auth) return auth.error;
+
   console.log("🚀 Requête reçue :", request.url);
 
   try {

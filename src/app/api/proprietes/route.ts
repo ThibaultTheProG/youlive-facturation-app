@@ -3,11 +3,15 @@ import { Property } from "@/lib/types";
 import { NextResponse } from "next/server";
 import { ApimoError, fetchApimoAll } from "@/utils/apimo";
 import { memeTexte, runChunked } from "@/utils/sync";
+import { requireCronOrAdmin } from "@/lib/apiAuth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireCronOrAdmin(request);
+  if ("error" in auth) return auth.error;
+
   const debut = Date.now();
   try {
     // Les deux statuts sont récupérés en parallèle, pagination déroulée

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { ApimoError, fetchApimoAll } from "@/utils/apimo";
 import { memeTexte, runChunked } from "@/utils/sync";
+import { requireCronOrAdmin, requireSelfOrAdmin } from "@/lib/apiAuth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -17,7 +18,10 @@ type ConseillerInput = {
   partners?: Array<{ reference: string }>;
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireCronOrAdmin(request);
+  if ("error" in auth) return auth.error;
+
   const debut = Date.now();
   try {
     const conseillers = await fetchApimoAll<ConseillerInput>("users", "users");
@@ -193,10 +197,39 @@ export async function GET() {
   }
 }
 
+/**
+ * Champs qu'un conseiller a le droit de modifier sur sa propre fiche.
+ * Tout le reste (rôle, rétrocession, CA, type de contrat, auto_parrain,
+ * parrainages...) pilote le calcul des factures et reste réservé à l'admin :
+ * sans cette liste blanche, le `...conseillerData` passé tel quel à Prisma
+ * permettait à n'importe quel conseiller de s'attribuer `role: "admin"` ou un
+ * taux de rétrocession arbitraire.
+ */
+const CHAMPS_CONSEILLER = [
+  "adresse",
+  "tva",
+  "taux_tva",
+  "nom_societe_facture",
+  "siren_facture",
+  "adresse_facture",
+] as const;
+
 export async function PUT(req: Request) {
   try {
     const data = await req.json();
-    const { id, parrain_id, niveau2_id, niveau3_id, ...conseillerData } = data;
+    const { id, parrain_id, niveau2_id, niveau3_id, ...champsRecus } = data;
+
+    const auth = await requireSelfOrAdmin(Number(id));
+    if ("error" in auth) return auth.error;
+    const estAdmin = auth.user.role === "admin";
+
+    const conseillerData = estAdmin
+      ? champsRecus
+      : Object.fromEntries(
+          Object.entries(champsRecus).filter(([cle]) =>
+            (CHAMPS_CONSEILLER as readonly string[]).includes(cle)
+          )
+        );
 
     // Ajout de logs pour déboguer
     console.log("Données reçues:", {
@@ -238,7 +271,11 @@ export async function PUT(req: Request) {
       );
     }
 
-    // Gestion des parrainages
+    // Gestion des parrainages — réservée à l'admin.
+    // Le formulaire conseiller (`/conseiller/compte`) n'envoie aucun `parrain_id` :
+    // exécuter ce bloc pour lui remettait les 3 niveaux de parrainage à null,
+    // c'est-à-dire effaçait son arbre de parrainage à chaque enregistrement.
+    if (estAdmin) {
     try {
       const existingParrainage = await prisma.parrainages.findFirst({
         where: { user_id: Number(id) },
@@ -285,6 +322,7 @@ export async function PUT(req: Request) {
         },
         { status: 500 }
       );
+    }
     }
 
     return NextResponse.json({

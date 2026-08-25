@@ -13,7 +13,6 @@ import {
   CardFooter 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   Popover,
@@ -35,11 +34,7 @@ const fetchConseillers = async (url: string): Promise<Conseiller[]> => {
 export default function FormInscription() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    conseillerId: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const [conseillerId, setConseillerId] = useState("");
 
   // SWR gère le chargement et le cache : pas d'effet ni d'état de chargement
   // à piloter à la main.
@@ -55,58 +50,42 @@ export default function FormInscription() {
   );
 
   const handleSelectConseiller = async (val: string) => {
-    setFormData({
-      ...formData,
-      conseillerId: val,
-    });
+    setConseillerId(val);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
-
+  // L'admin ne saisit plus de mot de passe : le conseiller reçoit un lien
+  // d'invitation et choisit lui-même le sien (cf. `/api/auth/invitation`).
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas");
-      return;
-    }
 
-    if (formData.password.length < 6) {
-      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+    if (!conseillerId) {
+      toast.error("Sélectionnez un conseiller");
       return;
     }
 
     setSubmitting(true);
-    
+
     try {
-      const response = await fetch("/api/assignPassword", {
+      const response = await fetch("/api/auth/invitation", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          conseillerId: formData.conseillerId,
-          password: formData.password,
-        }),
+        body: JSON.stringify({ conseillerId }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        toast.success("Mot de passe assigné avec succès");
+        toast.success(data.message || "Invitation envoyée");
+        setConseillerId("");
         router.push("/admin/inscription");
       } else {
         toast.error(data.error || "Une erreur est survenue");
       }
     } catch (error) {
-      console.error("Erreur lors de l'assignation du mot de passe :", error);
-      toast.error("Une erreur est survenue lors de l'assignation du mot de passe");
+      console.error("Erreur lors de l'envoi de l'invitation :", error);
+      toast.error("Une erreur est survenue lors de l'envoi de l'invitation");
     } finally {
       setSubmitting(false);
     }
@@ -117,7 +96,7 @@ export default function FormInscription() {
       <CardHeader className="px-6 pt-6 pb-4 border-b border-gray-100">
         <CardTitle className="text-base font-semibold text-gray-900">Nouveau conseiller</CardTitle>
         <CardDescription className="text-sm text-gray-500">
-          Sélectionnez un conseiller et définissez son mot de passe
+          Sélectionnez un conseiller pour lui envoyer son invitation
         </CardDescription>
       </CardHeader>
 
@@ -135,17 +114,17 @@ export default function FormInscription() {
                   disabled={loading}
                   className={cn(
                     "w-full justify-between",
-                    !formData.conseillerId && "text-muted-foreground"
+                    !conseillerId && "text-muted-foreground"
                   )}
                 >
-                  {formData.conseillerId ? (
+                  {conseillerId ? (
                     conseillers.find(
-                      (conseiller) => conseiller.id.toString() === formData.conseillerId
+                      (conseiller) => conseiller.id.toString() === conseillerId
                     )
                       ? `${conseillers.find(
-                          (conseiller) => conseiller.id.toString() === formData.conseillerId
+                          (conseiller) => conseiller.id.toString() === conseillerId
                         )?.prenom} ${conseillers.find(
-                          (conseiller) => conseiller.id.toString() === formData.conseillerId
+                          (conseiller) => conseiller.id.toString() === conseillerId
                         )?.nom}`
                       : "Sélectionner un conseiller"
                   ) : (
@@ -177,7 +156,7 @@ export default function FormInscription() {
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                formData.conseillerId === conseiller.id.toString()
+                                conseillerId === conseiller.id.toString()
                                   ? "opacity-100"
                                   : "opacity-0"
                               )}
@@ -193,50 +172,24 @@ export default function FormInscription() {
             </Popover>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password" className="font-medium">
-              Mot de passe
-            </Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              className="w-full"
-              placeholder="Minimum 6 caractères"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword" className="font-medium">
-              Confirmer le mot de passe
-            </Label>
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={handleInputChange}
-              className="w-full"
-              placeholder="Confirmer le mot de passe"
-              required
-            />
-          </div>
+          <p className="text-sm text-gray-500">
+            Le conseiller recevra un email l&apos;invitant à définir lui-même son
+            mot de passe. Le lien est valable 48 heures et ne fonctionne
+            qu&apos;une seule fois.
+          </p>
 
           <Button
             type="submit"
             className="w-full bg-orange-500 hover:bg-orange-600 transition-colors"
-            disabled={submitting || !formData.conseillerId || !formData.password}
+            disabled={submitting || !conseillerId}
           >
             {submitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Inscription en cours...
+                Envoi en cours...
               </>
             ) : (
-              "Inscrire le conseiller"
+              "Envoyer l'invitation"
             )}
           </Button>
         </form>

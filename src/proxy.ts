@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/auth";
+import { isAuthDisabled } from "@/lib/devAuth";
 
 export async function proxy(request: NextRequest) {
   // Vérifier si c'est une ressource statique
@@ -15,12 +16,17 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const isAuthDisabled = process.env.NEXT_PUBLIC_AUTH_DISABLED === "true";
-
-  if (isAuthDisabled) {
+  if (isAuthDisabled()) {
     const response = NextResponse.next();
     response.cookies.delete("authToken");
     return response;
+  }
+
+  // Route publique : activation de compte via le lien d'invitation reçu par
+  // email. C'est le jeton signé de l'URL qui authentifie la demande, pas une
+  // session (cf. `src/lib/passwordSetup.ts`).
+  if (pathname === "/definir-mot-de-passe") {
+    return NextResponse.next();
   }
 
   const token = request.cookies.get("authToken")?.value;

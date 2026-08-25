@@ -36,13 +36,39 @@ The Next.js middleware is split across two files:
 - `src/proxy.ts` — the actual middleware logic (auth check, role-based redirects)
 - `middleware.config.mjs` — exports the `config` with `matcher` patterns
 
-Auth is handled in `src/lib/auth.ts`. The `NEXT_PUBLIC_AUTH_DISABLED=true` env var disables auth entirely (for dev/testing).
+Auth is handled in `src/lib/auth.ts`. Le bypass `NEXT_PUBLIC_AUTH_DISABLED=true` (dev/test) passe **exclusivement** par `src/lib/devAuth.ts` (`isAuthDisabled()` / `devUser()`), qui le refuse dès que `NODE_ENV === "production"` — la variable étant `NEXT_PUBLIC_`, elle est lisible dans le bundle client. Ne jamais relire `process.env.NEXT_PUBLIC_AUTH_DISABLED` ailleurs (middleware, layouts, AuthProvider et gardes API passent tous par ce helper).
+
+En mode bypass, le middleware n'applique aucun contrôle de rôle sur les pages, mais les gardes API appliquent celui de `NEXT_PUBLIC_TEST_USER_ROLE` : travailler dans `/admin` avec `NEXT_PUBLIC_TEST_USER_ROLE=conseiller` donne des `403` sur les routes admin. Basculer la variable (et `NEXT_PUBLIC_TEST_USER_ID`) selon l'espace testé — le message d'erreur 403 le rappelle explicitement en dev.
+
+### Protection des routes API (obligatoire)
+Le middleware exclut `/api` de son matcher : **aucune route API n'est protégée par défaut**. Chaque handler doit appeler une garde de `src/lib/apiAuth.ts` en première instruction :
+- `requireUser()` — session valide
+- `requireAdmin()` — rôle `admin`
+- `requireSelfOrAdmin(targetId)` — admin, ou propriétaire de la ressource
+- `requireCronOrAdmin(request)` — `Authorization: Bearer $CRON_SECRET` (envoyé par les crons Vercel) ou session admin
+
+`CRON_SECRET` doit être défini côté Vercel, sinon les 5 crons nocturnes reçoivent un `401` et toute la chaîne de synchronisation/facturation s'arrête silencieusement.
+
+Sur `PUT /api/conseillers`, le corps de requête n'est jamais passé tel quel à Prisma pour un conseiller : `CHAMPS_CONSEILLER` liste les seuls champs qu'il peut modifier sur sa fiche (mass assignment → `role: "admin"`), et le bloc parrainages est réservé à l'admin (le formulaire conseiller n'envoie pas de `parrain_id` et effaçait l'arbre de parrainage).
+
+### Activation de compte (mot de passe)
+L'admin ne saisit jamais de mot de passe. `POST /api/auth/invitation` (admin) envoie au conseiller un lien signé vers `/definir-mot-de-passe`, où il choisit le sien via `POST /api/auth/set-password`. Aucun secret ne transite par email.
+
+Le jeton (`src/lib/passwordSetup.ts`) est un JWT HS256 d'audience `set-password`, valable 48h, dont le payload embarque `k` = empreinte SHA-256 du hash bcrypt au moment de l'émission. À la vérification, l'empreinte est recomparée au hash en base : **usage unique sans table dédiée** (dès que le mot de passe change, tous les jetons émis avant deviennent invalides). Ne pas remplacer par un jeton opaque sans prévoir la migration Prisma correspondante.
+
+`/definir-mot-de-passe` et `POST|GET /api/auth/set-password` sont publics **par construction** : c'est le jeton de l'URL qui authentifie. L'exception est déclarée explicitement dans `src/proxy.ts`.
+
+Politique de mot de passe : `src/lib/passwordPolicy.ts` (`LONGUEUR_MIN_MOT_DE_PASSE = 8`), module volontairement sans dépendance serveur pour être importable par les formulaires client — `src/lib/password.ts` tire `bcryptjs`. La validation du formulaire de connexion reste à 6 : la relever bloquerait les comptes existants dont le mot de passe fait 6 ou 7 caractères.
+
+Coût bcrypt : 12 (`BCRYPT_COST` dans `src/lib/password.ts`). Le facteur de travail étant stocké dans le hash, les mots de passe existants en coût 10 continuent de fonctionner et sont réhachés en 12 au prochain changement.
+
+`verifyToken` valide la forme du payload (`estPayloadValide` : id entier positif, rôle `admin`/`conseiller`, name/email en `string`) et épingle `algorithms: ["HS256"]`. Les appelants peuvent exploiter son retour tel quel — ne pas réintroduire de contrôles de forme en aval.
 
 ### Two Application Areas
 - `/admin` — admin only: agent settings (`parametres`), invoice dashboard (`suiviFactures`), agent registration (`inscription`)
 - `/conseiller` — conseiller only: invoices (`factures`), sponsored agents (`filleuls`), account settings (`compte`)
 
-Public routes: `/login`, `/factures/[id]/pdf` (PDF viewer)
+Routes publiques : `/login` et `/definir-mot-de-passe` (lien d'invitation). `/factures/[id]/pdf` (PDF viewer) est bien couvert par le matcher du middleware et exige une session ; l'API qu'il consomme (`/api/factures/[id]`) vérifie en plus que la facture appartient au demandeur.
 
 ### Invoice Generation (Core Business Logic)
 Toutes les routes de synchronisation partagent le même socle : `src/utils/apimo.ts` (`fetchApimoAll`, pagination) et `src/utils/sync.ts` (`runChunked`, `memeMontant`, `memeJour`, `memeTexte`). Le schéma imposé est **précharger en quelques SELECT → diff en mémoire → n'écrire que le delta**, jamais une requête Prisma par élément Apimo (cf. Known pitfalls).
@@ -96,6 +122,6 @@ Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `
 - `prisma.config.ts` — Prisma config pointing to `prisma/schema.prisma`
 
 ### Environment Variables
-Required: `DATABASE_URL`, `JWT_SECRET`, `SMTP_SERVER_HOST`, `SMTP_SERVER_PORT`, `SMTP_SERVER_USERNAME`, `SMTP_SERVER_PASSWORD`, `SMTP_FROM_EMAIL`, `NEXT_PUBLIC_BASE_URL`
+Required: `DATABASE_URL`, `JWT_SECRET`, `CRON_SECRET`, `SMTP_SERVER_HOST`, `SMTP_SERVER_PORT`, `SMTP_SERVER_USERNAME`, `SMTP_SERVER_PASSWORD`, `SMTP_FROM_EMAIL`, `NEXT_PUBLIC_BASE_URL`
 
 Optional: `NEXT_PUBLIC_AUTH_DISABLED=true` to bypass authentication

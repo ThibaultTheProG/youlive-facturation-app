@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User, AuthContextType } from "@/lib/types";
+import { devUser } from "@/lib/devAuth";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -12,18 +13,7 @@ export const AuthProvider = ({
   children: React.ReactNode;
   initialUser?: User | null;
 }) => {
-  const isAuthDisabled = process.env.NEXT_PUBLIC_AUTH_DISABLED === "true";
-
-  const testUser: User | null = isAuthDisabled
-    ? {
-        id: Number(process.env.NEXT_PUBLIC_TEST_USER_ID || 999),
-        name: process.env.NEXT_PUBLIC_TEST_USER_NAME || "Utilisateur Test",
-        email: process.env.NEXT_PUBLIC_TEST_USER_EMAIL || "test@example.com",
-        role:
-          (process.env.NEXT_PUBLIC_TEST_USER_ROLE as "admin" | "conseiller") ||
-          "conseiller",
-      }
-    : null;
+  const testUser = devUser() as User | null;
 
   const [user, setUser] = useState<User | null>(initialUser || testUser);
   const [loading, setLoading] = useState<boolean>(!initialUser && !testUser);

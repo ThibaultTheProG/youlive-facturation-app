@@ -1,36 +1,31 @@
+import bcryptjs from "bcryptjs";
+
+/**
+ * Hachage / vérification de mot de passe — **serveur uniquement**.
+ *
+ * Ces fonctions passaient auparavant par `POST /api/auth/hash` dès qu'elles
+ * étaient appelées côté navigateur. Cette route était publique et exposait un
+ * oracle bcrypt (hash + compare sans authentification) : elle a été supprimée.
+ * Aucun composant client n'utilisait cette branche — seules les routes
+ * `auth/login`, `auth/invitation`, `auth/set-password` et `change-password`
+ * importent ce module.
+ */
+/**
+ * Coût bcrypt. Passé de 10 à 12 : le facteur de travail est stocké dans le hash
+ * lui-même, donc `compareSync` continue de valider sans migration les mots de
+ * passe déjà hachés en coût 10 — ils seront réhachés en 12 au prochain
+ * changement de mot de passe.
+ */
+const BCRYPT_COST = 12;
+
 export async function hashPassword(password: string): Promise<string> {
-  // Vérifier si nous sommes côté serveur (pas de window)
-  if (typeof window === 'undefined') {
-    // Côté serveur: utiliser bcryptjs directement
-    const bcryptjs = await import('bcryptjs');
-    const salt = bcryptjs.genSaltSync(10);
-    return bcryptjs.hashSync(password, salt);
-  } else {
-    // Côté client: utiliser l'API
-    const response = await fetch('/api/auth/hash', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, action: 'hash' })
-    });
-    const data = await response.json();
-    return data.hash;
-  }
+  const salt = bcryptjs.genSaltSync(BCRYPT_COST);
+  return bcryptjs.hashSync(password, salt);
 }
-  
-export async function comparePassword(password: string, hash: string): Promise<boolean> {
-  // Vérifier si nous sommes côté serveur (pas de window)
-  if (typeof window === 'undefined') {
-    // Côté serveur: utiliser bcryptjs directement
-    const bcryptjs = await import('bcryptjs');
-    return bcryptjs.compareSync(password, hash);
-  } else {
-    // Côté client: utiliser l'API
-    const response = await fetch('/api/auth/hash', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, hash, action: 'compare' })
-    });
-    const data = await response.json();
-    return data.isValid;
-  }
+
+export async function comparePassword(
+  password: string,
+  hash: string
+): Promise<boolean> {
+  return bcryptjs.compareSync(password, hash);
 }

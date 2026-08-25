@@ -4,6 +4,10 @@ import { Lock } from "lucide-react";
 import InputPassword from "@/components/uiCustom/inputPassword";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  LONGUEUR_MIN_MOT_DE_PASSE,
+  MESSAGE_LONGUEUR_MIN,
+} from "@/lib/passwordPolicy";
 
   export default function ChangeMDP() {
     const [password, setPassword] = useState("");
@@ -17,6 +21,11 @@ import { Button } from "@/components/ui/button";
       setErrorMessage("");
       setSuccessMessage("");
   
+      if (password.length < LONGUEUR_MIN_MOT_DE_PASSE) {
+        setErrorMessage(MESSAGE_LONGUEUR_MIN);
+        return;
+      }
+
       if (password !== confirmPassword) {
         setErrorMessage("Les mots de passe ne correspondent pas.");
         return;

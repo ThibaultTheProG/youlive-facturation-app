@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { requireSelfOrAdmin } from "@/lib/apiAuth";
 
 /**
  * GET /api/conseiller/annees?id=X
@@ -25,6 +26,9 @@ export async function GET(request: Request) {
         { status: 400 }
       );
     }
+
+    const auth = await requireSelfOrAdmin(id);
+    if ("error" in auth) return auth.error;
 
     // Récupérer toutes les années disponibles pour ce conseiller
     const annees = await prisma.historique_ca_annuel.findMany({

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { FactureDetaillee, Contact } from "@/lib/types";
+import { requireSelfOrAdmin } from "@/lib/apiAuth";
 
 export async function GET(request: Request) {
   try {
@@ -50,6 +51,11 @@ export async function GET(request: Request) {
         { status: 404 }
       );
     }
+
+    // Contrôle de propriété : sans ça, incrémenter l'ID dans l'URL suffisait à
+    // lire la facture de n'importe quel conseiller (identité, SIREN, montants).
+    const auth = await requireSelfOrAdmin(result.user_id);
+    if ("error" in auth) return auth.error;
 
     // Récupérer l'utilisateur associé à la facture dans une requête séparée
     const utilisateur = result.user_id 
@@ -224,6 +230,32 @@ export async function PUT(request: Request) {
       apply_tva,
       taux_tva,
     } = await request.json();
+
+    const proprietaire = await prisma.factures.findUnique({
+      where: { id: factureId },
+      select: { user_id: true },
+    });
+
+    if (!proprietaire) {
+      return NextResponse.json(
+        { error: "Facture introuvable" },
+        { status: 404 }
+      );
+    }
+
+    const auth = await requireSelfOrAdmin(proprietaire.user_id);
+    if ("error" in auth) return auth.error;
+    const estAdmin = auth.user.role === "admin";
+
+    // Le statut de paiement et le paramétrage TVA de la facture sont pilotés
+    // depuis le back-office : un conseiller ne peut pas se déclarer payé ni
+    // modifier la TVA appliquée à sa propre facture.
+    if (!estAdmin && (statut_paiement !== undefined || apply_tva !== undefined || taux_tva !== undefined)) {
+      return NextResponse.json(
+        { error: "Accès refusé" },
+        { status: 403 }
+      );
+    }
 
 
       console.log(statut_paiement, numero, created_at, apporteur, apporteur_amount);

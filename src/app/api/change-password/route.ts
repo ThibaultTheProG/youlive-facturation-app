@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
+import {
+  LONGUEUR_MIN_MOT_DE_PASSE,
+  MESSAGE_LONGUEUR_MIN,
+} from "@/lib/passwordPolicy";
 import { cookies } from "next/headers";
 import prisma from "@/lib/db";
 
@@ -10,9 +14,13 @@ export async function POST(request: Request) {
   try {
     const { password } = await request.json();
 
-    if (!password || password.length < 6) {
+    if (
+      !password ||
+      typeof password !== "string" ||
+      password.length < LONGUEUR_MIN_MOT_DE_PASSE
+    ) {
       return NextResponse.json(
-        { error: "Le mot de passe doit contenir au moins 6 caractères." },
+        { error: MESSAGE_LONGUEUR_MIN },
         { status: 400 }
       );
     }

@@ -7,13 +7,17 @@ import { calculRetrocession } from "@/utils/calculs";
 import { round2 } from "@/utils/decoupageSeuil";
 import { ApimoError, fetchApimoAll } from "@/utils/apimo";
 import { memeJour, memeMontant, runChunked } from "@/utils/sync";
+import { requireCronOrAdmin } from "@/lib/apiAuth";
 
 export const dynamic = "force-dynamic";
 // Cron Vercel : la route doit pouvoir dépasser la durée par défaut si un gros
 // rattrapage est nécessaire (ex. première exécution après plusieurs jours d'arrêt).
 export const maxDuration = 300;
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireCronOrAdmin(request);
+  if ("error" in auth) return auth.error;
+
   const debut = Date.now();
   try {
     // Vérifier si une réinitialisation annuelle est nécessaire

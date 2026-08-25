@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import prisma from "@/lib/db";
 import { computeMontantsFacture } from "@/utils/montantsFacture";
 import { buildFactureAdminEmail } from "@/lib/emailFacture";
+import { requireSelfOrAdmin } from "@/lib/apiAuth";
 
 export async function POST(req: Request) {
   try {
@@ -21,6 +22,11 @@ export async function POST(req: Request) {
     if (!facture) {
       return NextResponse.json({ error: "Facture introuvable" }, { status: 404 });
     }
+
+    // Un conseiller ne peut déclencher l'envoi que de ses propres factures :
+    // la route expédie un email (vers l'admin) et était appelable sans auth.
+    const auth = await requireSelfOrAdmin(facture.user_id);
+    if ("error" in auth) return auth.error;
 
     // Générer l'URL de la facture
     const factureUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/factures/${factureId}/pdf`;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { round2 } from "@/utils/decoupageSeuil";
+import { requireAdmin } from "@/lib/apiAuth";
 
 /**
  * Création d'un avoir / ajustement « libre » (régularisation manuelle).
@@ -17,6 +18,9 @@ import { round2 } from "@/utils/decoupageSeuil";
  * et envoie depuis l'app via le flux existant.
  */
 export async function POST(request: Request) {
+  const auth = await requireAdmin();
+  if ("error" in auth) return auth.error;
+
   try {
     const body = await request.json();
     const {

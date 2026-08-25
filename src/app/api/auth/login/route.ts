@@ -64,6 +64,12 @@ export async function POST(request: Request) {
     response.cookies.set("authToken", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      // Explicite plutôt que de dépendre du défaut du framework.
+      // `lax` et non `strict` : les emails de facture contiennent un lien vers
+      // `/factures/[id]/pdf` — en `strict` le cookie ne serait pas envoyé lors
+      // de ce clic depuis la boîte mail et l'utilisateur serait renvoyé au
+      // login. `lax` conserve le blocage des requêtes mutantes cross-site.
+      sameSite: "lax",
       path: "/",
       maxAge: 60 * 60, // 1 heure
     });
