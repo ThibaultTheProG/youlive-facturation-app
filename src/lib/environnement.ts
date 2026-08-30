@@ -20,6 +20,34 @@ export function estProduction(): boolean {
   return process.env.VERCEL_ENV === "production";
 }
 
+/**
+ * Racine des URL composées dans les emails (lien d'activation, lien vers le
+ * PDF d'une facture, lien vers l'espace personnel). Toujours sans slash final :
+ * le code appelant concatène `/chemin`, et `https://x//chemin` est interprété
+ * par les navigateurs comme une URL *protocol-relative* — le lien serait mort.
+ *
+ * Ordre de résolution :
+ *  1. `NEXT_PUBLIC_BASE_URL` — la production la définit, elle gagne toujours ;
+ *  2. `VERCEL_BRANCH_URL` — alias stable de la branche déployée, fourni par
+ *     Vercel à l'exécution. C'est ce qui dispense `staging` de toute variable
+ *     d'URL. Ne pas utiliser `VERCEL_URL` en premier : elle désigne un
+ *     déploiement précis et change à chaque push ;
+ *  3. `VERCEL_URL` — dernier recours sur Vercel si l'alias de branche manque ;
+ *  4. localhost.
+ *
+ * Lue à l'exécution et non inlinée au build (contrairement au préfixe
+ * `NEXT_PUBLIC_`), donc un changement d'adresse ne demande pas de redéploiement.
+ */
+export function baseUrl(): string {
+  const explicite = process.env.NEXT_PUBLIC_BASE_URL;
+  if (explicite) return explicite.replace(/\/+$/, "");
+
+  const alias = process.env.VERCEL_BRANCH_URL || process.env.VERCEL_URL;
+  if (alias) return `https://${alias.replace(/\/+$/, "")}`;
+
+  return "http://localhost:3000";
+}
+
 /** Adresse recevant tout le courrier hors production. */
 function adresseDeroutage(): string {
   return (

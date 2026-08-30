@@ -5,7 +5,7 @@ import { requireCronOrAdmin } from "@/lib/apiAuth";
 import { PrismaClient } from "@prisma/client";
 import { RelationContrat } from "@/lib/types.js";
 import nodemailer from "nodemailer";
-import { destinataires, sujet } from "@/lib/environnement";
+import { destinataires, sujet, baseUrl } from "@/lib/environnement";
 import { decoupageSeuil, round2 } from "@/utils/decoupageSeuil";
 import { getCAForYear, getHistoriqueForYear } from "@/utils/historiqueCA";
 
@@ -571,7 +571,7 @@ async function sendEmailNotification(userId: number, factureType: string, montan
             <li><strong>Type :</strong> ${factureType}</li>
             <li><strong>Montant :</strong> ${montant.toLocaleString()} €</li>
           </ul>
-          <p>Vous pouvez consulter cette facture dans votre espace personnel en cliquant ici : ${process.env.NEXT_PUBLIC_BASE_URL}</p>
+          <p>Vous pouvez consulter cette facture dans votre espace personnel en cliquant ici : ${baseUrl()}</p>
           <p>Cordialement,<br>L'équipe YouLive</p>
         </div>
       `

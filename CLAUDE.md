@@ -62,6 +62,12 @@ l'environnement. Ne jamais relire `VERCEL_ENV` ailleurs (même règle que `devAu
   sans quoi un email dérouté est indiscernable d'un email correctement adressé.
 - `emailsAdminFactures()` — `FACTURES_ADMIN_EMAILS` (liste séparée par des virgules), à défaut
   `SMTP_TO_EMAIL`. Les adresses des destinataires admin ne sont plus en dur dans le code.
+- `baseUrl()` — racine des liens composés dans les emails, **sans slash final**. Prend
+  `NEXT_PUBLIC_BASE_URL` si définie (la production), sinon `VERCEL_BRANCH_URL` — l'alias stable
+  de la branche déployée, ce qui dispense `staging` de toute variable d'URL — sinon localhost.
+  Ne jamais composer une URL d'email à partir de `NEXT_PUBLIC_BASE_URL` directement : un slash
+  final donnerait `https://x//chemin`, que les navigateurs lisent comme une URL
+  *protocol-relative*, et `VERCEL_URL` désigne un déploiement précis qui change à chaque push.
 
 Le défaut est délibérément sûr : il faut une production explicite pour écrire à de vraies
 personnes. **Tout nouvel envoi d'email doit passer par `destinataires()` et `sujet()`.** Les trois

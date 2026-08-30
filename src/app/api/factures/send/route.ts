@@ -4,7 +4,7 @@ import prisma from "@/lib/db";
 import { computeMontantsFacture } from "@/utils/montantsFacture";
 import { buildFactureAdminEmail } from "@/lib/emailFacture";
 import { requireSelfOrAdmin } from "@/lib/apiAuth";
-import { destinataires, sujet, emailsAdminFactures } from "@/lib/environnement";
+import { destinataires, sujet, emailsAdminFactures, baseUrl } from "@/lib/environnement";
 
 export async function POST(req: Request) {
   try {
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     if ("error" in auth) return auth.error;
 
     // Générer l'URL de la facture
-    const factureUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/factures/${factureId}/pdf`;
+    const factureUrl = `${baseUrl()}/factures/${factureId}/pdf`;
 
     const conseiller = facture.utilisateurs;
 

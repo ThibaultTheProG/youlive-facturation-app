@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { requireAdmin } from "@/lib/apiAuth";
 import { createSetupToken } from "@/lib/passwordSetup";
 import { sendInvitationEmail } from "@/lib/email";
+import { baseUrl } from "@/lib/environnement";
 
 export const runtime = "nodejs";
 
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
     }
 
     const token = await createSetupToken(id, utilisateur.motDePasse);
-    const lien = `${process.env.NEXT_PUBLIC_BASE_URL}/definir-mot-de-passe?token=${encodeURIComponent(token)}`;
+    const lien = `${baseUrl()}/definir-mot-de-passe?token=${encodeURIComponent(token)}`;
 
     const envoye = await sendInvitationEmail(
       utilisateur.email,
