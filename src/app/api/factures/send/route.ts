@@ -4,6 +4,7 @@ import prisma from "@/lib/db";
 import { computeMontantsFacture } from "@/utils/montantsFacture";
 import { buildFactureAdminEmail } from "@/lib/emailFacture";
 import { requireSelfOrAdmin } from "@/lib/apiAuth";
+import { destinataires, sujet, emailsAdminFactures } from "@/lib/environnement";
 
 export async function POST(req: Request) {
   try {
@@ -82,10 +83,10 @@ export async function POST(req: Request) {
     // Configuration de l'email
     const mailOptions = {
       from: `"Application facturation" <${process.env.SMTP_FROM_EMAIL}>`,
-      to: [process.env.SMTP_TO_EMAIL, "laura.zanetta@youlive-immobilier.fr", "thibault.tuffin@websmith.fr"]
-        .filter(Boolean)
-        .join(", "),
-      subject,
+      // Destinataires pilotés par `FACTURES_ADMIN_EMAILS` (liste séparée par des
+      // virgules), et déroutés hors production.
+      to: destinataires(emailsAdminFactures()),
+      subject: sujet(subject, emailsAdminFactures()),
       text,
       html,
     };

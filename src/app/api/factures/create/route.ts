@@ -5,6 +5,7 @@ import { requireCronOrAdmin } from "@/lib/apiAuth";
 import { PrismaClient } from "@prisma/client";
 import { RelationContrat } from "@/lib/types.js";
 import nodemailer from "nodemailer";
+import { destinataires, sujet } from "@/lib/environnement";
 import { decoupageSeuil, round2 } from "@/utils/decoupageSeuil";
 import { getCAForYear, getHistoriqueForYear } from "@/utils/historiqueCA";
 
@@ -535,10 +536,6 @@ async function createFactureRecrutement(
 // Fonction pour envoyer une notification par email
 async function sendEmailNotification(userId: number, factureType: string, montant: number) {
   try {
-    // Pour les tests, on envoie toujours à cette adresse
-    // const testEmail = "tuffinthibaultgw@gmail.com";
-    
-    // Dans un environnement de production, on récupérerait l'email du conseiller
     const user = await prisma.utilisateurs.findUnique({
       where: { id: userId },
       select: { email: true, prenom: true, nom: true }
@@ -559,8 +556,11 @@ async function sendEmailNotification(userId: number, factureType: string, montan
     // Configuration de l'email
     const mailOptions = {
       from: process.env.SMTP_FROM_EMAIL,
-      to: `${email}`,
-      subject: `Nouvelle facture ${factureType} créée`,
+      // Hors production, la notification est déroutée : ce bloc s'exécute une
+      // fois par facture créée par le cron nocturne, soit potentiellement tout
+      // le réseau de conseillers en une nuit.
+      to: destinataires([email]),
+      subject: sujet(`Nouvelle facture ${factureType} créée`, [email]),
       text: `Une nouvelle facture de type ${factureType} d'un montant de ${montant.toLocaleString()} € a été créée pour vous.`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">

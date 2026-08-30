@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { destinataires, sujet } from './environnement';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_SERVER_HOST,
@@ -27,8 +28,11 @@ export async function sendInvitationEmail(
   try {
     await transporter.sendMail({
       from: `"Youlive" <${process.env.SMTP_SERVER_USERNAME}>`,
-      to: email,
-      subject: 'Active ton espace de facturation Youlive',
+      // Hors production, l'invitation ne doit surtout pas partir au conseiller :
+      // il définirait son mot de passe dans la base de préproduction et se
+      // croirait activé côté production.
+      to: destinataires([email]),
+      subject: sujet('Active ton espace de facturation Youlive', [email]),
       html: `
         <h1>Bienvenue ${prenom} ${nom} !</h1>
         <p>Ton espace de factures en ligne est prêt : tu pourras y suivre le paiement de tes commissions, l'évolution de ton chiffre d'affaires et celui des conseillers que tu auras recrutés.</p>

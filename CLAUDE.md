@@ -35,6 +35,31 @@ DATABASE_URL="$PREPROD_DATABASE_URL" pnpm dev
 l'environnement du shell — le préfixe suffit donc. Sans lui, le serveur de dev écrit en
 production. Même logique pour toute commande Prisma.
 
+Sur Vercel, la branche `preprod` est reliée à l'environnement personnalisé **staging**.
+
+### Emails : déroutage hors production (obligatoire)
+
+`src/lib/environnement.ts` est le **point d'entrée unique** de tout comportement dépendant de
+l'environnement. Ne jamais relire `VERCEL_ENV` ailleurs (même règle que `devAuth.ts`).
+
+- `estProduction()` — vrai **uniquement** si `VERCEL_ENV === "production"`. `NODE_ENV` ne convient
+  pas : Vercel le fixe à `"production"` sur *tous* les déploiements, staging compris.
+- `destinataires(voulus)` — la liste demandée en production, l'adresse de déroutage partout
+  ailleurs (`EMAIL_REDIRECTION`, à défaut `thibault.tuffin@youlive-immobilier.fr`).
+- `sujet(sujetVoulu, voulus)` — préfixe hors production par `[staging → destinataires réels]`,
+  sans quoi un email dérouté est indiscernable d'un email correctement adressé.
+- `emailsAdminFactures()` — `FACTURES_ADMIN_EMAILS` (liste séparée par des virgules), à défaut
+  `SMTP_TO_EMAIL`. Les adresses des destinataires admin ne sont plus en dur dans le code.
+
+Le défaut est délibérément sûr : il faut une production explicite pour écrire à de vraies
+personnes. **Tout nouvel envoi d'email doit passer par `destinataires()` et `sujet()`.** Les trois
+points d'envoi existants sont `src/lib/email.ts` (invitation, → le conseiller),
+`/api/factures/create` (notification de facture, → le conseiller, une par facture du cron nocturne)
+et `/api/factures/send` (→ l'administration).
+
+`JWT_SECRET` et `CRON_SECRET` **doivent différer entre staging et production** : partagés, un
+cookie `authToken` ou un jeton `set-password` émis par staging serait valide en production.
+
 ## Cette base est partagée avec une seconde application
 
 L'application **avis de valeur** (`../avis_de_valeur/avisdevaleur`) vit dans la même base
@@ -180,4 +205,10 @@ Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `
 ### Environment Variables
 Required: `DATABASE_URL`, `JWT_SECRET`, `CRON_SECRET`, `SMTP_SERVER_HOST`, `SMTP_SERVER_PORT`, `SMTP_SERVER_USERNAME`, `SMTP_SERVER_PASSWORD`, `SMTP_FROM_EMAIL`, `NEXT_PUBLIC_BASE_URL`
 
-Optional: `NEXT_PUBLIC_AUTH_DISABLED=true` to bypass authentication
+Optional: `NEXT_PUBLIC_AUTH_DISABLED=true` to bypass authentication (sans effet sur Vercel, où
+`NODE_ENV` vaut toujours `production`) · `PREPROD_DATABASE_URL` (branche Neon Preproduction, cf.
+« Travailler en préproduction ») · `FACTURES_ADMIN_EMAILS` (destinataires admin, liste séparée par
+des virgules ; à défaut `SMTP_TO_EMAIL`) · `EMAIL_REDIRECTION` (adresse recevant tout le courrier
+hors production ; à défaut `thibault.tuffin@youlive-immobilier.fr`)
+
+`VERCEL_ENV` est fourni par Vercel et ne se définit pas à la main.
