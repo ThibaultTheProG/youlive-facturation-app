@@ -87,7 +87,7 @@ export async function GET(request: Request) {
       idapimo: conseiller.idapimo || 0,
       tva: conseiller.tva || false,
       typecontrat: conseiller.typecontrat || "",
-      siren: conseiller.siren ? parseInt(conseiller.siren) : undefined,
+      siren: conseiller.siren || "",
       chiffre_affaires: chiffre_affaires, // Utilise le CA de l'année demandée
       retrocession: retrocession, // Utilise la rétrocession de l'année demandée
       auto_parrain: conseiller.auto_parrain || "",

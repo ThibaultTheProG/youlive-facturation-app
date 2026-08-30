@@ -9,7 +9,7 @@ export interface Conseiller {
   idapimo: number;
   tva?: boolean;
   typecontrat?: string;
-  siren?: number;
+  siren?: string;
   chiffre_affaires: number;
   retrocession?: number;
   parrain_id?: number;

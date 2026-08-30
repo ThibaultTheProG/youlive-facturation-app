@@ -161,7 +161,7 @@ export async function GET(request: Request) {
         telephone: utilisateur?.telephone || '',
         adresse: utilisateur?.adresse || '',
         mobile: utilisateur?.mobile || '',
-        siren: Number(utilisateur?.siren || 0),
+        siren: utilisateur?.siren || '',
         tva: utilisateur?.tva || false,
         chiffre_affaires: Number(utilisateur?.chiffre_affaires || 0),
         retrocession: Number(utilisateur?.retrocession || 0),

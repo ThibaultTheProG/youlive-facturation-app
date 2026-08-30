@@ -110,7 +110,7 @@ export default function FormParams({ user }: { user: User }) {
         telephone: conseiller?.telephone,
         adresse: formData.get("localisation")?.toString() || conseiller?.adresse || null,
 
-        siren: conseiller?.siren?.toString() || null,
+        siren: conseiller?.siren || null,
         tva: formData.get("tva") === "oui",
         typecontrat: formData.get("type_contrat")?.toString() || null,
         chiffre_affaires: chiffreAffaires,

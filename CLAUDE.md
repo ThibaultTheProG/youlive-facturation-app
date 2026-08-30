@@ -21,6 +21,54 @@ npx prisma studio         # Open Prisma Studio GUI
 
 There are no automated tests.
 
+## Travailler en préproduction
+
+Le développement se fait sur la branche git `preprod` et sur la branche Neon `Preproduction`
+(`br-royal-pine-b1mmspwb`, endpoint `ep-square-lake`), dont l'URL est dans `PREPROD_DATABASE_URL`.
+Le `DATABASE_URL` du `.env` pointe, lui, toujours sur la **production** (`ep-odd-river`).
+
+```bash
+DATABASE_URL="$PREPROD_DATABASE_URL" pnpm dev
+```
+
+`src/lib/db.ts` lit `DATABASE_URL`, et Next n'écrase pas une variable déjà présente dans
+l'environnement du shell — le préfixe suffit donc. Sans lui, le serveur de dev écrit en
+production. Même logique pour toute commande Prisma.
+
+## Cette base est partagée avec une seconde application
+
+L'application **avis de valeur** (`../avis_de_valeur/avisdevaleur`) vit dans la même base
+`facturation`, sur son propre schéma `avis_de_valeur`. Elle lit `public.utilisateurs` — et rien
+d'autre de `public` — pour authentifier les conseillers, la facturation restant la source de
+vérité unique des comptes, des rôles et des mots de passe.
+
+Le contrat entre les deux applications est dans `../contrat/`, importé ci-dessous. C'est le seul
+endroit où ce que l'une doit savoir de l'autre est écrit : deux sessions Claude ne partagent ni
+conversation ni mémoire.
+
+@../contrat/UTILISATEURS.md
+@../contrat/SCHEMAS_ET_ROLES.md
+@../contrat/EVOLUTIONS.md
+
+Ce que cela impose ici, concrètement :
+
+- **Onze colonnes de `utilisateurs` sont sous contrat** (voir `UTILISATEURS.md`). En ajouter est
+  libre ; en renommer, retyper ou supprimer une casse l'autre application — y compris élargir un
+  `VarChar(50)`, qui ne casse rien à l'exécution mais fait échouer sa vérification de schéma.
+  Séquencer selon la règle d'ordre du contrat, et inscrire le changement dans `EVOLUTIONS.md`.
+- **Ne pas activer `multiSchema`** dans le datasource sans relire `SCHEMAS_ET_ROLES.md` : Prisma
+  ne voit aujourd'hui que `public`, et c'est ce qui garde le schéma voisin hors de sa portée.
+- **Ne pas utiliser `prisma migrate dev`.** Deux raisons cumulées. D'une part le `DATABASE_URL`
+  du `.env` local pointe sur la production (`ep-odd-river`, `neondb_owner`). D'autre part
+  l'historique `prisma/migrations` **ne décrit plus la base** : il s'arrête au 12/03/2025, alors
+  que `utilisateurs.actif`, `utilisateurs.taux_tva`, la table `historique_ca_annuel` ou
+  `factures.statut_envoi` existent en base sans migration correspondante. `migrate dev` détectera
+  donc une dérive et proposera un `migrate reset`, qui supprime le schéma `public` en entier.
+  Tant que l'historique n'est pas rebaselé : écrire le `migration.sql` à la main dans un dossier
+  `prisma/migrations/<timestamp>_<slug>/`, puis appliquer par `prisma migrate deploy`, qui ne
+  vérifie jamais la dérive et ne propose jamais de reset. Voir le point 4 de `EVOLUTIONS.md`.
+
+
 ## Architecture
 
 ### Stack
@@ -110,6 +158,14 @@ Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `
 - **Mis-split threshold across multiple contracts:** Do not compute the per-contract "CA before" as `getCAForYear(...) - honoraires_agent`. Sort the contracts to invoice by `date_signature` ascending and accumulate CA from the already-invoiced base; pass that `currentCA` into `createFactureCommission`. The core split logic in `factures/create` (the `montantAvantSeuil` / `montantApresSeuil` branches) is correct and must not be altered.
 - **Pagination Apimo (plafond 10 000):** les endpoints Apimo sont paginés et une requête sans `limit`/`offset` est plafonnée à 10 000 éléments — au-delà, la troncature est **silencieuse**. C'est ce qui privait `/api/contacts` de 4 583 contacts (14 583 au total), laissant 236 contacts référencés par des contrats absents de la base. Toujours passer par `fetchApimoAll` (`src/utils/apimo.ts`), qui déroule les pages jusqu'à `total_items`. Ne jamais réintroduire un `fetch` direct sur `api.apimo.pro`.
 - **Timeout 504 du cron `/api/contrats`:** la route ne doit jamais refaire une requête Prisma par contrat/entry. Elle précharge en 4 SELECT (`utilisateurs`, `contrats`, `relations_contrats`, `historique_ca_annuel`), calcule le diff en mémoire et n'écrit que le delta, via `runChunked` (concurrence 5, sous la taille du pool pg). Le volume de contrats step 4 croît en continu : une boucle séquentielle finit fatalement par dépasser `maxDuration`. Le recalcul du CA étant en fin de route, un timeout partiel le saute silencieusement et laisse `historique_ca_annuel` périmé — donc des taux de rétrocession faux.
+- **`utilisateurs.siren` est du texte libre, jamais un nombre:** c'est le champ d'identifiant
+  légal du conseiller (libellé `SIREN / RSAC / RCS` dans les formulaires), et **c'est là que se
+  lit le numéro RSAC** — il n'y a pas de colonne `rsac`. Il appartient à Apimo
+  (`partners[0].reference`) et la sync `/api/conseillers` l'écrase chaque nuit : ne jamais
+  l'écrire depuis l'app. Son contenu est hétérogène (`"0"`, `"831 555 339"`, une phrase de 118
+  caractères pour six conseillers en portage) : le déclarer `number` ou le passer à `parseInt` /
+  `Number` tronque ou vide la valeur de 11 conseillers sur 114. C'était le cas jusqu'au
+  30/08/2026 dans `src/lib/types.ts` et les mappings de `/api/conseiller` et `/api/factures/[id]`.
 - **`contrats.date_signature` est un `timestamp` sans fuseau:** comparer deux valeurs avec `getTime()` fait diverger toutes les lignes selon le fuseau du process. Comparer le jour en composantes UTC (`toISOString().slice(0, 10)` vs `contract_at`).
 - One-shot recompute + audit script: `scripts/migrate-ca-2026.ts` (re-fetches Apimo, sets `historique_ca_annuel` for 2026, and reports — without modifying — inconsistent commission invoices to regenerate).
 

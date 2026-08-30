@@ -365,7 +365,9 @@ export default function FormParams() {
         telephone: formDataObj.telephone as string,
         adresse: adresse,
 
-        siren: formDataObj.siren as string,
+        // `siren` volontairement absent : la colonne appartient à Apimo
+        // (`partners[0].reference`) et la sync nocturne de /api/conseillers
+        // l'écrase. Le formulaire n'a d'ailleurs jamais rendu l'input.
         retrocession: Number(retrocession),
         tva: assujettiTVA === "oui",
         taux_tva: assujettiTVA === "oui" ? tauxTVA : null,
