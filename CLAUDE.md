@@ -28,14 +28,26 @@ Le développement se fait sur la branche git `preprod` et sur la branche Neon `P
 Le `DATABASE_URL` du `.env` pointe, lui, toujours sur la **production** (`ep-odd-river`).
 
 ```bash
-DATABASE_URL="$PREPROD_DATABASE_URL" pnpm dev
+pnpm dev:preprod
 ```
 
-`src/lib/db.ts` lit `DATABASE_URL`, et Next n'écrase pas une variable déjà présente dans
-l'environnement du shell — le préfixe suffit donc. Sans lui, le serveur de dev écrit en
-production. Même logique pour toute commande Prisma.
+**Le code ne lit jamais `PREPROD_DATABASE_URL`.** `src/lib/db.ts` ne connaît que `DATABASE_URL` ;
+`PREPROD_DATABASE_URL` n'est qu'un endroit où ranger l'URL dans le `.env`. C'est le script
+`dev:preprod` qui l'extrait du fichier et la substitue à `DATABASE_URL` dans l'environnement du
+processus.
 
-Sur Vercel, la branche `preprod` est reliée à l'environnement personnalisé **staging**.
+L'extraction passe par `grep` sur le `.env` et non par `"$PREPROD_DATABASE_URL"` : le `.env`
+n'est pas chargé dans le shell, l'expansion donnerait une chaîne vide et le serveur ne saurait
+plus à quelle base se connecter. Même précaution pour toute commande Prisma visant la
+préproduction :
+
+```bash
+DATABASE_URL="$(grep -m1 '^PREPROD_DATABASE_URL=' .env | cut -d= -f2-)" npx prisma studio
+```
+
+Sur Vercel, la branche `preprod` est reliée à l'environnement personnalisé **staging**. Là, pas de
+`PREPROD_DATABASE_URL` : c'est le `DATABASE_URL` **de cet environnement** qui porte l'URL de
+préproduction. Vercel isole les variables par environnement, c'est lui qui joue le rôle du script.
 
 ### Emails : déroutage hors production (obligatoire)
 

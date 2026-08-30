@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:preprod": "DATABASE_URL=\"$(grep -m1 '^PREPROD_DATABASE_URL=' .env | cut -d= -f2-)\" next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
