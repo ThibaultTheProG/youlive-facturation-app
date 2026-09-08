@@ -24,26 +24,34 @@ There are no automated tests.
 ## Travailler en préproduction
 
 Le développement se fait sur la branche git `preprod` et sur la branche Neon `Preproduction`
-(`br-royal-pine-b1mmspwb`, endpoint `ep-square-lake`), dont l'URL est dans `PREPROD_DATABASE_URL`.
-Le `DATABASE_URL` du `.env` pointe, lui, toujours sur la **production** (`ep-odd-river`).
+(`br-royal-pine-b1mmspwb`, endpoint `ep-square-lake`). **Depuis le 08/09/2026, c'est elle que
+vise le `DATABASE_URL` du `.env`** : une commande Prisma lancée sans préfixe s'adresse à la
+préproduction. L'URL de production est reléguée sous `PROD_DATABASE_URL`, et ne se vise qu'en la
+nommant — le geste devient délibéré :
 
 ```bash
-pnpm dev:preprod
+DATABASE_URL="$(grep -m1 '^PROD_DATABASE_URL=' .env | cut -d= -f2-)" npx prisma migrate status
 ```
 
-**Le code ne lit jamais `PREPROD_DATABASE_URL`.** `src/lib/db.ts` ne connaît que `DATABASE_URL` ;
-`PREPROD_DATABASE_URL` n'est qu'un endroit où ranger l'URL dans le `.env`. C'est le script
-`dev:preprod` qui l'extrait du fichier et la substitue à `DATABASE_URL` dans l'environnement du
-processus.
-
-L'extraction passe par `grep` sur le `.env` et non par `"$PREPROD_DATABASE_URL"` : le `.env`
-n'est pas chargé dans le shell, l'expansion donnerait une chaîne vide et le serveur ne saurait
-plus à quelle base se connecter. Même précaution pour toute commande Prisma visant la
-préproduction :
+Le serveur de développement se lance donc simplement, et vise la préproduction :
 
 ```bash
-DATABASE_URL="$(grep -m1 '^PREPROD_DATABASE_URL=' .env | cut -d= -f2-)" npx prisma studio
+pnpm dev
 ```
+
+`pnpm dev:preprod` reste équivalent : depuis l'inversion, il substitue à `DATABASE_URL` une URL
+qui est déjà la sienne. Il est conservé parce que la documentation et d'anciens mémos s'y
+adossent.
+
+**Le code ne lit ni `PREPROD_DATABASE_URL` ni `PROD_DATABASE_URL`.** `src/lib/db.ts` ne connaît
+que `DATABASE_URL` ; les deux autres ne sont que des endroits où ranger une URL dans le `.env`,
+d'où un script ou une commande va la chercher.
+
+Cette extraction passe par `grep` sur le `.env` et non par `"$PROD_DATABASE_URL"` : le `.env`
+n'est pas chargé dans le shell, l'expansion donnerait une chaîne vide — et une chaîne vide, pour
+Prisma, c'est le `DATABASE_URL` par défaut. Viser la production par une variable non expansée
+reviendrait donc silencieusement à viser la préproduction, ou l'inverse le jour où le défaut
+rechange. Toujours la forme `$(grep -m1 …)`.
 
 Sur Vercel, la branche `preprod` est reliée à l'environnement personnalisé **staging**. Là, pas de
 `PREPROD_DATABASE_URL` : c'est le `DATABASE_URL` **de cet environnement** qui porte l'URL de
@@ -101,15 +109,18 @@ Ce que cela impose ici, concrètement :
   Séquencer selon la règle d'ordre du contrat, et inscrire le changement dans `EVOLUTIONS.md`.
 - **Ne pas activer `multiSchema`** dans le datasource sans relire `SCHEMAS_ET_ROLES.md` : Prisma
   ne voit aujourd'hui que `public`, et c'est ce qui garde le schéma voisin hors de sa portée.
-- **Ne pas utiliser `prisma migrate dev`.** Deux raisons cumulées. D'une part le `DATABASE_URL`
-  du `.env` local pointe sur la production (`ep-odd-river`, `neondb_owner`). D'autre part
-  l'historique `prisma/migrations` **ne décrit plus la base** : il s'arrête au 12/03/2025, alors
-  que `utilisateurs.actif`, `utilisateurs.taux_tva`, la table `historique_ca_annuel` ou
-  `factures.statut_envoi` existent en base sans migration correspondante. `migrate dev` détectera
-  donc une dérive et proposera un `migrate reset`, qui supprime le schéma `public` en entier.
-  Tant que l'historique n'est pas rebaselé : écrire le `migration.sql` à la main dans un dossier
-  `prisma/migrations/<timestamp>_<slug>/`, puis appliquer par `prisma migrate deploy`, qui ne
-  vérifie jamais la dérive et ne propose jamais de reset. Voir le point 4 de `EVOLUTIONS.md`.
+- **L'historique `prisma/migrations` décrit à nouveau la base** (rebaselé le 08/09/2026). Il
+  s'arrêtait au 12/03/2025 alors que la base avait continué d'évoluer par `db push` ; la migration
+  `20260908191913_rebaseline_etat_reel` comble l'écart. Elle est **descriptive** : marquée
+  appliquée sur les deux branches par `migrate resolve`, jamais exécutée, et elle échouerait si on
+  l'exécutait (un `ADD COLUMN … NOT NULL` sans `DEFAULT` sur une table peuplée). Ne pas la rejouer,
+  ne pas la réécrire.
+- **`prisma migrate dev` ne s'adresse jamais à `ep-odd-river`.** La dérive qui faisait proposer un
+  `migrate reset` — lequel supprime le schéma `public` en entier — a disparu, et le `DATABASE_URL`
+  par défaut vise désormais la préproduction. Le garde-fou reste : vérifier la cible avant, et ne
+  jamais accepter un reset proposé contre la production. Pour une migration destinée à la
+  production, écrire le `migration.sql` puis appliquer par `prisma migrate deploy`, qui ne propose
+  jamais de reset.
 
 
 ## Architecture
@@ -224,9 +235,19 @@ Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `
 Required: `DATABASE_URL`, `JWT_SECRET`, `CRON_SECRET`, `SMTP_SERVER_HOST`, `SMTP_SERVER_PORT`, `SMTP_SERVER_USERNAME`, `SMTP_SERVER_PASSWORD`, `SMTP_FROM_EMAIL`, `NEXT_PUBLIC_BASE_URL`
 
 Optional: `NEXT_PUBLIC_AUTH_DISABLED=true` to bypass authentication (sans effet sur Vercel, où
-`NODE_ENV` vaut toujours `production`) · `PREPROD_DATABASE_URL` (branche Neon Preproduction, cf.
-« Travailler en préproduction ») · `FACTURES_ADMIN_EMAILS` (destinataires admin, liste séparée par
+`NODE_ENV` vaut toujours `production`) · `PROD_DATABASE_URL` et `PREPROD_DATABASE_URL` (local
+uniquement, cf. « Travailler en préproduction » ; le code ne lit ni l'une ni l'autre) · `FACTURES_ADMIN_EMAILS` (destinataires admin, liste séparée par
 des virgules ; à défaut `SMTP_TO_EMAIL`) · `EMAIL_REDIRECTION` (adresse recevant tout le courrier
 hors production ; à défaut `thibault.tuffin@youlive-immobilier.fr`)
 
 `VERCEL_ENV` est fourni par Vercel et ne se définit pas à la main.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
