@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { requireAdmin } from "@/lib/apiAuth";
+import { avecAuteurParrainage } from "@/utils/parrainagesHistorique";
 
 export async function POST(req: Request) {
   const auth = await requireAdmin();
@@ -36,23 +37,26 @@ export async function POST(req: Request) {
       data: { actif: false },
     });
 
-    // 2. Retirer le conseiller désactivé des parrainages (sans décalage de niveaux)
-    await prisma.parrainages.updateMany({
-      where: { niveau1: conseillerId },
-      data: { niveau1: null },
-    });
-    await prisma.parrainages.updateMany({
-      where: { niveau2: conseillerId },
-      data: { niveau2: null },
-    });
-    await prisma.parrainages.updateMany({
-      where: { niveau3: conseillerId },
-      data: { niveau3: null },
-    });
+    // 2 et 3, signés pour `parrainages_historique`
+    await avecAuteurParrainage(auth.user.id, "admin:desactivation", async (tx) => {
+      // 2. Retirer le conseiller désactivé des parrainages (sans décalage de niveaux)
+      await tx.parrainages.updateMany({
+        where: { niveau1: conseillerId },
+        data: { niveau1: null },
+      });
+      await tx.parrainages.updateMany({
+        where: { niveau2: conseillerId },
+        data: { niveau2: null },
+      });
+      await tx.parrainages.updateMany({
+        where: { niveau3: conseillerId },
+        data: { niveau3: null },
+      });
 
-    // 3. Supprimer le propre enregistrement de parrainage du conseiller désactivé
-    await prisma.parrainages.deleteMany({
-      where: { user_id: conseillerId },
+      // 3. Supprimer le propre enregistrement de parrainage du conseiller désactivé
+      await tx.parrainages.deleteMany({
+        where: { user_id: conseillerId },
+      });
     });
 
     console.log(`✅ Conseiller ${conseillerId} (${conseiller.prenom} ${conseiller.nom}) désactivé`);

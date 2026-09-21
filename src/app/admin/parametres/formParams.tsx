@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import InputCustom from "@/components/uiCustom/inputCustom";
 import { Label } from "@/components/ui/label";
 import RadioCustom from "@/components/uiCustom/radioCustom";
@@ -66,6 +66,15 @@ export default function FormParams() {
   );
 
   const [isDeactivating, setIsDeactivating] = useState(false);
+
+  // Les parrains affichés appartiennent-ils bien au conseiller sélectionné ?
+  // Tant que ce n'est pas le cas, l'enregistrement est bloqué : il écrirait les
+  // parrains du conseiller précédent, ou « Aucun » si le chargement a échoué,
+  // et détacherait ainsi un filleul de son parrain.
+  const [parrainagesCharges, setParrainagesCharges] = useState(false);
+  // Numéro de la dernière sélection : une réponse arrivée pour une sélection
+  // antérieure (changement rapide de conseiller) est ignorée.
+  const selectionCourante = useRef(0);
 
   // États pour la gestion des années
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -206,6 +215,10 @@ export default function FormParams() {
       (c: Conseiller) => `${c.prenom.trim()} ${c.nom.trim()}` === val
     );
 
+    const selection = ++selectionCourante.current;
+    const estPerimee = () => selection !== selectionCourante.current;
+    setParrainagesCharges(false);
+
     if (conseiller) {
       try {
         setFormStatus({
@@ -234,6 +247,7 @@ export default function FormParams() {
 
         // Mettre à jour le conseiller sélectionné avec les données fraîches de la BDD
         const conseillerData = await conseillerResponse.json();
+        if (estPerimee()) return;
         appliquerConseiller(conseillerData);
 
         // Récupération de tous les parrains en une seule requête
@@ -254,6 +268,7 @@ export default function FormParams() {
         }
 
         const parrainages = await parrainagesResponse.json();
+        if (estPerimee()) return;
 
         // Mise à jour des états pour chaque niveau de parrain
         setSelectedParrain(parrainages.niveau1.nom);
@@ -265,26 +280,22 @@ export default function FormParams() {
         setSelectedParrain3(parrainages.niveau3.nom);
         setSelectedParrain3Id(parrainages.niveau3.id);
 
+        setParrainagesCharges(true);
         setFormStatus({ type: null, message: null });
       } catch (error) {
+        if (estPerimee()) return;
         console.error("Erreur lors de la récupération des informations:", error);
         setFormStatus({
           type: "error",
           message: `Erreur: ${
             error instanceof Error ? error.message : String(error)
-          }`,
+          } — enregistrement bloqué, resélectionnez le conseiller.`,
         });
 
-        // En cas d'erreur, utiliser les données locales comme fallback
+        // En cas d'erreur, utiliser les données locales comme fallback.
+        // Les parrains restent inconnus : `parrainagesCharges` reste à false et
+        // bloque l'enregistrement, qui les aurait sinon écrasés par « Aucun ».
         appliquerConseiller(conseiller || null);
-        
-        // Réinitialiser les valeurs des parrains
-        setSelectedParrain("Aucun");
-        setSelectedParrainId(null);
-        setSelectedParrain2("Aucun");
-        setSelectedParrain2Id(null);
-        setSelectedParrain3("Aucun");
-        setSelectedParrain3Id(null);
       }
     } else {
       // Réinitialiser les valeurs si aucun conseiller n'est sélectionné
@@ -349,6 +360,15 @@ export default function FormParams() {
           type: "error",
           message: "Veuillez sélectionner un conseiller",
         });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!parrainagesCharges) {
+        const message =
+          "Les parrains de ce conseiller ne sont pas chargés : resélectionnez-le avant d'enregistrer.";
+        toast.error(message);
+        setFormStatus({ type: "error", message });
         setIsSubmitting(false);
         return;
       }
@@ -572,7 +592,10 @@ export default function FormParams() {
                 {isDeactivating ? "Désactivation..." : "Désactiver le compte"}
               </Button>
             </div>
-            <SubmitButton isSubmitting={isSubmitting} />
+            <SubmitButton
+              isSubmitting={isSubmitting}
+              disabled={!parrainagesCharges}
+            />
           </div>
         </>
       )}

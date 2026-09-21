@@ -1,8 +1,14 @@
 import { Button } from "@/components/ui/button";
 
-export default function SubmitButton({ isSubmitting }: { isSubmitting: boolean }) {
+export default function SubmitButton({
+  isSubmitting,
+  disabled = false,
+}: {
+  isSubmitting: boolean;
+  disabled?: boolean;
+}) {
     return (
-      <Button className="bg-orange-strong cursor-pointer" type="submit" disabled={isSubmitting}>
+      <Button className="bg-orange-strong cursor-pointer" type="submit" disabled={isSubmitting || disabled}>
         {isSubmitting ? (
           <div className="flex items-center">
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

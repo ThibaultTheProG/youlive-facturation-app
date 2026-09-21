@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { ApimoError, fetchApimoAll } from "@/utils/apimo";
 import { memeTexte, runChunked } from "@/utils/sync";
 import { requireCronOrAdmin, requireSelfOrAdmin } from "@/lib/apiAuth";
+import { avecAuteurParrainage } from "@/utils/parrainagesHistorique";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -275,13 +276,12 @@ export async function PUT(req: Request) {
     // Le formulaire conseiller (`/conseiller/compte`) n'envoie aucun `parrain_id` :
     // exécuter ce bloc pour lui remettait les 3 niveaux de parrainage à null,
     // c'est-à-dire effaçait son arbre de parrainage à chaque enregistrement.
-    if (estAdmin) {
+    // Même pour l'admin, on ne touche aux parrainages que si le corps de requête
+    // porte explicitement les trois clés : une clé absente n'est pas un « Aucun ».
+    const parrainagesEnvoyes =
+      "parrain_id" in data && "niveau2_id" in data && "niveau3_id" in data;
+    if (estAdmin && parrainagesEnvoyes) {
     try {
-      const existingParrainage = await prisma.parrainages.findFirst({
-        where: { user_id: Number(id) },
-      });
-      console.log("Parrainage existant:", existingParrainage);
-
       // Préparation des données de parrainage avec vérification des valeurs
       const parrainageData = {
         niveau1: parrain_id ? Number(parrain_id) : null,
@@ -291,22 +291,29 @@ export async function PUT(req: Request) {
 
       console.log("Données de parrainage à enregistrer:", parrainageData);
 
-      // Mise à jour ou création du parrainage
-      if (existingParrainage) {
-        await prisma.parrainages.update({
-          where: { id: existingParrainage.id },
-          data: parrainageData,
+      // Mise à jour ou création du parrainage, signée pour `parrainages_historique`
+      await avecAuteurParrainage(auth.user.id, "admin:fiche", async (tx) => {
+        const existingParrainage = await tx.parrainages.findFirst({
+          where: { user_id: Number(id) },
         });
-        console.log("Mise à jour parrainage réussie");
-      } else if (parrain_id || niveau2_id || niveau3_id) {
-        await prisma.parrainages.create({
-          data: {
-            user_id: Number(id),
-            ...parrainageData,
-          },
-        });
-        console.log("Création parrainage réussie");
-      }
+        console.log("Parrainage existant:", existingParrainage);
+
+        if (existingParrainage) {
+          await tx.parrainages.update({
+            where: { id: existingParrainage.id },
+            data: parrainageData,
+          });
+          console.log("Mise à jour parrainage réussie");
+        } else if (parrain_id || niveau2_id || niveau3_id) {
+          await tx.parrainages.create({
+            data: {
+              user_id: Number(id),
+              ...parrainageData,
+            },
+          });
+          console.log("Création parrainage réussie");
+        }
+      });
     } catch (parrainageError) {
       console.error(
         "Erreur lors de la gestion des parrainages:",

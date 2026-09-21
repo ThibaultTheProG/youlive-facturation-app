@@ -221,6 +221,16 @@ Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `
   `Number` tronque ou vide la valeur de 11 conseillers sur 114. C'était le cas jusqu'au
   30/08/2026 dans `src/lib/types.ts` et les mappings de `/api/conseiller` et `/api/factures/[id]`.
 - **`contrats.date_signature` est un `timestamp` sans fuseau:** comparer deux valeurs avec `getTime()` fait diverger toutes les lignes selon le fuseau du process. Comparer le jour en composantes UTC (`toISOString().slice(0, 10)` vs `contract_at`).
+- **Parrainages effacés, factures de recrutement jamais rattrapées:** avant le 25/08/2026, tout
+  enregistrement de sa fiche par un conseiller remettait ses trois niveaux de parrainage à `null`
+  (cas Anne-Sophie BERTHELOT et Julia JEGO MONTFORT, 12 factures recrutement recréées à la main le
+  21/09/2026). `PUT /api/conseillers` ne touche plus aux parrainages que pour un admin **et** si
+  `parrain_id`, `niveau2_id`, `niveau3_id` sont tous présents dans le corps ; le formulaire admin
+  bloque « Valider » tant que les parrains du conseiller affiché ne sont pas chargés. Toute écriture
+  sur `parrainages` est journalisée dans `parrainages_historique` par un trigger PostgreSQL ; écrire
+  via `avecAuteurParrainage` (`src/utils/parrainagesHistorique.ts`) pour y ajouter auteur et source.
+  Le cron `/api/factures/create` ne regarde que les relations créées depuis 7 jours : un parrain
+  remis après coup ne régénère **rien**, les factures manquantes se créent manuellement.
 - One-shot recompute + audit script: `scripts/migrate-ca-2026.ts` (re-fetches Apimo, sets `historique_ca_annuel` for 2026, and reports — without modifying — inconsistent commission invoices to regenerate).
 
 ### Key Files

@@ -89,6 +89,29 @@ model parrainages {
   user       utilisateurs @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
+/// Journal des modifications de `parrainages`, alimenté par le trigger
+/// `parrainages_historique_trigger` (cf. migration 20260921_parrainages_historique) :
+/// toute écriture est tracée, qu'elle vienne de l'app, d'un cron ou d'un SQL manuel.
+/// `auteur_id` et `source` sont lus dans les réglages de session `app.parrainage_auteur`
+/// et `app.parrainage_source` (cf. `src/utils/parrainagesHistorique.ts`), nuls sinon.
+/// Pas de clé étrangère : l'historique doit survivre à la suppression d'un utilisateur.
+model parrainages_historique {
+  id            Int      @id @default(autoincrement())
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  operation     String   @db.VarChar(10)
+  user_id       Int
+  niveau1_avant Int?
+  niveau2_avant Int?
+  niveau3_avant Int?
+  niveau1_apres Int?
+  niveau2_apres Int?
+  niveau3_apres Int?
+  auteur_id     Int?
+  source        String?  @db.VarChar(100)
+
+  @@index([user_id, created_at])
+}
+
 model property {
   id            Int       @id @default(autoincrement())
   adresse       String?   @db.VarChar(120)
