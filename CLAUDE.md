@@ -78,10 +78,13 @@ l'environnement. Ne jamais relire `VERCEL_ENV` ailleurs (même règle que `devAu
   *protocol-relative*, et `VERCEL_URL` désigne un déploiement précis qui change à chaque push.
 
 Le défaut est délibérément sûr : il faut une production explicite pour écrire à de vraies
-personnes. **Tout nouvel envoi d'email doit passer par `destinataires()` et `sujet()`.** Les trois
+personnes. **Tout nouvel envoi d'email doit passer par `destinataires()` et `sujet()`.** Les quatre
 points d'envoi existants sont `src/lib/email.ts` (invitation, → le conseiller),
-`/api/factures/create` (notification de facture, → le conseiller, une par facture du cron nocturne)
-et `/api/factures/send` (→ l'administration).
+`/api/factures/create` (notification de facture, → le conseiller, une par facture du cron nocturne),
+`/api/factures/send` (→ l'administration) et `/api/contrats` (mail « club des 99 % » via
+`sendEmailClub99`, → le conseiller, administration en copie, une fois par an au franchissement des
+70 000 € ; marqueur `historique_ca_annuel.email_club99_envoye_le`, posé après envoi réussi — la
+migration l'a pré-rempli pour ceux déjà au-dessus du seuil, d'où aucun envoi rétroactif).
 
 `JWT_SECRET` et `CRON_SECRET` **doivent différer entre staging et production** : partagés, un
 cookie `authToken` ou un jeton `set-password` émis par staging serait valide en production.

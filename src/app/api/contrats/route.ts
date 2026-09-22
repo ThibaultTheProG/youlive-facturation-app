@@ -4,10 +4,11 @@ import { NextResponse } from "next/server";
 import { checkAndResetYearIfNeeded } from "@/utils/resetCAYear";
 import { recomputeCAForYear } from "@/utils/historiqueCA";
 import { calculRetrocession } from "@/utils/calculs";
-import { round2 } from "@/utils/decoupageSeuil";
+import { round2, SEUIL_CA } from "@/utils/decoupageSeuil";
 import { ApimoError, fetchApimoAll } from "@/utils/apimo";
 import { memeJour, memeMontant, runChunked } from "@/utils/sync";
 import { requireCronOrAdmin } from "@/lib/apiAuth";
+import { sendEmailClub99 } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 // Cron Vercel : la route doit pouvoir dépasser la durée par défaut si un gros
@@ -69,6 +70,8 @@ export async function GET(request: Request) {
             auto_parrain: true,
             chiffre_affaires: true,
             retrocession: true,
+            email: true,
+            actif: true,
           },
         }),
         prisma.contrats.findMany({
@@ -99,6 +102,7 @@ export async function GET(request: Request) {
             chiffre_affaires: true,
             retrocession_finale: true,
             date_cloture: true,
+            email_club99_envoye_le: true,
           },
         }),
       ]);
@@ -379,6 +383,54 @@ export async function GET(request: Request) {
       }
     });
 
+    // ---------------------------------------------------------------------
+    // 6. Mail « club des 99 % » : une fois par (conseiller, année en cours),
+    //    dès que le CA franchit le seuil. On examine tous les CA de l'année et
+    //    pas seulement ceux recalculés ce soir, pour qu'un échec SMTP soit
+    //    retenté la nuit suivante (le marqueur n'est posé qu'après succès).
+    // ---------------------------------------------------------------------
+    const club99 = [...caAccumulator.values()].filter((acc) => {
+      if (acc.year !== currentYear) return false;
+      const histo = historiquesParCle.get(`${acc.userId}-${acc.year}`);
+      if (histo?.date_cloture || histo?.email_club99_envoye_le) return false;
+
+      const utilisateur = usersParId.get(acc.userId);
+      if (!utilisateur?.actif || !utilisateur.email) return false;
+
+      const total = round2(acc.total);
+      return (
+        total >= SEUIL_CA &&
+        calculRetrocession(
+          utilisateur.typecontrat || "",
+          total,
+          utilisateur.auto_parrain || undefined
+        ) === 99
+      );
+    });
+
+    let emailsClub99 = 0;
+    await runChunked(club99, async ({ userId, year, label }) => {
+      const utilisateur = usersParId.get(userId)!;
+      const envoye = await sendEmailClub99({
+        email: utilisateur.email!,
+        prenom: utilisateur.prenom,
+        annee: year,
+      });
+      if (!envoye) return; // retenté au prochain passage
+
+      try {
+        await prisma.historique_ca_annuel.update({
+          where: { user_id_annee: { user_id: userId, annee: year } },
+          data: { email_club99_envoye_le: new Date() },
+        });
+      } catch (error) {
+        // Ne jamais faire échouer la sync pour un mail de félicitations
+        console.error(`Marqueur club des 99 % non posé pour ${label} (${year}) :`, error);
+      }
+      emailsClub99++;
+      console.log(`🎉 Mail club des 99 % envoyé à ${label} (${year})`);
+    });
+
     const resume = {
       contrats_crees: contratsACreer.length,
       contrats_maj: contratsAMaj.length,
@@ -386,6 +438,7 @@ export async function GET(request: Request) {
       relations_maj: relationsAMaj.length,
       contacts_crees: contactsACreer.length,
       ca_recalcules: caARecalculer.length,
+      emails_club99: emailsClub99,
       duree_ms: Date.now() - debut,
     };
     console.log("✅ Sync contrats terminée", resume);
