@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { FactureDetaillee } from "@/lib/types";
 import RadioCustom from "@/components/uiCustom/radioCustom";
+import { tvaParDefaut } from "@/utils/montantsFacture";
 
 interface EditTvaDialogProps {
   facture: FactureDetaillee | null;
@@ -28,7 +29,9 @@ export default function EditTvaDialog({
   onOpenChange,
   onSaved,
 }: EditTvaDialogProps) {
-  const userTva = facture?.conseiller.tva ?? false;
+  const userTva = facture
+    ? tvaParDefaut(facture.type, facture.conseiller)
+    : false;
   const userTaux = facture?.conseiller.taux_tva ?? 20;
 
   const initialApply =

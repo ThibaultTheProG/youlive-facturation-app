@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { FactureDetaillee, Contact } from "@/lib/types";
 import { requireSelfOrAdmin } from "@/lib/apiAuth";
+import { tvaParDefaut } from "@/utils/montantsFacture";
 
 export async function GET(request: Request) {
   try {
@@ -170,6 +171,7 @@ export async function GET(request: Request) {
         siren_facture: utilisateur?.siren_facture || '',
         adresse_facture: utilisateur?.adresse_facture || '',
         taux_tva: utilisateur?.taux_tva ? Number(utilisateur.taux_tva) : undefined,
+        tva_recrutement: utilisateur?.tva_recrutement ?? true,
       },
 
       contrat: {
@@ -292,9 +294,12 @@ export async function PUT(request: Request) {
       const current = await prisma.factures.findUnique({
         where: { id: factureId },
         select: {
+          type: true,
           retrocession: true,
           user_id: true,
-          utilisateurs: { select: { tva: true, taux_tva: true } },
+          utilisateurs: {
+            select: { tva: true, taux_tva: true, tva_recrutement: true },
+          },
         },
       });
 
@@ -321,7 +326,8 @@ export async function PUT(request: Request) {
       updateData.apply_tva = nextApply;
       updateData.taux_tva = nextTaux;
 
-      const effectiveApply = nextApply ?? current.utilisateurs?.tva ?? false;
+      const effectiveApply =
+        nextApply ?? tvaParDefaut(current.type, current.utilisateurs ?? {});
       const effectiveTaux =
         nextTaux ??
         (current.utilisateurs?.taux_tva

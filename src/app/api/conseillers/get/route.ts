@@ -33,6 +33,7 @@ export async function GET(request: Request) {
         siren: true,
         tva: true,
         taux_tva: true,
+        tva_recrutement: true,
         chiffre_affaires: true,
         retrocession: true,
         auto_parrain: true,

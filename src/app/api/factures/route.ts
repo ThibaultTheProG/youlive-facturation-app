@@ -102,7 +102,8 @@ export async function GET(request: Request) {
             prenom: true,
             nom: true,
             tva: true,
-            taux_tva: true
+            taux_tva: true,
+            tva_recrutement: true
           }
         },
         relations_contrats: {
@@ -129,7 +130,8 @@ export async function GET(request: Request) {
         prenom: facture.utilisateurs?.prenom || "",
         nom: facture.utilisateurs?.nom || "",
         tva: facture.utilisateurs?.tva ?? false,
-        taux_tva: facture.utilisateurs?.taux_tva ? Number(facture.utilisateurs.taux_tva) : null
+        taux_tva: facture.utilisateurs?.taux_tva ? Number(facture.utilisateurs.taux_tva) : null,
+        tva_recrutement: facture.utilisateurs?.tva_recrutement ?? true
       },
       propriete: {
         numero_mandat: facture.relations_contrats?.contrats?.property?.numero_mandat || ""

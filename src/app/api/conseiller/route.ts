@@ -98,6 +98,7 @@ export async function GET(request: Request) {
       siren_facture: conseiller.siren_facture || "",
       adresse_facture: conseiller.adresse_facture || "",
       taux_tva: conseiller.taux_tva ? Number(conseiller.taux_tva) : undefined,
+      tva_recrutement: conseiller.tva_recrutement,
     };
 
     return NextResponse.json(conseillerData);

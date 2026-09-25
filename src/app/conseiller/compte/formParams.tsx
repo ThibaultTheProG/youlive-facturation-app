@@ -19,6 +19,7 @@ export default function FormParams({ user }: { user: User }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [tauxTVA, setTauxTVA] = useState<number>(20);
+  const [tvaRecrutement, setTvaRecrutement] = useState<string>("oui");
 
   // Nouveaux états pour les informations de facture de recrutement
   const [nomSocieteFacture, setNomSocieteFacture] = useState<string>("");
@@ -76,6 +77,7 @@ export default function FormParams({ user }: { user: User }) {
           setSirenFacture(data.siren_facture || "");
           setAdresseFacture(data.adresse_facture || "");
           setTauxTVA(data.taux_tva ?? 20);
+          setTvaRecrutement(data.tva_recrutement === false ? "non" : "oui");
         }
       } catch (error) {
         console.error("Erreur lors de la récupération du conseiller:", error);
@@ -122,6 +124,7 @@ export default function FormParams({ user }: { user: User }) {
         siren_facture: formData.get("siren_facture")?.toString() || sirenFacture || null,
         adresse_facture: formData.get("adresse_facture")?.toString() || adresseFacture || null,
         taux_tva: formData.get("tva") === "oui" ? tauxTVA : null,
+        tva_recrutement: tvaRecrutement === "oui",
       };
       
       //console.log("Données envoyées à l'API:", conseillerData);
@@ -256,6 +259,12 @@ export default function FormParams({ user }: { user: User }) {
               value={tauxTVA}
               onChange={(val) => setTauxTVA(Number(val))}
             />
+          )}
+          {assujettiTVA === "oui" && (
+            <div className="flex flex-col space-y-2">
+              <Label className="text-sm text-gray-700">TVA sur les factures de recrutement</Label>
+              <RadioCustom onChange={(value) => setTvaRecrutement(value)} value={tvaRecrutement} name="tva_recrutement" />
+            </div>
           )}
         </div>
       </div>

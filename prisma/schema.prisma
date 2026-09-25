@@ -162,6 +162,9 @@ model utilisateurs {
   siren_facture        String?                @db.VarChar(255)
   taux_tva             Decimal?               @db.Decimal(5, 2)
   actif                Boolean                @default(true)
+  /// TVA aussi sur les factures de recrutement. `false` : seules les commissions en portent
+  /// (ex. recrutement facturé par une société non assujettie). Sans effet si `tva` est faux.
+  tva_recrutement      Boolean                @default(true)
   factures             factures[]
   parrainages          parrainages?
   relations_contrats   relations_contrats[]

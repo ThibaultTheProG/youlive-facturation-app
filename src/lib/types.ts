@@ -20,6 +20,8 @@ export interface Conseiller {
   siren_facture?: string;
   adresse_facture?: string;
   taux_tva?: number;
+  /** TVA aussi sur les factures de recrutement (défaut vrai). */
+  tva_recrutement?: boolean;
   actif?: boolean;
 }
 

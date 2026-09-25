@@ -36,6 +36,7 @@ export async function POST(req: Request) {
 
     const montants = computeMontantsFacture(
       {
+        type: facture.type,
         retrocession: facture.retrocession,
         honoraires_agent: facture.relations_contrats?.honoraires_agent?.toString(),
         montant_honoraires: facture.montant_honoraires?.toString(),
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
       {
         tva: conseiller?.tva,
         taux_tva: conseiller?.taux_tva?.toString(),
+        tva_recrutement: conseiller?.tva_recrutement,
       }
     );
 

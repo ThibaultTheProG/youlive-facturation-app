@@ -13,6 +13,8 @@
 type Numérique = number | string | null | undefined;
 
 export interface FactureMontantsInput {
+  /** `commission`, `recrutement`, `avoir` : décide du défaut de TVA hérité du profil. */
+  type?: string | null;
   /** Montant HT de la rétrocession. Signé : négatif pour un avoir. */
   retrocession: Numérique;
   /** Honoraires agence — ancien champ, utilisé en repli. */
@@ -31,6 +33,23 @@ export interface FactureMontantsInput {
 export interface ConseillerMontantsInput {
   tva?: boolean | null;
   taux_tva?: Numérique;
+  tva_recrutement?: boolean | null;
+}
+
+/**
+ * TVA par défaut d'une facture d'après le profil du conseiller, quand la
+ * facture ne la fixe pas elle-même (`apply_tva` nul).
+ *
+ * Un conseiller assujetti peut exclure ses factures de recrutement de la TVA
+ * (`tva_recrutement = false`) : c'est le cas quand le recrutement est facturé
+ * par une société distincte, non assujettie. Les commissions n'en dépendent pas.
+ */
+export function tvaParDefaut(
+  type: string | null | undefined,
+  conseiller: Pick<ConseillerMontantsInput, "tva" | "tva_recrutement">
+): boolean {
+  if (!conseiller.tva) return false;
+  return type === "recrutement" ? conseiller.tva_recrutement !== false : true;
 }
 
 export interface MontantsFacture {
@@ -71,7 +90,7 @@ export function computeMontantsFacture(
     ? Math.round((retrocessionHT / honorairesAgence) * 100)
     : 0;
 
-  const tvaActive = facture.apply_tva ?? conseiller.tva ?? false;
+  const tvaActive = facture.apply_tva ?? tvaParDefaut(facture.type, conseiller);
   const tauxTVA =
     facture.taux_tva != null
       ? Number(facture.taux_tva)

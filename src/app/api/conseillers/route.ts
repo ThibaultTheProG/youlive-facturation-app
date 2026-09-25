@@ -210,6 +210,7 @@ const CHAMPS_CONSEILLER = [
   "adresse",
   "tva",
   "taux_tva",
+  "tva_recrutement",
   "nom_societe_facture",
   "siren_facture",
   "adresse_facture",

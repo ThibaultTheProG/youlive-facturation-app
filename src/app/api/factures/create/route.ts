@@ -7,6 +7,7 @@ import { RelationContrat } from "@/lib/types.js";
 import nodemailer from "nodemailer";
 import { destinataires, sujet, baseUrl } from "@/lib/environnement";
 import { decoupageSeuil, round2 } from "@/utils/decoupageSeuil";
+import { tvaParDefaut } from "@/utils/montantsFacture";
 import { getCAForYear, getHistoriqueForYear } from "@/utils/historiqueCA";
 
 export const dynamic = "force-dynamic";
@@ -321,6 +322,8 @@ async function createFactureCommission(
           taux_retrocession: tauxAvantSeuil,
           tranche: 'avant_seuil',
           montant_tva: montantTvaAvantSeuil,
+          apply_tva: userTva,
+          taux_tva: userTva ? userTauxTva : null,
           statut_paiement: 'non payé',
           statut_envoi: 'non envoyée',
           created_at: new Date(),
@@ -351,6 +354,8 @@ async function createFactureCommission(
           taux_retrocession: tauxApresSeuil,
           tranche: 'apres_seuil',
           montant_tva: montantTvaApresSeuil,
+          apply_tva: userTva,
+          taux_tva: userTva ? userTauxTva : null,
           statut_paiement: 'non payé',
           statut_envoi: 'non envoyée',
           created_at: new Date(),
@@ -455,7 +460,7 @@ async function createFactureRecrutement(
         // Récupérer les infos du parrain depuis la table utilisateurs
         const parrain = await prisma.utilisateurs.findUnique({
           where: { id: parrainId },
-          select: { retrocession: true, tva: true, taux_tva: true }
+          select: { retrocession: true, tva: true, taux_tva: true, tva_recrutement: true }
         });
 
         if (!parrain) {
@@ -464,7 +469,7 @@ async function createFactureRecrutement(
         }
 
         const retrocessionAmount = Number(((honoraires_agent * percentage) / 100).toFixed(2));
-        const parrainTva = parrain.tva || false;
+        const parrainTva = tvaParDefaut('recrutement', parrain);
         const parrainTauxTva = parrain.taux_tva ? Number(parrain.taux_tva) : 20;
         const montantTvaRecrutement = parrainTva ? Number((retrocessionAmount * parrainTauxTva / 100).toFixed(2)) : 0;
 
@@ -500,6 +505,8 @@ async function createFactureRecrutement(
               taux_retrocession: percentage, // Stocker le pourcentage de parrainage (6%, 8%, 2%, 1%)
               tranche: 'avant_seuil',
               montant_tva: montantTvaRecrutement,
+              apply_tva: parrainTva,
+              taux_tva: parrainTva ? parrainTauxTva : null,
               statut_paiement: 'non payé',
               statut_envoi: 'non envoyée',
               created_at: new Date(),

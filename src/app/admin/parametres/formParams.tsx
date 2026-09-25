@@ -31,6 +31,7 @@ export default function FormParams() {
     useState<Conseiller | null>(null);
   const [assujettiTVA, setAssujettiTVA] = useState<string>("non");
   const [tauxTVA, setTauxTVA] = useState<number>(20);
+  const [tvaRecrutement, setTvaRecrutement] = useState<string>("oui");
   const [autoParrain, setAutoParrain] = useState<string>("non");
   const [selectedTypeContrat, setSelectedTypeContrat] = useState<string>("");
   const [chiffreAffaires, setChiffreAffaires] = useState<number>(0);
@@ -145,6 +146,7 @@ export default function FormParams() {
     setChiffreAffaires(conseiller.chiffre_affaires || 0);
     setAssujettiTVA(conseiller.tva ? "oui" : "non");
     setTauxTVA(conseiller.taux_tva ?? 20);
+    setTvaRecrutement(conseiller.tva_recrutement === false ? "non" : "oui");
     setAdresse(conseiller.adresse || "");
 
     if (conseiller.auto_parrain) {
@@ -391,6 +393,7 @@ export default function FormParams() {
         retrocession: Number(retrocession),
         tva: assujettiTVA === "oui",
         taux_tva: assujettiTVA === "oui" ? tauxTVA : null,
+        tva_recrutement: tvaRecrutement === "oui",
         typecontrat: selectedTypeContrat,
         auto_parrain: autoParrain,
         chiffre_affaires: Number(chiffreAffaires),
@@ -534,6 +537,16 @@ export default function FormParams() {
                     type="number"
                     value={tauxTVA}
                     onChange={(val) => setTauxTVA(Number(val))}
+                  />
+                </div>
+              )}
+              {assujettiTVA === "oui" && (
+                <div className="flex flex-col space-y-2">
+                  <Label className="text-sm text-gray-700">TVA sur les factures de recrutement</Label>
+                  <RadioCustom
+                    onChange={(value) => setTvaRecrutement(value)}
+                    value={tvaRecrutement}
+                    name="tva_recrutement"
                   />
                 </div>
               )}

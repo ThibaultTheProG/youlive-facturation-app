@@ -203,6 +203,12 @@ The main invoice creation logic is in `src/app/api/factures/create/route.ts`.
 - niveau2: 2%
 - niveau3: 1%
 - Capped: no recrutement invoices generated if the filleul's CA ≥ €70k
+- TVA : un parrain assujetti peut exclure ses recrutements de la TVA (`utilisateurs.tva_recrutement
+  = false`, réglable par l'admin comme par le conseiller) — cas d'un recrutement facturé par une
+  société non assujettie (Maryline DELAHAYE / EASY RENT). Le défaut TVA d'une facture selon son
+  type passe **toujours** par `tvaParDefaut` (`src/utils/montantsFacture.ts`) ; ne jamais relire
+  `utilisateurs.tva` seul. Depuis le 25/09/2026, le cron fige `apply_tva` / `taux_tva` sur chaque
+  facture créée ; les plus anciennes (`apply_tva` nul) suivent encore le profil.
 
 Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `utilisateurs.chiffre_affaires`. See `src/utils/historiqueCA.ts`.
 
