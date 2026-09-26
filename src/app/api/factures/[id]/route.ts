@@ -42,7 +42,8 @@ export async function GET(request: Request) {
             },
             utilisateurs: true // Inclure l'utilisateur associé à la relation_contrat (le filleul)
           }
-        }
+        },
+        remplace: { select: { numero: true } }
       }
     });
 
@@ -152,6 +153,9 @@ export async function GET(request: Request) {
       apply_tva: result.apply_tva ?? null,
       taux_tva: result.taux_tva != null ? Number(result.taux_tva) : null,
       motif: result.motif ?? null,
+      annulee: result.en_vigueur !== true,
+      annulee_le: result.annulee_le?.toISOString() ?? null,
+      remplace: result.remplace_id ? { id: result.remplace_id, numero: result.remplace?.numero ?? null } : null,
 
       conseiller: {
         idapimo: utilisateur?.idapimo || 0,
@@ -235,7 +239,7 @@ export async function PUT(request: Request) {
 
     const proprietaire = await prisma.factures.findUnique({
       where: { id: factureId },
-      select: { user_id: true },
+      select: { user_id: true, en_vigueur: true },
     });
 
     if (!proprietaire) {
@@ -248,6 +252,14 @@ export async function PUT(request: Request) {
     const auth = await requireSelfOrAdmin(proprietaire.user_id);
     if ("error" in auth) return auth.error;
     const estAdmin = auth.user.role === "admin";
+
+    // Une facture annulée est figée : ni numéro, ni statut, ni TVA.
+    if (proprietaire.en_vigueur !== true) {
+      return NextResponse.json(
+        { error: "Cette facture est annulée et ne peut plus être modifiée" },
+        { status: 409 }
+      );
+    }
 
     // Le statut de paiement et le paramétrage TVA de la facture sont pilotés
     // depuis le back-office : un conseiller ne peut pas se déclarer payé ni

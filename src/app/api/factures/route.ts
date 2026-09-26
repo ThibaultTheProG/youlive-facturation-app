@@ -45,8 +45,12 @@ export async function GET(request: Request) {
             }
           ]
         } : {},
-        // Filtre par statut
-        filterStatut ? { statut_paiement: filterStatut } : {},
+        // Filtre par statut. « annulée » n'est pas un statut de paiement : une
+        // facture annulée garde le sien (« non payé »), il faut donc l'écarter
+        // des autres filtres.
+        filterStatut === 'annulée'
+          ? { en_vigueur: null }
+          : filterStatut ? { statut_paiement: filterStatut, en_vigueur: true } : {},
         // Filtre par type
         filterType ? { type: filterType } : {},
         // Filtre par statut d'envoi
@@ -106,6 +110,7 @@ export async function GET(request: Request) {
             tva_recrutement: true
           }
         },
+        remplace: { select: { numero: true } },
         relations_contrats: {
           include: {
             contrats: {
@@ -124,8 +129,11 @@ export async function GET(request: Request) {
     });
 
     // Transformer les données pour le format attendu
-    const facturesFormatees = factures.map(facture => ({
+    const facturesFormatees = factures.map(({ remplace, ...facture }) => ({
       ...facture,
+      annulee: facture.en_vigueur !== true,
+      annulee_le: facture.annulee_le?.toISOString() ?? null,
+      remplace: facture.remplace_id ? { id: facture.remplace_id, numero: remplace?.numero ?? null } : null,
       conseiller: {
         prenom: facture.utilisateurs?.prenom || "",
         nom: facture.utilisateurs?.nom || "",

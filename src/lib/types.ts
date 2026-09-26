@@ -149,6 +149,10 @@ export interface Facture {
   taux_tva?: number | null;
   // Avoir / ajustement : désignation libre (facultatif pour les autres types)
   motif?: string | null;
+  // Annulation d'une facture non envoyée (voir /api/factures/[id]/remplacer)
+  annulee?: boolean;
+  annulee_le?: string | null;
+  remplace?: { id: number; numero: string | null } | null;
 }
 
 interface Filleul {

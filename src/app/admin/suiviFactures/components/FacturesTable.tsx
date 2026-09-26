@@ -18,6 +18,7 @@ interface FacturesTableProps {
   handleSort: (field: string) => void;
   updateStatut: (factureId: number, newStatut: string, numero: string, created_at: string) => Promise<void>;
   onEditTva: (facture: FactureDetaillee) => void;
+  onRemplacer: (facture: FactureDetaillee) => void;
 }
 
 export const FacturesTable = ({
@@ -26,7 +27,8 @@ export const FacturesTable = ({
   sortDirection,
   handleSort,
   updateStatut,
-  onEditTva
+  onEditTva,
+  onRemplacer
 }: FacturesTableProps) => {
   return (
     <Table>
@@ -95,6 +97,7 @@ export const FacturesTable = ({
               facture={facture}
               updateStatut={updateStatut}
               onEditTva={onEditTva}
+              onRemplacer={onRemplacer}
             />
           ))
         )}

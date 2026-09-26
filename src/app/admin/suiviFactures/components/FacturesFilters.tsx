@@ -81,6 +81,7 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
             <SelectItem value="tous_statuts">Tous les statuts</SelectItem>
             <SelectItem value="payé">Payé</SelectItem>
             <SelectItem value="non payé">Non payé</SelectItem>
+            <SelectItem value="annulée">Annulée</SelectItem>
           </SelectContent>
         </Select>
       </div>

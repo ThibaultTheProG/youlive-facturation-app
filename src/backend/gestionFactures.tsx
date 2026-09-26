@@ -4,7 +4,10 @@ import prisma from "../lib/db";
 export async function getFactures(userId: number) {
   const result = await prisma.factures.findMany({
     where: {
-      user_id: userId
+      user_id: userId,
+      // Une facture annulée n'a jamais été émise : le conseiller ne voit que
+      // sa remplaçante.
+      en_vigueur: true
     },
     select: {
       id: true,

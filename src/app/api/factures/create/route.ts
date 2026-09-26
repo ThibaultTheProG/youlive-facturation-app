@@ -108,6 +108,8 @@ async function createFacture() {
         where: {
           user_id: userId,
           type: 'commission',
+          // Une commission annulée est comptée par sa remplaçante.
+          en_vigueur: true,
           relations_contrats: {
             contrats: {
               date_signature: { gte: debutAnnee, lt: finAnnee }
@@ -239,7 +241,9 @@ async function createFactureCommission(
   const currentYear = new Date().getFullYear();
 
   try {
-    // Vérifier d'abord si des factures existent déjà pour cette relation
+    // Vérifier d'abord si des factures existent déjà pour cette relation.
+    // Les annulées comptent : une facture annulée a été traitée, le cron ne
+    // doit pas la recréer.
     const facturesExistantes = await prisma.factures.findMany({
       where: {
         relation_id: relationid,
@@ -392,6 +396,7 @@ async function createFactureRecrutement(
 
   try {
     // VÉRIFICATION GLOBALE: Si des factures de recrutement existent déjà pour cette relation, ne rien créer
+    // (annulées comprises : une facture annulée a été traitée, pas oubliée)
     const facturesExistantes = await prisma.factures.findMany({
       where: {
         relation_id: relationid,

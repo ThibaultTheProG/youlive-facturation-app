@@ -29,6 +29,10 @@ export async function POST(req: Request) {
     const auth = await requireSelfOrAdmin(facture.user_id);
     if ("error" in auth) return auth.error;
 
+    if (facture.en_vigueur !== true) {
+      return NextResponse.json({ error: "Cette facture est annulée" }, { status: 409 });
+    }
+
     // Générer l'URL de la facture
     const factureUrl = `${baseUrl()}/factures/${factureId}/pdf`;
 

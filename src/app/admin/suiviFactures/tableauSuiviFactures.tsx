@@ -8,6 +8,7 @@ import Pagination from "./components/Pagination";
 import ExportExcelButton from "./components/ExportExcelButton";
 import EditTvaDialog from "./components/EditTvaDialog";
 import CreateAvoirDialog from "./components/CreateAvoirDialog";
+import RemplacerFactureDialog from "./components/RemplacerFactureDialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus } from "lucide-react";
 import { FactureDetaillee } from "@/lib/types";
@@ -54,6 +55,17 @@ const TableauSuiviFactures: React.FC = () => {
     setEditingFacture(facture);
     setTvaOpenCount((count) => count + 1);
     setTvaDialogOpen(true);
+  };
+
+  // État pour la popup « Annuler et remplacer »
+  const [remplacerDialogOpen, setRemplacerDialogOpen] = useState(false);
+  const [remplacantFacture, setRemplacantFacture] = useState<FactureDetaillee | null>(null);
+  const [remplacerOpenCount, setRemplacerOpenCount] = useState(0);
+
+  const handleRemplacer = (facture: FactureDetaillee) => {
+    setRemplacantFacture(facture);
+    setRemplacerOpenCount((count) => count + 1);
+    setRemplacerDialogOpen(true);
   };
 
   const handleCreateAvoir = () => {
@@ -151,6 +163,7 @@ const TableauSuiviFactures: React.FC = () => {
             handleSort={handleSort}
             updateStatut={updateStatut}
             onEditTva={handleEditTva}
+            onRemplacer={handleRemplacer}
           />
 
           {/* Pagination */}
@@ -171,6 +184,17 @@ const TableauSuiviFactures: React.FC = () => {
         onOpenChange={setTvaDialogOpen}
         onSaved={async () => {
           await mutate();
+        }}
+      />
+
+      <RemplacerFactureDialog
+        key={`remplacer-${remplacerOpenCount}`}
+        facture={remplacantFacture}
+        open={remplacerDialogOpen}
+        onOpenChange={setRemplacerDialogOpen}
+        onReplaced={async () => {
+          await mutate();
+          toast.success("Facture annulée et remplacée");
         }}
       />
 

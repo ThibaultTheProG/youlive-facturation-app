@@ -47,6 +47,7 @@ export default function ExportExcelButton() {
         { header: "Date de création", key: "date_creation", width: 18 },
         { header: "Statut paiement", key: "statut_paiement", width: 16 },
         { header: "Statut envoi", key: "statut_envoi", width: 16 },
+        { header: "Remplace la facture", key: "remplace", width: 20 },
       ];
 
       // Style de l'en-tête
@@ -70,8 +71,11 @@ export default function ExportExcelButton() {
           date_creation: f.created_at
             ? new Date(f.created_at).toLocaleDateString("fr-FR")
             : "",
-          statut_paiement: f.statut_paiement || "",
+          statut_paiement: f.annulee
+            ? `annulée le ${new Date(f.annulee_le).toLocaleDateString("fr-FR")}`
+            : f.statut_paiement || "",
           statut_envoi: f.statut_envoi || "non envoyée",
+          remplace: f.remplace ? f.remplace.numero || `#${f.remplace.id}` : "",
         });
       }
 

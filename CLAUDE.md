@@ -210,6 +210,18 @@ The main invoice creation logic is in `src/app/api/factures/create/route.ts`.
   `utilisateurs.tva` seul. Depuis le 25/09/2026, le cron fige `apply_tva` / `taux_tva` sur chaque
   facture créée ; les plus anciennes (`apply_tva` nul) suivent encore le profil.
 
+**Annulation d'une facture non envoyée** (depuis le 26/09/2026) : `POST /api/factures/[id]/remplacer`
+(admin, bouton « Annuler et remplacer » du suivi) annule une commission ou un recrutement **ni
+envoyé ni payé** — donc jamais émis, annulé sans avoir — et crée sa remplaçante : mêmes relation,
+type, tranche et montants HT, TVA recalculée par `tvaParDefaut`, sans numéro. Une facture envoyée
+ou payée s'annule par un avoir, jamais par cette route. Mécanique : `factures.en_vigueur` vaut
+`true` (active) ou `NULL` (annulée), **jamais `false`** (CHECK en base), et il entre dans
+`factures_unique_constraint` — les NULL étant distincts, une annulée libère sa place. C'est un
+détour délibéré : Prisma 7 n'écrit pas d'index unique partiel, un `WHERE` à la main créerait une
+dérive à chaque `migrate dev`. Toute nouvelle lecture qui somme ou liste des factures « dues »
+doit filtrer `en_vigueur: true` ; les contrôles d'existence du cron, eux, comptent les annulées
+(une facture annulée a été traitée, elle ne doit pas être recréée).
+
 Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `utilisateurs.chiffre_affaires`. See `src/utils/historiqueCA.ts`.
 
 **CA recomputation (idempotent, not incremental):** On each `/api/contrats` sync, `historique_ca_annuel.chiffre_affaires` is **recomputed by SUM** (set, not incremented) as the total of `honoraires_agent` of all type-9 entries of the conseiller for the contract year, via `recomputeCAForYear`. This is idempotent: it self-heals when Apimo revises an amount or when a relation was previously missed, and it never double-counts across runs. `recomputeCAForYear` skips any year already closed (`date_cloture` set), recomputes `retrocession_finale`, and syncs the `utilisateurs` cache only for the current year. The old incremental `updateCACurrentYear` is no longer used by the sync.

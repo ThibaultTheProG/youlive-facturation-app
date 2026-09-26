@@ -3,6 +3,7 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { FactureDetaillee } from "@/lib/types"; // Import du type de facture
 import { computeMontantsFacture } from "@/utils/montantsFacture";
+import MentionAnnulation from "./MentionAnnulation";
 
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 12 },
@@ -125,6 +126,7 @@ export default function FactureCommission({
 
         {/* Titre */}
         <Text style={styles.highlight}>{getFactureTitle()}</Text>
+        <MentionAnnulation facture={facture} />
 
         {/* Bloc DÉSIGNATION */}
         <View style={[styles.table, { marginTop: 10 }]}>
