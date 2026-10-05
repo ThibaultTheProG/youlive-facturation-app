@@ -153,6 +153,7 @@ export async function GET(request: Request) {
       apply_tva: result.apply_tva ?? null,
       taux_tva: result.taux_tva != null ? Number(result.taux_tva) : null,
       motif: result.motif ?? null,
+      objet: result.objet ?? null,
       annulee: result.en_vigueur !== true,
       annulee_le: result.annulee_le?.toISOString() ?? null,
       remplace: result.remplace_id ? { id: result.remplace_id, numero: result.remplace?.numero ?? null } : null,

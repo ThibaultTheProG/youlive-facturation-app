@@ -66,6 +66,11 @@ model factures {
   apply_tva          Boolean?
   taux_tva           Decimal?            @db.Decimal(5, 2)
   motif              String?             @db.VarChar(500)
+  /// Avoir / ajustement seulement : nature des factures qu'il régularise,
+  /// `commission` ou `recrutement`. Un avoir sur recrutement s'établit au nom
+  /// de la société de facturation du conseiller et suit `tva_recrutement`.
+  /// `NULL` = avoir antérieur au 02/10/2026, traité comme `commission`.
+  objet              String?             @db.VarChar(20)
   /// `true` = facture active, `NULL` = annulée — jamais `false` (contrainte CHECK en base).
   /// Il entre dans `factures_unique_constraint` : les NULL étant distincts, une
   /// facture annulée libère sa place pour sa remplaçante.

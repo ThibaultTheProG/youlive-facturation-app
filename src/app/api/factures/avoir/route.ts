@@ -3,6 +3,9 @@ import prisma from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { round2 } from "@/utils/decoupageSeuil";
 import { requireAdmin } from "@/lib/apiAuth";
+import { tvaParDefaut } from "@/utils/montantsFacture";
+
+const OBJETS = ["commission", "recrutement"] as const;
 
 /**
  * Création d'un avoir / ajustement « libre » (régularisation manuelle).
@@ -12,6 +15,10 @@ import { requireAdmin } from "@/lib/apiAuth";
  * d'ajustement », négatif = trop-perçu à rembourser / « avoir »), une
  * désignation libre (motif) et une TVA calculée depuis le profil du conseiller
  * (utilisateurs.tva / taux_tva, fallback 20 %) — voir [[reference_tva_profil]].
+ *
+ * `objet` dit ce qu'il régularise : `commission` (défaut) ou `recrutement`. Un
+ * avoir sur recrutement est imprimé au nom de la société de facturation du
+ * conseiller et son défaut de TVA suit `tva_recrutement` (`tvaParDefaut`).
  *
  * Il n'impacte NI historique_ca_annuel NI la rétrocession : c'est un document
  * de régularisation. Créé sans numéro et non envoyé — Tiphaine attribue le n°
@@ -27,12 +34,14 @@ export async function POST(request: Request) {
       user_id,
       montant_ht,
       motif,
+      objet,
       apply_tva,
       taux_tva,
     }: {
       user_id?: number;
       montant_ht?: number | string;
       motif?: string;
+      objet?: string | null;
       apply_tva?: boolean | null;
       taux_tva?: number | string | null;
     } = body;
@@ -67,9 +76,17 @@ export async function POST(request: Request) {
       );
     }
 
+    const objetAvoir = objet ?? "commission";
+    if (!OBJETS.some((o) => o === objetAvoir)) {
+      return NextResponse.json(
+        { error: "L'objet de l'avoir doit être « commission » ou « recrutement »" },
+        { status: 400 }
+      );
+    }
+
     const conseiller = await prisma.utilisateurs.findUnique({
       where: { id: userId },
-      select: { id: true, tva: true, taux_tva: true },
+      select: { id: true, tva: true, taux_tva: true, tva_recrutement: true },
     });
 
     if (!conseiller) {
@@ -82,7 +99,7 @@ export async function POST(request: Request) {
     // TVA : override éventuel sinon profil du conseiller, fallback 20 %
     const effectiveApply =
       apply_tva === undefined || apply_tva === null
-        ? conseiller.tva ?? false
+        ? tvaParDefaut(objetAvoir, conseiller)
         : Boolean(apply_tva);
 
     const overrideTaux =
@@ -107,6 +124,7 @@ export async function POST(request: Request) {
         user_id: userId,
         relation_id: null,
         motif: motif.trim(),
+        objet: objetAvoir,
         retrocession: montantHTArrondi,
         montant_honoraires: null,
         taux_retrocession: null,

@@ -4,8 +4,8 @@ import { Text } from "@react-pdf/renderer";
 import { FactureDetaillee } from "@/lib/types";
 
 /**
- * Sous le titre d'une facture de commission ou de recrutement : signale
- * qu'elle est annulée, ou qu'elle en remplace une autre.
+ * Sous le titre d'une facture ou d'un avoir : signale que le document est
+ * annulé, ou qu'il en remplace un autre.
  */
 export default function MentionAnnulation({ facture }: { facture: FactureDetaillee }) {
   if (facture.annulee) {
@@ -14,7 +14,9 @@ export default function MentionAnnulation({ facture }: { facture: FactureDetaill
       : "";
     return (
       <Text style={{ color: "#c00", textAlign: "center", fontSize: 14, marginTop: 6 }}>
-        FACTURE ANNULÉE{le} — NON ÉMISE, NE PAS RÉGLER
+        {facture.type === "avoir" && Number(facture.retrocession) < 0
+          ? `AVOIR ANNULÉ${le} — NON ÉMIS, SANS EFFET`
+          : `FACTURE ANNULÉE${le} — NON ÉMISE, NE PAS RÉGLER`}
       </Text>
     );
   }

@@ -3,6 +3,7 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { FactureDetaillee } from "@/lib/types";
 import { computeMontantsFacture } from "@/utils/montantsFacture";
+import MentionAnnulation from "./MentionAnnulation";
 
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 12 },
@@ -60,6 +61,18 @@ export default function FactureAvoir({
 
   const isAvoir = montantHT < 0;
 
+  // Un avoir qui régularise des recrutements est établi par celui qui les a
+  // facturés : la société de facturation du conseiller, comme sur
+  // `FactureRecrutement`. Sinon (commissions, avoirs sans objet), le conseiller.
+  const surRecrutement = facture.objet === "recrutement";
+  const emetteur = surRecrutement
+    ? {
+        nom: user.nom_societe_facture || `EI ${user.nom} ${user.prenom}`,
+        adresse: user.adresse_facture || user.adresse,
+        siren: user.siren_facture || user.siren,
+      }
+    : { nom: `${user.nom} ${user.prenom}`, adresse: user.adresse, siren: user.siren };
+
   const documentLabel = isAvoir ? "AVOIR" : "FACTURE D'AJUSTEMENT";
   const montantLabel = isAvoir
     ? "Montant à rembourser TTC"
@@ -75,10 +88,10 @@ export default function FactureAvoir({
         <View style={styles.flexRow}>
           <View>
             <Text style={[styles.bold, styles.headerInfo]}>
-              {facture.conseiller.nom} {facture.conseiller.prenom}
+              {emetteur.nom}
             </Text>
             <Text style={styles.headerInfo}>
-              Adresse : {facture.conseiller.adresse}
+              Adresse : {emetteur.adresse}
             </Text>
             <Text style={styles.headerInfo}>
               {facture.conseiller.telephone
@@ -89,7 +102,7 @@ export default function FactureAvoir({
               Mail : {facture.conseiller.email}
             </Text>
             <Text style={styles.headerInfo}>
-              Siren : {facture.conseiller.siren}
+              Siren : {emetteur.siren}
             </Text>
           </View>
           <View>
@@ -120,6 +133,7 @@ export default function FactureAvoir({
 
         {/* Titre */}
         <Text style={styles.highlight}>{getTitle()}</Text>
+        <MentionAnnulation facture={facture} />
 
         {/* Bloc DÉSIGNATION / motif */}
         <View style={[styles.table, { marginTop: 10 }]}>

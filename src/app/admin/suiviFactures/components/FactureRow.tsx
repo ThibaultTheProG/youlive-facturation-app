@@ -7,21 +7,23 @@ interface FactureRowProps {
   updateStatut: (factureId: number, newStatut: string, numero: string, created_at: string) => Promise<void>;
   onEditTva: (facture: FactureDetaillee) => void;
   onRemplacer: (facture: FactureDetaillee) => void;
+  onAnnulerAvoir: (facture: FactureDetaillee) => void;
 }
 
-export const FactureRow = ({ facture, updateStatut, onEditTva, onRemplacer }: FactureRowProps) => {
+export const FactureRow = ({ facture, updateStatut, onEditTva, onRemplacer, onAnnulerAvoir }: FactureRowProps) => {
   const typeLabel =
     facture.type === "avoir"
       ? Number(facture.retrocession) < 0
         ? "Avoir"
         : "Ajustement"
       : facture.type;
-  // Même règle que /api/factures/[id]/remplacer : une facture envoyée ou
-  // payée a été émise, elle s'annule par un avoir.
+  // Même règle que /api/factures/[id]/remplacer et /annuler : un document
+  // envoyé ou payé a été émis, il ne s'annule plus sans contre-écriture.
+  const jamaisEmise =
+    facture.statut_envoi !== "envoyée" && facture.statut_paiement !== "payé";
   const remplacable =
-    (facture.type === "commission" || facture.type === "recrutement") &&
-    facture.statut_envoi !== "envoyée" &&
-    facture.statut_paiement !== "payé";
+    (facture.type === "commission" || facture.type === "recrutement") && jamaisEmise;
+  const avoirAnnulable = facture.type === "avoir" && jamaisEmise;
   const pdfButton = (
     <Button
       className="bg-orange-strong text-white hover:bg-orange-light hover:text-black cursor-pointer"
@@ -106,6 +108,16 @@ export const FactureRow = ({ facture, updateStatut, onEditTva, onRemplacer }: Fa
               onClick={() => onRemplacer(facture)}
             >
               Annuler et remplacer
+            </Button>
+          )}
+
+          {avoirAnnulable && (
+            <Button
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => onAnnulerAvoir(facture)}
+            >
+              {Number(facture.retrocession) < 0 ? "Annuler l'avoir" : "Annuler l'ajustement"}
             </Button>
           )}
         </div>

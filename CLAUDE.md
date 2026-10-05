@@ -222,6 +222,17 @@ dérive à chaque `migrate dev`. Toute nouvelle lecture qui somme ou liste des f
 doit filtrer `en_vigueur: true` ; les contrôles d'existence du cron, eux, comptent les annulées
 (une facture annulée a été traitée, elle ne doit pas être recréée).
 
+**Avoirs : objet et annulation** (depuis le 02/10/2026) : un avoir / ajustement porte
+`factures.objet`, `commission` ou `recrutement` (`NULL` sur les avoirs antérieurs, lu comme
+`commission`). Sur `recrutement`, `FactureAvoir.tsx` imprime la société de facturation
+(`nom_societe_facture`, `siren_facture`, `adresse_facture`) comme `FactureRecrutement.tsx`, et le
+défaut de TVA suit `tva_recrutement` via `tvaParDefaut(objet, …)` — un avoir établi au nom de la
+personne alors que la facture l'était au nom de sa société est à refaire (cas Maryline DELAHAYE /
+EASY RENT, 7 avoirs). `POST /api/factures/[id]/annuler` (admin, bouton « Annuler l'avoir ») annule
+un avoir **ni envoyé ni payé**, sans le remplacer ; il refuse les commissions et recrutements,
+qu'un cron comptant les annulées comme traitées ne recréerait jamais — ceux-là passent par
+`/remplacer`.
+
 Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `utilisateurs.chiffre_affaires`. See `src/utils/historiqueCA.ts`.
 
 **CA recomputation (idempotent, not incremental):** On each `/api/contrats` sync, `historique_ca_annuel.chiffre_affaires` is **recomputed by SUM** (set, not incremented) as the total of `honoraires_agent` of all type-9 entries of the conseiller for the contract year, via `recomputeCAForYear`. This is idempotent: it self-heals when Apimo revises an amount or when a relation was previously missed, and it never double-counts across runs. `recomputeCAForYear` skips any year already closed (`date_cloture` set), recomputes `retrocession_finale`, and syncs the `utilisateurs` cache only for the current year. The old incremental `updateCACurrentYear` is no longer used by the sync.

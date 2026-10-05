@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import RadioCustom from "@/components/uiCustom/radioCustom";
+import { tvaParDefaut } from "@/utils/montantsFacture";
 
 interface ConseillerLite {
   id: number;
@@ -28,7 +29,13 @@ interface ConseillerLite {
   nom: string | null;
   tva: boolean;
   taux_tva: number | null;
+  tva_recrutement: boolean | null;
+  nom_societe_facture: string | null;
+  siren_facture: string | null;
+  siren?: string;
 }
+
+type ObjetAvoir = "commission" | "recrutement";
 
 const fetchConseillers = async (url: string): Promise<ConseillerLite[]> => {
   const response = await fetch(url);
@@ -53,6 +60,7 @@ export default function CreateAvoirDialog({
   const [userId, setUserId] = useState<string>("");
   const [montant, setMontant] = useState<string>("");
   const [motif, setMotif] = useState<string>("");
+  const [objet, setObjet] = useState<ObjetAvoir>("commission");
   const [assujetti, setAssujetti] = useState<string>("non");
   const [taux, setTaux] = useState<number>(20);
 
@@ -64,15 +72,41 @@ export default function CreateAvoirDialog({
     ConseillerLite[]
   >(open ? "/api/conseillers/get?includeInactifs=true" : null, fetchConseillers);
 
-  // Le choix du conseiller préremplit la TVA depuis son profil.
+  const conseillerChoisi = conseillers.find((c) => String(c.id) === userId);
+
+  // Le conseiller et l'objet de l'avoir préremplissent la TVA depuis le
+  // profil : un avoir sur recrutement suit `tva_recrutement`.
+  const preremplirTva = (conseiller: ConseillerLite | undefined, pour: ObjetAvoir) => {
+    if (!conseiller) return;
+    setAssujetti(tvaParDefaut(pour, conseiller) ? "oui" : "non");
+    setTaux(conseiller.taux_tva != null ? conseiller.taux_tva : 20);
+  };
+
   const handleConseillerChange = (value: string) => {
     setUserId(value);
-    const conseiller = conseillers.find((c) => String(c.id) === value);
-    if (conseiller) {
-      setAssujetti(conseiller.tva ? "oui" : "non");
-      setTaux(conseiller.taux_tva != null ? conseiller.taux_tva : 20);
-    }
+    preremplirTva(conseillers.find((c) => String(c.id) === value), objet);
   };
+
+  const handleObjetChange = (value: string) => {
+    const pour: ObjetAvoir = value === "recrutement" ? "recrutement" : "commission";
+    setObjet(pour);
+    preremplirTva(conseillerChoisi, pour);
+  };
+
+  // Émetteur imprimé sur le PDF — même règle que `FactureAvoir`.
+  const emetteur = !conseillerChoisi
+    ? null
+    : objet === "recrutement"
+    ? {
+        nom:
+          conseillerChoisi.nom_societe_facture ||
+          `EI ${conseillerChoisi.nom} ${conseillerChoisi.prenom}`,
+        siren: conseillerChoisi.siren_facture || conseillerChoisi.siren,
+      }
+    : {
+        nom: `${conseillerChoisi.nom} ${conseillerChoisi.prenom}`,
+        siren: conseillerChoisi.siren,
+      };
 
   const montantNum = Number(montant);
   const montantValide =
@@ -109,6 +143,7 @@ export default function CreateAvoirDialog({
           user_id: Number(userId),
           montant_ht: montantNum,
           motif: motif.trim(),
+          objet,
           apply_tva: assujetti === "oui",
           taux_tva: assujetti === "oui" ? taux : null,
         }),
@@ -166,6 +201,30 @@ export default function CreateAvoirDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Objet : décide de l'émetteur imprimé et du défaut de TVA */}
+          <div className="flex flex-col space-y-2">
+            <Label htmlFor="avoir-objet">Régularise</Label>
+            <Select value={objet} onValueChange={handleObjetChange}>
+              <SelectTrigger id="avoir-objet" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="commission">
+                  Des commissions — au nom du conseiller
+                </SelectItem>
+                <SelectItem value="recrutement">
+                  Des recrutements — au nom de sa société de facturation
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {emetteur && (
+              <p className="text-xs text-gray-600">
+                Établi au nom de : <span className="font-semibold">{emetteur.nom}</span>
+                {emetteur.siren ? ` — ${emetteur.siren}` : ""}
+              </p>
+            )}
           </div>
 
           {/* Montant HT */}

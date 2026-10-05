@@ -9,6 +9,7 @@ import ExportExcelButton from "./components/ExportExcelButton";
 import EditTvaDialog from "./components/EditTvaDialog";
 import CreateAvoirDialog from "./components/CreateAvoirDialog";
 import RemplacerFactureDialog from "./components/RemplacerFactureDialog";
+import AnnulerAvoirDialog from "./components/AnnulerAvoirDialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus } from "lucide-react";
 import { FactureDetaillee } from "@/lib/types";
@@ -66,6 +67,17 @@ const TableauSuiviFactures: React.FC = () => {
     setRemplacantFacture(facture);
     setRemplacerOpenCount((count) => count + 1);
     setRemplacerDialogOpen(true);
+  };
+
+  // État pour la popup d'annulation d'un avoir / ajustement non envoyé
+  const [annulerDialogOpen, setAnnulerDialogOpen] = useState(false);
+  const [avoirAAnnuler, setAvoirAAnnuler] = useState<FactureDetaillee | null>(null);
+  const [annulerOpenCount, setAnnulerOpenCount] = useState(0);
+
+  const handleAnnulerAvoir = (facture: FactureDetaillee) => {
+    setAvoirAAnnuler(facture);
+    setAnnulerOpenCount((count) => count + 1);
+    setAnnulerDialogOpen(true);
   };
 
   const handleCreateAvoir = () => {
@@ -164,6 +176,7 @@ const TableauSuiviFactures: React.FC = () => {
             updateStatut={updateStatut}
             onEditTva={handleEditTva}
             onRemplacer={handleRemplacer}
+            onAnnulerAvoir={handleAnnulerAvoir}
           />
 
           {/* Pagination */}
@@ -195,6 +208,17 @@ const TableauSuiviFactures: React.FC = () => {
         onReplaced={async () => {
           await mutate();
           toast.success("Facture annulée et remplacée");
+        }}
+      />
+
+      <AnnulerAvoirDialog
+        key={`annuler-${annulerOpenCount}`}
+        facture={avoirAAnnuler}
+        open={annulerDialogOpen}
+        onOpenChange={setAnnulerDialogOpen}
+        onCancelled={async () => {
+          await mutate();
+          toast.success("Document annulé");
         }}
       />
 
