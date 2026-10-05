@@ -40,6 +40,9 @@ export default function FormParams() {
     null
   );
   const [adresse, setAdresse] = useState<string>("");
+  const [nomSocieteFacture, setNomSocieteFacture] = useState<string>("");
+  const [sirenFacture, setSirenFacture] = useState<string>("");
+  const [adresseFacture, setAdresseFacture] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStatus, setFormStatus] = useState<FormStatusType>({
     type: null,
@@ -148,6 +151,9 @@ export default function FormParams() {
     setTauxTVA(conseiller.taux_tva ?? 20);
     setTvaRecrutement(conseiller.tva_recrutement === false ? "non" : "oui");
     setAdresse(conseiller.adresse || "");
+    setNomSocieteFacture(conseiller.nom_societe_facture || "");
+    setSirenFacture(conseiller.siren_facture || "");
+    setAdresseFacture(conseiller.adresse_facture || "");
 
     if (conseiller.auto_parrain) {
       setAutoParrain(conseiller.auto_parrain);
@@ -394,6 +400,9 @@ export default function FormParams() {
         tva: assujettiTVA === "oui",
         taux_tva: assujettiTVA === "oui" ? tauxTVA : null,
         tva_recrutement: tvaRecrutement === "oui",
+        nom_societe_facture: nomSocieteFacture.trim() || null,
+        siren_facture: sirenFacture.trim() || null,
+        adresse_facture: adresseFacture.trim() || null,
         typecontrat: selectedTypeContrat,
         auto_parrain: autoParrain,
         chiffre_affaires: Number(chiffreAffaires),
@@ -558,6 +567,47 @@ export default function FormParams() {
                   name="auto_parrain"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Informations facture de recrutement */}
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <span className="text-sm font-semibold text-gray-700">Informations facture de recrutement</span>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Société au nom de laquelle sont établis les factures de recrutement et les avoirs qui les régularisent. Vide : identité du conseiller.
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <InputCustom
+                  disable={false}
+                  name="nom_societe_facture"
+                  label="Nom de société"
+                  id="nom_societe_facture"
+                  type="text"
+                  value={nomSocieteFacture}
+                  onChange={(val) => setNomSocieteFacture(String(val))}
+                />
+                <InputCustom
+                  disable={false}
+                  name="siren_facture"
+                  label="SIREN / RSAC / RCS"
+                  id="siren_facture"
+                  type="text"
+                  value={sirenFacture}
+                  onChange={(val) => setSirenFacture(String(val))}
+                />
+              </div>
+              <InputCustom
+                disable={false}
+                name="adresse_facture"
+                label="Adresse de facturation"
+                id="adresse_facture"
+                type="text"
+                value={adresseFacture}
+                onChange={(val) => setAdresseFacture(String(val))}
+              />
             </div>
           </div>
 

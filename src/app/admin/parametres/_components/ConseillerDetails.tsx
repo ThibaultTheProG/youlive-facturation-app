@@ -72,6 +72,18 @@ export default function ConseillerDetails({ selectedConseiller, adresse, setAdre
           ) : null}
         </div>
 
+        {/* Identifiant légal : appartient à Apimo, écrasé chaque nuit par la sync */}
+        <div>
+          <InputCustom
+            disable={true}
+            name="siren_apimo"
+            label="SIREN / RSAC / RCS (Apimo)"
+            id="siren_apimo"
+            type="text"
+            value={selectedConseiller?.siren || ""}
+          />
+        </div>
+
         {/* Adresse (éditable) */}
         <div>
           <InputCustom
