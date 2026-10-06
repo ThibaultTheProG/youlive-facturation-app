@@ -50,10 +50,11 @@ export type inputCustomProps = {
 
 // Pour gérer les contrats :
 export interface Contract {
-  id: string;
-  step: string;
-  agency?: string;
-  property?: string;
+  id: number | string;
+  // Code Apimo, en chaîne ou en nombre selon les époques : comparer via String().
+  step: number | string;
+  agency?: number | string;
+  property?: number | string;
   currency?: string;
   commission: string;
   commission_agency?: string;
@@ -76,7 +77,8 @@ export interface Entries {
   amount: number | string;
   vat: number | string;
   vat_rate: number | string;
-  type: string;
+  // Code Apimo, en chaîne ou en nombre selon les époques : comparer via String().
+  type: number | string;
 }
 
 export interface RelationContrat {

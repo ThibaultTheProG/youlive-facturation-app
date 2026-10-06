@@ -30,9 +30,15 @@ export async function GET(request: Request) {
     // Contrats retenus : step 4, champs obligatoires présents, année en cours
     // ou précédente. Le filtrage est fait ici (avant toute requête DB) pour ne
     // jamais payer de round-trip sur un contrat qui sera ignoré.
+    // Apimo renvoie ses codes (step, type) tantôt en chaîne, tantôt en nombre :
+    // depuis le 02/10/2026 ce sont des nombres, et une comparaison stricte à
+    // "4" écartait tous les contrats sans la moindre erreur. Toujours comparer
+    // par `code()`.
+    const code = (valeur: unknown) => String(valeur);
+
     let invalides = 0;
     const eligibles = contracts.filter((contrat) => {
-      if (contrat.step !== "4") return false;
+      if (code(contrat.step) !== "4") return false;
       const { id, property, commission_agency, contract_at } = contrat;
       if (!id || !property || !commission_agency || !contract_at) {
         invalides++;
@@ -46,6 +52,15 @@ export async function GET(request: Request) {
         currentYear - 1
       }-${currentYear})` + (invalides ? `, ${invalides} invalides ignorés` : "")
     );
+
+    // Des contrats mais aucun éligible : la réponse d'Apimo a changé de forme.
+    // Échouer bruyamment — un « 0 créé » en 200 passe pour une nuit calme et
+    // prive les conseillers de leurs factures.
+    if (contracts.length > 0 && eligibles.length === 0) {
+      throw new Error(
+        `Aucun contrat éligible sur ${contracts.length} reçus d'Apimo : format de réponse inattendu`
+      );
+    }
 
     // ---------------------------------------------------------------------
     // 1. Préchargement : 4 requêtes au lieu d'un SELECT par contrat/entry.
@@ -134,7 +149,7 @@ export async function GET(request: Request) {
     for (const contrat of eligibles) {
       const idApimo = Number(contrat.id);
       const cible: CibleContrat = {
-        statut: contrat.step,
+        statut: code(contrat.step),
         property_id: Number(contrat.property),
         honoraires: Number(contrat.commission_agency),
         date_signature: new Date(contrat.contract_at as string),
@@ -204,8 +219,8 @@ export async function GET(request: Request) {
       // Trier les entries pour avoir les type 2, donc apporteur d'affaire, en premier
       const sortEntries = [...(contrat.entries ?? [])].sort(
         (a: Entries, b: Entries) =>
-          Number(b.type === "2") - Number(a.type === "2") ||
-          Number(a.type === "9") - Number(b.type === "9")
+          Number(code(b.type) === "2") - Number(code(a.type) === "2") ||
+          Number(code(a.type) === "9") - Number(code(b.type) === "9")
       );
 
       for (const entry of sortEntries) {
@@ -251,7 +266,7 @@ export async function GET(request: Request) {
         // des honoraires_agent par (utilisateur, année du contrat). Le CA sera
         // recomposé (SET) après la boucle — recalcul idempotent qui rattrape
         // automatiquement les montants révisés et les relations manquantes.
-        if (type === "9") {
+        if (code(type) === "9") {
           const key = `${utilisateur.id}-${contractYear}`;
           const acc = caAccumulator.get(key) ?? {
             userId: utilisateur.id,
@@ -314,7 +329,7 @@ export async function GET(request: Request) {
         const { contact: contactId, type } = contact;
 
         // Ne pas insérer les contacts avec le type 3 ou 4
-        if (!contactId || !type || type === "3" || type === "4") {
+        if (!contactId || !type || code(type) === "3" || code(type) === "4") {
           continue;
         }
 
