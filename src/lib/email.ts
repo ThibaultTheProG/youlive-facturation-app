@@ -40,6 +40,7 @@ export async function sendInvitationEmail(
         <p><a href="${lien}" style="display:inline-block;padding:12px 20px;background:#f97316;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold;">Définir mon mot de passe</a></p>
         <p>Ce lien est personnel et valable <strong>48 heures</strong>. Il ne fonctionnera qu'une seule fois.</p>
         <p>Tu te connecteras ensuite avec ton adresse email : <strong>${email}</strong></p>
+        <p>Ces identifiants (adresse email et mot de passe) te servent aussi à te connecter à l'application <strong>Avis de valeur</strong> : tu n'as pas de second compte à créer.</p>
         <p style="color:#666;font-size:13px;">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br>${lien}</p>
       `,
     });
