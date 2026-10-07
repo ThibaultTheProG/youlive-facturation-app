@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { ApimoError, fetchApimoAll } from "@/utils/apimo";
 import { memeTexte, runChunked } from "@/utils/sync";
 import { requireCronOrAdmin } from "@/lib/apiAuth";
+import { journaliserSync, type JournalSync } from "@/lib/journalSync";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -28,6 +29,10 @@ export async function GET(request: Request) {
   const auth = await requireCronOrAdmin(request);
   if ("error" in auth) return auth.error;
 
+  return journaliserSync("contacts", auth, synchroniser);
+}
+
+async function synchroniser(journal: JournalSync) {
   const debut = Date.now();
   try {
     // Contacts effectivement rattachés à un contrat : seuls ceux-là nous intéressent
@@ -161,6 +166,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, ...resume });
   } catch (error) {
+    journal.echec(error);
     console.error("Erreur lors de la récupération des contacts :", error);
     if (error instanceof ApimoError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

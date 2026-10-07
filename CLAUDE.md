@@ -170,7 +170,7 @@ Coût bcrypt : 12 (`BCRYPT_COST` dans `src/lib/password.ts`). Le facteur de trav
 `verifyToken` valide la forme du payload (`estPayloadValide` : id entier positif, rôle `admin`/`conseiller`, name/email en `string`) et épingle `algorithms: ["HS256"]`. Les appelants peuvent exploiter son retour tel quel — ne pas réintroduire de contrôles de forme en aval.
 
 ### Two Application Areas
-- `/admin` — admin only: agent settings (`parametres`), invoice dashboard (`suiviFactures`), agent registration (`inscription`)
+- `/admin` — admin only: agent settings (`parametres`), invoice dashboard (`suiviFactures`), agent registration (`inscription`), sync launcher and log (`synchronisations`)
 - `/conseiller` — conseiller only: invoices (`factures`), sponsored agents (`filleuls`), account settings (`compte`)
 
 Routes publiques : `/login` et `/definir-mot-de-passe` (lien d'invitation). `/factures/[id]/pdf` (PDF viewer) est bien couvert par le matcher du middleware et exige une session ; l'API qu'il consomme (`/api/factures/[id]`) vérifie en plus que la facture appartient au demandeur.
@@ -186,6 +186,17 @@ Invoices are auto-created nightly via Vercel cron jobs (`vercel.json`) in this s
 5. `/api/factures/create` → generate invoices for recent contracts (last 7 days)
 
 The main invoice creation logic is in `src/app/api/factures/create/route.ts`.
+
+**Journal et lancement manuel** (depuis le 07/10/2026) : chaque passage d'une de ces cinq routes
+est consigné dans la table `synchronisations` par `journaliserSync` (`src/lib/journalSync.ts`),
+qui refuse aussi en `409` un second lancement du même type tant que le premier tourne. La page
+`/admin/synchronisations` lit ce journal (`GET /api/synchronisations`) et lance les routes à la
+main, une par une ou enchaînées. **Toute nouvelle synchronisation passe par `journaliserSync`** et
+se déclare dans `SYNCHRONISATIONS` (`src/lib/synchronisations.ts`, module sans dépendance serveur,
+partagé avec la page). Dans son `catch`, la route appelle `journal.echec(error)` : sa réponse HTTP
+est volontairement vague, c'est le journal qui garde le vrai message. Le statut `interrompue`
+n'est jamais écrit : c'est une ligne restée `en_cours` plus de `DELAI_INTERRUPTION_MS` — une
+fonction tuée par le timeout Vercel ne peut pas consigner son propre échec.
 
 **Two invoice types:**
 - `commission` — agent's retrocession on their own sale
@@ -270,7 +281,7 @@ Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `
 - `src/lib/db.ts` — singleton Prisma client with pg Pool adapter
 - `src/backend/gestionFactures.tsx` — server action for fetching a conseiller's invoices
 - `src/app/factures/[id]/pdf/` — PDF rendering pages (`FactureCommission.tsx`, `FactureRecrutement.tsx`)
-- `prisma/schema.prisma` — DB schema (tables: `utilisateurs`, `factures`, `relations_contrats`, `contrats`, `parrainages`, `historique_ca_annuel`, `contacts`, `property`)
+- `prisma/schema.prisma` — DB schema (tables: `utilisateurs`, `factures`, `relations_contrats`, `contrats`, `parrainages`, `historique_ca_annuel`, `contacts`, `property`, `synchronisations`)
 - `prisma.config.ts` — Prisma config pointing to `prisma/schema.prisma`
 
 ### Environment Variables

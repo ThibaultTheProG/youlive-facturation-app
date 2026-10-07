@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { requireCronOrAdmin } from "@/lib/apiAuth";
+import { journaliserSync } from "@/lib/journalSync";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { PrismaClient } from "@prisma/client";
 import { RelationContrat } from "@/lib/types.js";
@@ -32,17 +33,20 @@ export async function GET(request: Request) {
 
   console.log("🚀 Requête reçue :", request.url);
 
-  try {
-    await createFacture();
-    console.log("✅ Factures générées avec succès.");
-    return NextResponse.json({ message: "Ok" });
-  } catch (error) {
-    console.error("❌ Erreur lors de la génération des factures :", error);
-    return NextResponse.json(
-      { error: "Erreur interne du serveur." },
-      { status: 500 }
-    );
-  }
+  return journaliserSync("factures", auth, async (journal) => {
+    try {
+      const resume = await createFacture();
+      console.log("✅ Factures générées avec succès.", resume);
+      return NextResponse.json({ message: "Ok", ...resume });
+    } catch (error) {
+      journal.echec(error);
+      console.error("❌ Erreur lors de la génération des factures :", error);
+      return NextResponse.json(
+        { error: "Erreur interne du serveur." },
+        { status: 500 }
+      );
+    }
+  });
 }
 
 // Fonction principale
@@ -170,6 +174,17 @@ async function createFacture() {
         notification.montant
       );
     }
+
+    // Une notification est empilée par facture créée : le décompte du journal
+    // des synchronisations en découle, sans compteur dans la création elle-même.
+    const recrutements = notificationsToSend.filter(
+      (n) => n.factureType === "recrutement"
+    ).length;
+    return {
+      relations_traitees: contrats.length,
+      factures_commission: notificationsToSend.length - recrutements,
+      factures_recrutement: recrutements,
+    };
   } catch (error) {
     console.error("❌ Erreur lors de la création des factures :", error);
     throw error;

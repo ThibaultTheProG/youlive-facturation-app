@@ -8,6 +8,7 @@ import { round2, SEUIL_CA } from "@/utils/decoupageSeuil";
 import { ApimoError, fetchApimoAll } from "@/utils/apimo";
 import { memeJour, memeMontant, runChunked } from "@/utils/sync";
 import { requireCronOrAdmin } from "@/lib/apiAuth";
+import { journaliserSync, type JournalSync } from "@/lib/journalSync";
 import { sendEmailClub99 } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,10 @@ export async function GET(request: Request) {
   const auth = await requireCronOrAdmin(request);
   if ("error" in auth) return auth.error;
 
+  return journaliserSync("contrats", auth, synchroniser);
+}
+
+async function synchroniser(journal: JournalSync) {
   const debut = Date.now();
   try {
     // Vérifier si une réinitialisation annuelle est nécessaire
@@ -464,6 +469,7 @@ export async function GET(request: Request) {
       ...resume,
     });
   } catch (error) {
+    journal.echec(error);
     console.error("Erreur lors de la récupération des contrats :", error);
     if (error instanceof ApimoError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { ApimoError, fetchApimoAll } from "@/utils/apimo";
 import { memeTexte, runChunked } from "@/utils/sync";
 import { requireCronOrAdmin, requireSelfOrAdmin } from "@/lib/apiAuth";
+import { journaliserSync, type JournalSync } from "@/lib/journalSync";
 import { avecAuteurParrainage } from "@/utils/parrainagesHistorique";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,10 @@ export async function GET(request: Request) {
   const auth = await requireCronOrAdmin(request);
   if ("error" in auth) return auth.error;
 
+  return journaliserSync("conseillers", auth, synchroniser);
+}
+
+async function synchroniser(journal: JournalSync) {
   const debut = Date.now();
   try {
     const conseillers = await fetchApimoAll<ConseillerInput>("users", "users");
@@ -187,6 +192,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, ...resume });
   } catch (error) {
+    journal.echec(error);
     console.error("Erreur lors de la synchronisation des conseillers :", error);
     if (error instanceof ApimoError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

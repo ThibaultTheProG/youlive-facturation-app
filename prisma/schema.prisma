@@ -183,6 +183,7 @@ model utilisateurs {
   parrainages          parrainages?
   relations_contrats   relations_contrats[]
   historique_ca_annuel historique_ca_annuel[]
+  synchronisations     synchronisations[]
 }
 
 model historique_ca_annuel {
@@ -205,4 +206,27 @@ model historique_ca_annuel {
   @@index([user_id], map: "idx_historique_ca_user_id")
   @@index([annee], map: "idx_historique_ca_annee")
   @@index([date_cloture], map: "idx_historique_ca_date_cloture")
+}
+
+/// Journal des synchronisations (crons nocturnes et lancements manuels). Écrit exclusivement
+/// par `journaliserSync` (`src/lib/journalSync.ts`). Une ligne restée `en_cours` plus de cinq
+/// minutes est une exécution tuée par Vercel (timeout) : elle est lue comme « interrompue ».
+model synchronisations {
+  id          Int       @id @default(autoincrement())
+  /// `conseillers` | `contrats` | `proprietes` | `contacts` | `factures`
+  type        String    @db.VarChar(30)
+  /// `cron` | `manuel`
+  declencheur String    @db.VarChar(10)
+  /// L'admin qui a lancé la synchronisation ; NULL pour le cron.
+  auteur_id   Int?
+  debut       DateTime  @default(now()) @db.Timestamp(6)
+  fin         DateTime? @db.Timestamp(6)
+  /// `en_cours` | `succes` | `avec_erreurs` | `echec`
+  statut      String    @db.VarChar(20)
+  resume      Json?
+  erreur      String?
+
+  utilisateurs utilisateurs? @relation(fields: [auteur_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([type, debut(sort: Desc)], map: "idx_synchronisations_type_debut")
 }
