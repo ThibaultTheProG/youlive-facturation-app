@@ -17,8 +17,40 @@ type ConseillerInput = {
   phone?: string;
   mobile?: string;
   city?: { name: string };
-  partners?: Array<{ reference: string }>;
+  partners?: Array<{ type: number; reference: string }>;
 };
+
+/**
+ * Identifiant légal du conseiller, extrait du tableau `partners` d'Apimo.
+ *
+ * `partners` est **hétérogène et sans ordre garanti** : on y trouve, selon le
+ * conseiller, l'attestation de collaborateur (type 4, `ADC8501…`), un
+ * partenaire nommé sans référence (type 5, banque ou assureur), le SIREN/RSAC
+ * (type 8, neuf chiffres et la ville d'immatriculation), la mention de portage
+ * salarial (type 13, une phrase), un drapeau valant `"0"` ou `"1"` (type 14) et
+ * un RCS saisi avec sa ville (type 15).
+ *
+ * La sync lisait `partners[0].reference`, donc la première entrée **quelle que
+ * soit sa nature** : huit conseillers sur les 81 synchronisés recevaient ainsi
+ * un `"0"`, un `"1"` ou rien du tout alors que leur numéro était bien présent
+ * plus loin dans le tableau (signalé par Tiphaine le 08/10/2026 pour Nicolas
+ * DEMIZIEUX et Emmanuelle L'HOURS). Choisir par **type**, jamais par position.
+ *
+ * L'ordre de préférence place le portage avant le SIREN : pour un conseiller en
+ * portage, la phrase *est* la mention légale, et c'est elle qui doit figurer sur
+ * ses factures même s'il possède aussi un SIREN propre (cas Gilles FERRON).
+ */
+const TYPES_IDENTIFIANT_LEGAL = [13, 8, 15] as const;
+
+function identifiantLegal(
+  partners: ConseillerInput["partners"]
+): string | null {
+  for (const type of TYPES_IDENTIFIANT_LEGAL) {
+    const reference = partners?.find((p) => p.type === type)?.reference?.trim();
+    if (reference) return reference;
+  }
+  return null;
+}
 
 export async function GET(request: Request) {
   const auth = await requireCronOrAdmin(request);
@@ -90,7 +122,7 @@ async function synchroniser(journal: JournalSync) {
         email: email || null,
         telephone: phone || null,
         mobile: mobile || null,
-        siren: partners?.[0]?.reference || null,
+        siren: identifiantLegal(partners),
         // `adresse` n'est renseignée qu'à la création : elle est ensuite
         // modifiable dans l'app et ne doit pas être écrasée par Apimo.
         adresse: city?.name || null,

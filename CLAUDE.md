@@ -258,11 +258,15 @@ Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `
 - **`utilisateurs.siren` est du texte libre, jamais un nombre:** c'est le champ d'identifiant
   légal du conseiller (libellé `SIREN / RSAC / RCS` dans les formulaires), et **c'est là que se
   lit le numéro RSAC** — il n'y a pas de colonne `rsac`. Il appartient à Apimo
-  (`partners[0].reference`) et la sync `/api/conseillers` l'écrase chaque nuit : ne jamais
+  (tableau `partners`) et la sync `/api/conseillers` l'écrase chaque nuit : ne jamais
   l'écrire depuis l'app. Son contenu est hétérogène (`"0"`, `"831 555 339"`, une phrase de 118
   caractères pour six conseillers en portage) : le déclarer `number` ou le passer à `parseInt` /
   `Number` tronque ou vide la valeur de 11 conseillers sur 114. C'était le cas jusqu'au
   30/08/2026 dans `src/lib/types.ts` et les mappings de `/api/conseiller` et `/api/factures/[id]`.
+  Le tableau `partners` d'Apimo est **hétérogène et sans ordre garanti** : l'identifiant légal
+  s'y choisit **par type** (`identifiantLegal` dans `/api/conseillers`, préférence 13 portage →
+  8 SIREN/RSAC → 15 RCS), jamais par position. Lire `partners[0].reference` donnait un `"0"` ou
+  un `"1"` (type 14, un drapeau) à huit conseillers sur 81 — corrigé le 08/10/2026.
 - **`contrats.date_signature` est un `timestamp` sans fuseau:** comparer deux valeurs avec `getTime()` fait diverger toutes les lignes selon le fuseau du process. Comparer le jour en composantes UTC (`toISOString().slice(0, 10)` vs `contract_at`).
 - **Parrainages effacés, factures de recrutement jamais rattrapées:** avant le 25/08/2026, tout
   enregistrement de sa fiche par un conseiller remettait ses trois niveaux de parrainage à `null`
