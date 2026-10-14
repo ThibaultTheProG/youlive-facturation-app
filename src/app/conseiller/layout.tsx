@@ -16,10 +16,11 @@ export default async function ConseillerLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const menuReplie = cookieStore.get("sidebar:state")?.value === "false";
   let user = devUser();
 
   if (!user) {
-    const cookieStore = await cookies();
     const token = cookieStore.get("authToken")?.value;
 
     if (token) {
@@ -30,7 +31,7 @@ export default async function ConseillerLayout({
 
   return (
     <AuthProvider initialUser={user}>
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={!menuReplie}>
         <AppSidebar />
         <main className="flex flex-col min-h-screen w-full">
           <BarreSuperieure accueil="/conseiller" />
