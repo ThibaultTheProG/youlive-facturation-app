@@ -85,7 +85,7 @@ export default function FactureRecrutement({
                 : `Mobile : ${facture.conseiller.mobile}`}
             </Text>
             <Text style={styles.headerInfo}>
-              Mail : {facture.conseiller.email}
+              Mail : {facture.conseiller.email_facture || facture.conseiller.email}
             </Text>
             <Text style={styles.headerInfo}>
               Siren : {facture.conseiller.siren_facture || facture.conseiller.siren}

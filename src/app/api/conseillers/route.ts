@@ -252,6 +252,7 @@ const CHAMPS_CONSEILLER = [
   "nom_societe_facture",
   "siren_facture",
   "adresse_facture",
+  "email_facture",
 ] as const;
 
 export async function PUT(req: Request) {

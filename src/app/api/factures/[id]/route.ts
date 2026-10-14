@@ -175,6 +175,7 @@ export async function GET(request: Request) {
         nom_societe_facture: utilisateur?.nom_societe_facture || '',
         siren_facture: utilisateur?.siren_facture || '',
         adresse_facture: utilisateur?.adresse_facture || '',
+        email_facture: utilisateur?.email_facture || '',
         taux_tva: utilisateur?.taux_tva ? Number(utilisateur.taux_tva) : undefined,
         tva_recrutement: utilisateur?.tva_recrutement ?? true,
       },

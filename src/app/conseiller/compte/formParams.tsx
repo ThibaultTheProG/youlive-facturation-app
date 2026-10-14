@@ -25,6 +25,7 @@ export default function FormParams({ user }: { user: User }) {
   const [nomSocieteFacture, setNomSocieteFacture] = useState<string>("");
   const [sirenFacture, setSirenFacture] = useState<string>("");
   const [adresseFacture, setAdresseFacture] = useState<string>("");
+  const [emailFacture, setEmailFacture] = useState<string>("");
 
   // États pour la gestion des années
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -76,6 +77,7 @@ export default function FormParams({ user }: { user: User }) {
           setNomSocieteFacture(data.nom_societe_facture || "");
           setSirenFacture(data.siren_facture || "");
           setAdresseFacture(data.adresse_facture || "");
+          setEmailFacture(data.email_facture || "");
           setTauxTVA(data.taux_tva ?? 20);
           setTvaRecrutement(data.tva_recrutement === false ? "non" : "oui");
         }
@@ -123,6 +125,7 @@ export default function FormParams({ user }: { user: User }) {
         nom_societe_facture: formData.get("nom_societe_facture")?.toString() || nomSocieteFacture || null,
         siren_facture: formData.get("siren_facture")?.toString() || sirenFacture || null,
         adresse_facture: formData.get("adresse_facture")?.toString() || adresseFacture || null,
+        email_facture: emailFacture.trim() || null,
         taux_tva: formData.get("tva") === "oui" ? tauxTVA : null,
         tva_recrutement: tvaRecrutement === "oui",
       };
@@ -304,6 +307,15 @@ export default function FormParams({ user }: { user: User }) {
             type="text"
             value={adresseFacture}
             onChange={(val) => setAdresseFacture(String(val))}
+          />
+          <InputCustom
+            disable={false}
+            name="email_facture"
+            label="Email de facturation"
+            id="email_facture"
+            type="email"
+            value={emailFacture}
+            onChange={(val) => setEmailFacture(String(val))}
           />
         </div>
       </div>

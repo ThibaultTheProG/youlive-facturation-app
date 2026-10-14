@@ -70,8 +70,14 @@ export default function FactureAvoir({
         nom: user.nom_societe_facture || `EI ${user.nom} ${user.prenom}`,
         adresse: user.adresse_facture || user.adresse,
         siren: user.siren_facture || user.siren,
+        email: user.email_facture || user.email,
       }
-    : { nom: `${user.nom} ${user.prenom}`, adresse: user.adresse, siren: user.siren };
+    : {
+        nom: `${user.nom} ${user.prenom}`,
+        adresse: user.adresse,
+        siren: user.siren,
+        email: user.email,
+      };
 
   const documentLabel = isAvoir ? "AVOIR" : "FACTURE D'AJUSTEMENT";
   const montantLabel = isAvoir
@@ -99,7 +105,7 @@ export default function FactureAvoir({
                 : `Mobile : ${facture.conseiller.mobile}`}
             </Text>
             <Text style={styles.headerInfo}>
-              Mail : {facture.conseiller.email}
+              Mail : {emetteur.email}
             </Text>
             <Text style={styles.headerInfo}>
               Siren : {emetteur.siren}

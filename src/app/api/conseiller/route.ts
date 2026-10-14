@@ -97,6 +97,7 @@ export async function GET(request: Request) {
       nom_societe_facture: conseiller.nom_societe_facture || "",
       siren_facture: conseiller.siren_facture || "",
       adresse_facture: conseiller.adresse_facture || "",
+      email_facture: conseiller.email_facture || "",
       taux_tva: conseiller.taux_tva ? Number(conseiller.taux_tva) : undefined,
       tva_recrutement: conseiller.tva_recrutement,
     };

@@ -43,6 +43,7 @@ export default function FormParams() {
   const [nomSocieteFacture, setNomSocieteFacture] = useState<string>("");
   const [sirenFacture, setSirenFacture] = useState<string>("");
   const [adresseFacture, setAdresseFacture] = useState<string>("");
+  const [emailFacture, setEmailFacture] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStatus, setFormStatus] = useState<FormStatusType>({
     type: null,
@@ -154,6 +155,7 @@ export default function FormParams() {
     setNomSocieteFacture(conseiller.nom_societe_facture || "");
     setSirenFacture(conseiller.siren_facture || "");
     setAdresseFacture(conseiller.adresse_facture || "");
+    setEmailFacture(conseiller.email_facture || "");
 
     if (conseiller.auto_parrain) {
       setAutoParrain(conseiller.auto_parrain);
@@ -403,6 +405,7 @@ export default function FormParams() {
         nom_societe_facture: nomSocieteFacture.trim() || null,
         siren_facture: sirenFacture.trim() || null,
         adresse_facture: adresseFacture.trim() || null,
+        email_facture: emailFacture.trim() || null,
         typecontrat: selectedTypeContrat,
         auto_parrain: autoParrain,
         chiffre_affaires: Number(chiffreAffaires),
@@ -607,6 +610,15 @@ export default function FormParams() {
                 type="text"
                 value={adresseFacture}
                 onChange={(val) => setAdresseFacture(String(val))}
+              />
+              <InputCustom
+                disable={false}
+                name="email_facture"
+                label="Email de facturation"
+                id="email_facture"
+                type="email"
+                value={emailFacture}
+                onChange={(val) => setEmailFacture(String(val))}
               />
             </div>
           </div>

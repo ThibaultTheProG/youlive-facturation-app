@@ -174,6 +174,9 @@ model utilisateurs {
   adresse_facture      String?                @db.VarChar(255)
   nom_societe_facture  String?                @db.VarChar(255)
   siren_facture        String?                @db.VarChar(255)
+  /// Email imprimé en en-tête des factures de recrutement (et de leurs avoirs) à la place
+  /// de `email`, qui reste l'identifiant de connexion. Vide : `email`.
+  email_facture        String?                @db.VarChar(255)
   taux_tva             Decimal?               @db.Decimal(5, 2)
   actif                Boolean                @default(true)
   /// TVA aussi sur les factures de recrutement. `false` : seules les commissions en portent

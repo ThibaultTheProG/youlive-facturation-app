@@ -44,6 +44,7 @@ export async function GET(request: Request) {
         nom_societe_facture: true,
         siren_facture: true,
         adresse_facture: true,
+        email_facture: true,
         // Historique CA annuel
         historique_ca_annuel: {
           where: {
