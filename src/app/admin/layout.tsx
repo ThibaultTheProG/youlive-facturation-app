@@ -1,4 +1,5 @@
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { BarreSuperieure } from "@/components/navigation/BarreSuperieure";
 import { AppSidebar } from "./sidebarAdmin";
 import "../globals.css";
 import { cookies } from "next/headers";
@@ -31,7 +32,7 @@ export default async function Layout({
       <SidebarProvider>
         <AppSidebar />
         <main className="flex flex-col min-h-screen w-full">
-          <SidebarTrigger />
+          <BarreSuperieure accueil="/admin" />
           <div className="flex-grow">
             {children}
           </div>
