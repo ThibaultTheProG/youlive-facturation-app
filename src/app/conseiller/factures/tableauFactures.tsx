@@ -33,7 +33,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { PastilleEnvoi, PastillePaiement, PastilleType } from "./pastilles";
+import { PastilleEnvoi, PastillePaiement, PastilleType } from "@/components/factures/pastilles";
 
 const EUROS = new Intl.NumberFormat("fr-FR", {
   style: "currency",

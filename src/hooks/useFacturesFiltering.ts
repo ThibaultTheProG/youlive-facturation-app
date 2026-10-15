@@ -1,6 +1,16 @@
 import { useState, useMemo, useCallback } from "react";
-import { SortDirection, SortField } from "../app/admin/suiviFactures/components/SortableHeader";
 import useSWR from 'swr';
+
+// Types pour le tri
+export type SortDirection = "asc" | "desc";
+export type SortField =
+  | "conseiller"
+  | "montant"
+  | "date_signature"
+  | "date_paiement"
+  | "statut_envoi"
+  | "numero_mandat"
+  | null;
 
 // Fonction fetcher pour SWR
 const fetcher = async (url: string) => {
@@ -100,6 +110,8 @@ export const useFacturesFiltering = () => {
     handleSort,
     currentFactures: data?.factures || [],
     totalPages: Math.ceil((data?.totalCount || 0) / itemsPerPage),
+    totalCount: (data?.totalCount as number | undefined) ?? 0,
+    itemsPerPage,
     isLoading,
     mutate
   };

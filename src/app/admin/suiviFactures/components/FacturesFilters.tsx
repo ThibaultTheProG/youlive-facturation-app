@@ -1,13 +1,7 @@
-import React, { useCallback, useEffect } from 'react';
-import { Input } from "@/components/ui/input";
+import React from "react";
+import { Search, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface FacturesFiltersProps {
   searchTerm: string;
@@ -20,6 +14,8 @@ interface FacturesFiltersProps {
   setFilterStatutEnvoi: (value: string) => void;
 }
 
+const DECLENCHEUR = "w-full min-w-[10.5rem] cursor-pointer";
+
 const FacturesFilters: React.FC<FacturesFiltersProps> = ({
   searchTerm,
   setSearchTerm,
@@ -30,54 +26,43 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
   filterStatutEnvoi,
   setFilterStatutEnvoi,
 }) => {
-  // Mémoriser les gestionnaires d'événements
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  }, [setSearchTerm]);
+  const filtresActifs = Boolean(searchTerm || filterStatut || filterType || filterStatutEnvoi);
 
-  const handleStatutChange = useCallback((value: string) => {
-    setFilterStatut(value === "tous_statuts" ? "" : value);
-  }, [setFilterStatut]);
-
-  const handleTypeChange = useCallback((value: string) => {
-    setFilterType(value === "tous_types" ? "" : value);
-  }, [setFilterType]);
-
-  const handleStatutEnvoiChange = useCallback((value: string) => {
-    setFilterStatutEnvoi(value === "tous_statuts_envoi" ? "" : value);
-  }, [setFilterStatutEnvoi]);
-
-  // Effet pour réinitialiser les filtres si nécessaire
-  useEffect(() => {
-    // Cette fonction vide est intentionnelle, elle sert juste à déclencher l'effet dans le hook parent
-    // qui réinitialisera la pagination
-  }, [searchTerm, filterStatut, filterType, filterStatutEnvoi]);
+  const reinitialiser = () => {
+    setSearchTerm("");
+    setFilterStatut("");
+    setFilterType("");
+    setFilterStatutEnvoi("");
+  };
 
   return (
-    <div className="grid gap-4 mb-6 md:grid-cols-4">
-      {/* Filtre par nom de conseiller ou numéro de mandat */}
-      <div className="space-y-2">
-        <Label htmlFor="search-conseiller">Rechercher un conseiller ou un mandat</Label>
-        <Input
-          id="search-conseiller"
-          placeholder="Nom du conseiller ou n° de mandat..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-          className="w-full"
-        />
+    <>
+      <div className="min-w-[14rem] flex-1 md:max-w-sm">
+        <Label htmlFor="search-conseiller" className="mb-1 block text-xs font-medium text-gray-500">
+          Conseiller ou n° de mandat
+        </Label>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            id="search-conseiller"
+            type="search"
+            placeholder="Nom ou n° de mandat…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#E07C24]/60"
+          />
+        </div>
       </div>
 
-      {/* Filtre par statut de paiement */}
-      <div className="space-y-2">
-        <Label htmlFor="filter-statut">Statut de paiement</Label>
-        <Select
-          value={filterStatut || "tous_statuts"}
-          onValueChange={handleStatutChange}
-        >
-          <SelectTrigger id="filter-statut" className="w-full">
+      <div>
+        <Label htmlFor="filter-statut" className="mb-1 block text-xs font-medium text-gray-500">
+          Paiement
+        </Label>
+        <Select value={filterStatut || "tous_statuts"} onValueChange={(v) => setFilterStatut(v === "tous_statuts" ? "" : v)}>
+          <SelectTrigger id="filter-statut" className={DECLENCHEUR}>
             <SelectValue placeholder="Tous les statuts" />
           </SelectTrigger>
-          <SelectContent className="bg-white">
+          <SelectContent>
             <SelectItem value="tous_statuts">Tous les statuts</SelectItem>
             <SelectItem value="payé">Payé</SelectItem>
             <SelectItem value="non payé">Non payé</SelectItem>
@@ -86,17 +71,15 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
         </Select>
       </div>
 
-      {/* Filtre par type de facture */}
-      <div className="space-y-2">
-        <Label htmlFor="filter-type">Type de facture</Label>
-        <Select
-          value={filterType || "tous_types"}
-          onValueChange={handleTypeChange}
-        >
-          <SelectTrigger id="filter-type" className="w-full">
+      <div>
+        <Label htmlFor="filter-type" className="mb-1 block text-xs font-medium text-gray-500">
+          Type
+        </Label>
+        <Select value={filterType || "tous_types"} onValueChange={(v) => setFilterType(v === "tous_types" ? "" : v)}>
+          <SelectTrigger id="filter-type" className={DECLENCHEUR}>
             <SelectValue placeholder="Tous les types" />
           </SelectTrigger>
-          <SelectContent className="bg-white">
+          <SelectContent>
             <SelectItem value="tous_types">Tous les types</SelectItem>
             <SelectItem value="recrutement">Recrutement</SelectItem>
             <SelectItem value="commission">Commission</SelectItem>
@@ -105,25 +88,37 @@ const FacturesFilters: React.FC<FacturesFiltersProps> = ({
         </Select>
       </div>
 
-      {/* Filtre par statut d'envoi */}
-      <div className="space-y-2">
-        <Label htmlFor="filter-statut-envoi">Statut d&apos;envoi</Label>
+      <div>
+        <Label htmlFor="filter-statut-envoi" className="mb-1 block text-xs font-medium text-gray-500">
+          Envoi
+        </Label>
         <Select
           value={filterStatutEnvoi || "tous_statuts_envoi"}
-          onValueChange={handleStatutEnvoiChange}
+          onValueChange={(v) => setFilterStatutEnvoi(v === "tous_statuts_envoi" ? "" : v)}
         >
-          <SelectTrigger id="filter-statut-envoi" className="w-full">
-            <SelectValue placeholder="Tous les statuts d&apos;envoi" />
+          <SelectTrigger id="filter-statut-envoi" className={DECLENCHEUR}>
+            <SelectValue placeholder="Tous les envois" />
           </SelectTrigger>
-          <SelectContent className="bg-white">
-            <SelectItem value="tous_statuts_envoi">Tous les statuts d&apos;envoi</SelectItem>
+          <SelectContent>
+            <SelectItem value="tous_statuts_envoi">Tous les envois</SelectItem>
             <SelectItem value="envoyée">Envoyée</SelectItem>
             <SelectItem value="non envoyée">Non envoyée</SelectItem>
           </SelectContent>
         </Select>
       </div>
-    </div>
+
+      {filtresActifs && (
+        <button
+          type="button"
+          onClick={reinitialiser}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-gray-500 outline-none transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-[#E07C24]/60"
+        >
+          <X className="h-4 w-4" />
+          Réinitialiser
+        </button>
+      )}
+    </>
   );
 };
 
-export default React.memo(FacturesFilters); 
+export default React.memo(FacturesFilters);

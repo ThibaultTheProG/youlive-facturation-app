@@ -64,3 +64,11 @@ export function PastilleEnvoi({ statut }: { statut: string }) {
     </span>
   );
 }
+
+export function PastilleAnnulee({ date }: { date?: string | null }) {
+  return (
+    <span className={cn(BASE, "bg-gray-100 text-gray-500")}>
+      Annulée{date ? ` le ${new Date(date).toLocaleDateString("fr-FR")}` : ""}
+    </span>
+  );
+}

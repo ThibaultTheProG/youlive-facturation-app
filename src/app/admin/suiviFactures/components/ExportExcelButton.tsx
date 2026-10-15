@@ -100,9 +100,10 @@ export default function ExportExcelButton() {
 
   return (
     <Button
+      variant="outline"
       onClick={handleExport}
       disabled={isExporting}
-      className="bg-green-600 text-white hover:bg-green-700 cursor-pointer"
+      className="cursor-pointer"
     >
       {isExporting ? (
         <>

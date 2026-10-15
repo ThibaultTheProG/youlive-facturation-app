@@ -1,130 +1,48 @@
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { FactureDetaillee } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { formatDate, formatEuros } from "@/utils/formats";
+import { PastilleAnnulee, PastilleEnvoi, PastillePaiement, PastilleType } from "@/components/factures/pastilles";
+import { ActionsFacture, ActionsFactureProps } from "./ActionsFacture";
 
-interface FactureRowProps {
-  facture: FactureDetaillee;
-  updateStatut: (factureId: number, newStatut: string, numero: string, created_at: string) => Promise<void>;
-  onEditTva: (facture: FactureDetaillee) => void;
-  onRemplacer: (facture: FactureDetaillee) => void;
-  onAnnulerAvoir: (facture: FactureDetaillee) => void;
-}
+type FactureRowProps = Omit<ActionsFactureProps, "avecLibelles">;
 
-export const FactureRow = ({ facture, updateStatut, onEditTva, onRemplacer, onAnnulerAvoir }: FactureRowProps) => {
-  const typeLabel =
-    facture.type === "avoir"
-      ? Number(facture.retrocession) < 0
-        ? "Avoir"
-        : "Ajustement"
-      : facture.type;
-  // Même règle que /api/factures/[id]/remplacer et /annuler : un document
-  // envoyé ou payé a été émis, il ne s'annule plus sans contre-écriture.
-  const jamaisEmise =
-    facture.statut_envoi !== "envoyée" && facture.statut_paiement !== "payé";
-  const remplacable =
-    (facture.type === "commission" || facture.type === "recrutement") && jamaisEmise;
-  const avoirAnnulable = facture.type === "avoir" && jamaisEmise;
-  const pdfButton = (
-    <Button
-      className="bg-orange-strong text-white hover:bg-orange-light hover:text-black cursor-pointer"
-      onClick={() => {
-        // Ouvrir la facture PDF dans un nouvel onglet
-        const pdfUrl = `/factures/${facture.id}/pdf`;
-        window.open(pdfUrl, '_blank');
-      }}
-    >
-      Voir PDF
-    </Button>
-  );
+export const numeroMandat = (facture: FactureDetaillee) =>
+  facture.propriete?.numero_mandat ? String(facture.propriete.numero_mandat).trim() : "N/A";
+
+export const FactureRow = (props: FactureRowProps) => {
+  const { facture } = props;
   return (
-    <TableRow key={facture.id} className={facture.annulee ? "text-gray-400" : undefined}>
-      <TableCell>
+    <TableRow className={cn("hover:bg-gray-50/60", facture.annulee && "text-gray-400")}>
+      <TableCell className="px-3 py-3 font-medium text-gray-900">
         {facture.conseiller.prenom} {facture.conseiller.nom}
       </TableCell>
-      <TableCell>
-        <span className={facture.annulee ? "line-through" : undefined}>{facture.numero}</span>
+      <TableCell className="px-3 py-3">
+        <span className={cn("whitespace-nowrap", facture.annulee && "line-through")}>
+          {facture.numero || <span className="text-gray-400">À attribuer</span>}
+        </span>
         {facture.remplace && (
-          <div className="text-xs text-gray-500">
-            remplace {facture.remplace.numero || `#${facture.remplace.id}`}
-          </div>
+          <div className="text-xs text-gray-500">remplace {facture.remplace.numero || `#${facture.remplace.id}`}</div>
         )}
       </TableCell>
-      <TableCell>{typeLabel}</TableCell>
-      <TableCell>{facture.retrocession.toLocaleString()} €</TableCell>
-      <TableCell>{facture.propriete?.numero_mandat ? String(facture.propriete.numero_mandat).trim() : "N/A"}</TableCell>
-      <TableCell>
-        {facture.date_signature 
-          ? new Date(facture.date_signature).toLocaleDateString('fr-FR')
-          : "N/A"
-        }
+      <TableCell className="px-3 py-3">
+        <PastilleType facture={facture} />
       </TableCell>
-      <TableCell>{facture.statut_envoi || "non envoyée"}</TableCell>
-      <TableCell>
-        {facture.annulee
-          ? `annulée le ${new Date(facture.annulee_le!).toLocaleDateString('fr-FR')}`
-          : facture.statut_paiement}
+      <TableCell className="px-3 py-3 text-right font-semibold tabular-nums">{formatEuros(facture.retrocession)}</TableCell>
+      <TableCell className="px-3 py-3">{numeroMandat(facture)}</TableCell>
+      <TableCell className="whitespace-nowrap px-3 py-3">{formatDate(facture.date_signature)}</TableCell>
+      <TableCell className="px-3 py-3">
+        <PastilleEnvoi statut={facture.statut_envoi || "non envoyée"} />
       </TableCell>
-      <TableCell>
-        {facture.date_paiement
-          ? new Date(facture.date_paiement).toLocaleDateString('fr-FR')
-          : "N/A"
-        }
+      <TableCell className="px-3 py-3">
+        {facture.annulee ? <PastilleAnnulee date={facture.annulee_le} /> : <PastillePaiement statut={facture.statut_paiement} />}
       </TableCell>
-      <TableCell>
-        {facture.annulee ? (
-          <div className="flex space-x-2">{pdfButton}</div>
-        ) : (
-        <div className="flex space-x-2">
-          {facture.statut_paiement !== "payé" ? (
-            <Button
-              className="bg-green-500 text-white hover:bg-green-700 cursor-pointer"
-              onClick={() => updateStatut(facture.id, "payé", facture.numero, facture.created_at)}
-            >
-              Marquer comme payé
-            </Button>
-          ) : (
-            <Button
-              className="bg-red-500 text-white hover:bg-red-700 cursor-pointer"
-              onClick={() => updateStatut(facture.id, "non payé", facture.numero, facture.created_at)}
-            >
-              Annuler
-            </Button>
-          )}
-
-          {pdfButton}
-
-          <Button
-            variant="outline"
-            className="cursor-pointer"
-            onClick={() => onEditTva(facture)}
-          >
-            Modifier TVA
-          </Button>
-
-          {remplacable && (
-            <Button
-              variant="outline"
-              className="cursor-pointer"
-              onClick={() => onRemplacer(facture)}
-            >
-              Annuler et remplacer
-            </Button>
-          )}
-
-          {avoirAnnulable && (
-            <Button
-              variant="outline"
-              className="cursor-pointer"
-              onClick={() => onAnnulerAvoir(facture)}
-            >
-              {Number(facture.retrocession) < 0 ? "Annuler l'avoir" : "Annuler l'ajustement"}
-            </Button>
-          )}
-        </div>
-        )}
+      <TableCell className="hidden whitespace-nowrap px-3 py-3 xl:table-cell">{formatDate(facture.date_paiement)}</TableCell>
+      <TableCell className="px-3 py-3">
+        <ActionsFacture {...props} />
       </TableCell>
     </TableRow>
   );
 };
 
-export default FactureRow; 
+export default FactureRow;

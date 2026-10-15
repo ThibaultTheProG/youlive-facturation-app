@@ -4,14 +4,14 @@ import React, { useEffect, useState } from "react";
 import { useFacturesFiltering } from "@/hooks/useFacturesFiltering";
 import FacturesFilters from "./components/FacturesFilters";
 import { FacturesTable } from "./components/FacturesTable";
-import Pagination from "./components/Pagination";
+import { PiedPagination } from "@/components/uiCustom/piedPagination";
 import ExportExcelButton from "./components/ExportExcelButton";
 import EditTvaDialog from "./components/EditTvaDialog";
 import CreateAvoirDialog from "./components/CreateAvoirDialog";
 import RemplacerFactureDialog from "./components/RemplacerFactureDialog";
 import AnnulerAvoirDialog from "./components/AnnulerAvoirDialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { FactureDetaillee } from "@/lib/types";
 import { toast } from "react-hot-toast";
 
@@ -34,6 +34,8 @@ const TableauSuiviFactures: React.FC = () => {
     handleSort,
     currentFactures,
     totalPages,
+    totalCount,
+    itemsPerPage,
     isLoading,
     mutate
   } = useFacturesFiltering();
@@ -131,62 +133,58 @@ const TableauSuiviFactures: React.FC = () => {
     }
   };
 
+  const filtresActifs = Boolean(searchTerm || filterStatut || filterType || filterStatutEnvoi);
+  const debut = totalCount === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const fin = Math.min(currentPage * itemsPerPage, totalCount);
+
   return (
     <div>
-      {/* Filtres */}
-      <FacturesFilters
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        filterStatut={filterStatut}
-        setFilterStatut={setFilterStatut}
-        filterType={filterType}
-        setFilterType={setFilterType}
-        filterStatutEnvoi={filterStatutEnvoi}
-        setFilterStatutEnvoi={setFilterStatutEnvoi}
-      />
+      <div className="overflow-clip rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-end gap-4 border-b border-gray-100 p-4 md:p-5">
+          <FacturesFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            filterStatut={filterStatut}
+            setFilterStatut={setFilterStatut}
+            filterType={filterType}
+            setFilterType={setFilterType}
+            filterStatutEnvoi={filterStatutEnvoi}
+            setFilterStatutEnvoi={setFilterStatutEnvoi}
+          />
 
-      {/* Actions */}
-      <div className="flex justify-end gap-2 mb-4">
-        <Button
-          onClick={handleCreateAvoir}
-          className="bg-orange-strong text-white hover:bg-orange-light hover:text-black cursor-pointer"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Créer un avoir / ajustement
-        </Button>
-        <ExportExcelButton />
-      </div>
-
-      {/* État de chargement */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-          <p className="text-lg text-gray-600">
-            Chargement des factures en cours...
-          </p>
+          <div className="flex w-full flex-wrap items-center gap-2 lg:ml-auto lg:w-auto">
+            <ExportExcelButton />
+            <Button onClick={handleCreateAvoir} className="cursor-pointer bg-[#E07C24] text-white hover:bg-[#c96a17]">
+              <Plus className="mr-1 h-4 w-4" />
+              Créer un avoir / ajustement
+            </Button>
+          </div>
         </div>
-      ) : (
-        <>
-          {/* Tableau des factures */}
-          <FacturesTable
-            currentFactures={currentFactures}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            handleSort={handleSort}
-            updateStatut={updateStatut}
-            onEditTva={handleEditTva}
-            onRemplacer={handleRemplacer}
-            onAnnulerAvoir={handleAnnulerAvoir}
-          />
 
-          {/* Pagination */}
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
-        </>
-      )}
+        <FacturesTable
+          currentFactures={currentFactures}
+          isLoading={isLoading}
+          filtresActifs={filtresActifs}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          handleSort={handleSort}
+          updateStatut={updateStatut}
+          onEditTva={handleEditTva}
+          onRemplacer={handleRemplacer}
+          onAnnulerAvoir={handleAnnulerAvoir}
+        />
+
+        <PiedPagination
+          debut={debut}
+          fin={fin}
+          total={totalCount}
+          element="facture"
+          page={currentPage}
+          totalPages={Math.max(1, totalPages)}
+          onPrecedent={() => setCurrentPage(currentPage - 1)}
+          onSuivant={() => setCurrentPage(currentPage + 1)}
+        />
+      </div>
 
       {/* `key` liée au compteur d'ouvertures : réinitialise l'état local du
           dialogue à chaque ouverture, sans effet de resynchronisation. */}
