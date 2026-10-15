@@ -1,7 +1,6 @@
 import React from "react";
 import PopoverCustom from "@/components/uiCustom/popoverCustom";
 import { Label } from "@/components/ui/label";
-import { Users } from "lucide-react";
 
 interface ParrainagesManagerProps {
   parrains: { key: number; name: string }[];
@@ -36,47 +35,36 @@ export default function ParrainagesManager({ parrains, openParrain1, setOpenParr
   ];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#fef3e8" }}>
-          <Users className="w-3.5 h-3.5" style={{ color: "#E07C24" }} />
+    <div className="grid gap-6 md:grid-cols-3">
+      {niveaux.map((niveau, i) => (
+        <div key={i} className="relative flex flex-col gap-2">
+          {/* Trait pointillé entre les niveaux */}
+          {i < 2 && (
+            <div
+              aria-hidden
+              className="absolute left-full top-5 z-10 hidden w-6 -translate-y-1/2 border-t border-dashed border-gray-200 md:block"
+            />
+          )}
+          <div className="mb-1 flex items-center gap-2">
+            <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ backgroundColor: "#fef3e8", color: "#E07C24" }}>
+              {niveauConfig[i].label}
+            </span>
+            <span className="text-xs text-gray-400">{niveauConfig[i].percent}</span>
+          </div>
+          <Label className="text-xs text-gray-500">{niveauConfig[i].description}</Label>
+          <PopoverCustom
+            open={niveau.open}
+            onOpenChange={niveau.setOpen}
+            options={parrains}
+            value={niveau.value}
+            onSelect={niveau.onSelect}
+            placeholder="Sélectionner..."
+            searchPlaceholder="Rechercher..."
+            emptyMessage="Aucun parrain trouvé."
+            selectedId={niveau.id}
+          />
         </div>
-        <span className="text-sm font-semibold text-gray-700">Chaîne de parrainage</span>
-      </div>
-
-      <div className="p-6">
-        <div className="grid grid-cols-3 gap-6">
-          {niveaux.map((niveau, i) => (
-            <div key={i} className="relative flex flex-col gap-2">
-              {/* Connector line between levels */}
-              {i < 2 && (
-                <div className="absolute top-5 left-full w-6 border-t border-dashed border-gray-200 z-10" style={{ transform: "translateY(-50%)" }} />
-              )}
-              <div className="flex items-center gap-2 mb-1">
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{ backgroundColor: "#fef3e8", color: "#E07C24" }}
-                >
-                  {niveauConfig[i].label}
-                </span>
-                <span className="text-xs text-gray-400">{niveauConfig[i].percent}</span>
-              </div>
-              <Label className="text-xs text-gray-500">{niveauConfig[i].description}</Label>
-              <PopoverCustom
-                open={niveau.open}
-                onOpenChange={niveau.setOpen}
-                options={parrains}
-                value={niveau.value}
-                onSelect={niveau.onSelect}
-                placeholder="Sélectionner..."
-                searchPlaceholder="Rechercher..."
-                emptyMessage="Aucun parrain trouvé."
-                selectedId={niveau.id}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
+      ))}
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import React from "react";
 import InputCustom from "@/components/uiCustom/inputCustom";
 import { Conseiller } from "@/lib/types";
-import { User } from "lucide-react";
 
 interface ConseillerDetailsProps {
   selectedConseiller: Conseiller | null;
@@ -11,91 +10,34 @@ interface ConseillerDetailsProps {
 
 export default function ConseillerDetails({ selectedConseiller, adresse, setAdresse }: ConseillerDetailsProps) {
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#fef3e8" }}>
-          <User className="w-3.5 h-3.5" style={{ color: "#E07C24" }} />
-        </div>
-        <span className="text-sm font-semibold text-gray-700">Identité du conseiller</span>
-        <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">ID #{selectedConseiller?.id}</span>
-      </div>
-
-      <div className="p-6 space-y-4">
-        {/* Nom / Prénom */}
-        <div className="grid grid-cols-2 gap-4">
-          <InputCustom
-            disable={true}
-            name="nom"
-            label="Nom"
-            id="nom"
-            type="text"
-            value={selectedConseiller?.nom || ""}
-          />
-          <InputCustom
-            disable={true}
-            name="prenom"
-            label="Prénom"
-            id="prenom"
-            type="text"
-            value={selectedConseiller?.prenom || ""}
-          />
-        </div>
-
-        {/* Email + Téléphone */}
-        <div className="grid grid-cols-2 gap-4">
-          <InputCustom
-            disable={true}
-            name="email"
-            label="Email"
-            id="email"
-            type="email"
-            value={selectedConseiller?.email || ""}
-          />
-          {selectedConseiller?.telephone ? (
-            <InputCustom
-              disable={true}
-              name="telephone"
-              label="Téléphone"
-              id="telephone"
-              type="tel"
-              value={selectedConseiller.telephone}
-            />
-          ) : selectedConseiller?.mobile ? (
-            <InputCustom
-              disable={true}
-              name="mobile"
-              label="Mobile"
-              id="mobile"
-              type="tel"
-              value={selectedConseiller.mobile}
-            />
-          ) : null}
-        </div>
-
-        {/* Identifiant légal : appartient à Apimo, écrasé chaque nuit par la sync */}
-        <div>
-          <InputCustom
-            disable={true}
-            name="siren_apimo"
-            label="SIREN / RSAC / RCS (Apimo)"
-            id="siren_apimo"
-            type="text"
-            value={selectedConseiller?.siren || ""}
-          />
-        </div>
-
-        {/* Adresse (éditable) */}
-        <div>
-          <InputCustom
-            disable={false}
-            name="adresse"
-            label="Adresse"
-            id="adresse"
-            type="text"
-            value={adresse}
-            onChange={(val) => setAdresse(val as string)}
-          />
-        </div>
+    <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+      <InputCustom disable={true} name="nom" label="Nom" id="nom" type="text" value={selectedConseiller?.nom || ""} />
+      <InputCustom disable={true} name="prenom" label="Prénom" id="prenom" type="text" value={selectedConseiller?.prenom || ""} />
+      <InputCustom disable={true} name="email" label="Email" id="email" type="email" value={selectedConseiller?.email || ""} />
+      {selectedConseiller?.telephone ? (
+        <InputCustom disable={true} name="telephone" label="Téléphone" id="telephone" type="tel" value={selectedConseiller.telephone} />
+      ) : selectedConseiller?.mobile ? (
+        <InputCustom disable={true} name="mobile" label="Mobile" id="mobile" type="tel" value={selectedConseiller.mobile} />
+      ) : null}
+      {/* Identifiant légal : appartient à Apimo, écrasé chaque nuit par la sync */}
+      <InputCustom
+        disable={true}
+        name="siren_apimo"
+        label="SIREN / RSAC / RCS (Apimo)"
+        id="siren_apimo"
+        type="text"
+        value={selectedConseiller?.siren || ""}
+      />
+      <div className="lg:col-span-2">
+        <InputCustom
+          disable={false}
+          name="adresse"
+          label="Adresse"
+          id="adresse"
+          type="text"
+          value={adresse}
+          onChange={(val) => setAdresse(val as string)}
+        />
       </div>
     </div>
   );

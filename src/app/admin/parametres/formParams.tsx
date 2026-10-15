@@ -19,6 +19,17 @@ import ConseillerSelector from "./_components/ConseillerSelector";
 import ConseillerDetails from "./_components/ConseillerDetails";
 import ContratManager from "./_components/ContratManager";
 import ParrainagesManager from "./_components/ParrainagesManager";
+import { BriefcaseBusiness, Building2, Network, Receipt, TriangleAlert, UserRound } from "lucide-react";
+import { CarteOnglets, Panneau, type Onglet } from "@/components/uiCustom/carteOnglets";
+
+const ONGLETS: Onglet[] = [
+  { id: "identite", label: "Identité", icon: UserRound },
+  { id: "contrat", label: "Contrat & CA", icon: BriefcaseBusiness },
+  { id: "fiscalite", label: "Fiscalité & options", icon: Receipt },
+  { id: "recrutement", label: "Facturation recrutement", icon: Building2 },
+  { id: "parrainage", label: "Parrainage", icon: Network },
+];
+const GRILLE = "grid gap-4 lg:grid-cols-2 2xl:grid-cols-3";
 
 // Composant principal
 export default function FormParams() {
@@ -71,6 +82,7 @@ export default function FormParams() {
   );
 
   const [isDeactivating, setIsDeactivating] = useState(false);
+  const [onglet, setOnglet] = useState<string>(ONGLETS[0].id);
 
   // Les parrains affichés appartiennent-ils bien au conseiller sélectionné ?
   // Tant que ce n'est pas le cas, l'enregistrement est bloqué : il écrirait les
@@ -518,19 +530,76 @@ export default function FormParams() {
       />
 
       {selectedConseiller && (
-        <>
-          <ConseillerDetails
-            selectedConseiller={selectedConseiller}
-            adresse={adresse}
-            setAdresse={setAdresse}
-          />
+        <CarteOnglets
+          libelle="Paramètres du conseiller"
+          onglets={ONGLETS}
+          actif={onglet}
+          onChange={setOnglet}
+          className="md:min-h-[calc(100vh-17rem)]"
+        >
+          <Panneau
+            id="identite"
+            actif={onglet}
+            icon={UserRound}
+            titre="Identité du conseiller"
+            description="Coordonnées synchronisées depuis Apimo. Seule l'adresse est modifiable ici."
+          >
+            <ConseillerDetails
+              selectedConseiller={selectedConseiller}
+              adresse={adresse}
+              setAdresse={setAdresse}
+            />
 
-          {/* TVA & Auto-parrainage */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <span className="text-sm font-semibold text-gray-700">Fiscalité & Options</span>
+            <div className="mt-8 rounded-xl border border-red-100 bg-red-50/50 p-5">
+              <div className="flex items-start gap-3">
+                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-red-900">Désactiver le compte</h3>
+                  <p className="mt-1 text-sm text-red-800/80">
+                    Le conseiller ne pourra plus se connecter, il sera retiré de tous les parrainages où il apparaît et son propre enregistrement de parrainage sera supprimé.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDesactiver}
+                    disabled={isDeactivating}
+                    className="mt-4 cursor-pointer"
+                  >
+                    {isDeactivating ? "Désactivation..." : "Désactiver le compte"}
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div className="p-6 flex flex-wrap gap-10">
+          </Panneau>
+
+          <Panneau
+            id="contrat"
+            actif={onglet}
+            icon={BriefcaseBusiness}
+            titre="Contrat & chiffre d'affaires"
+            description="Type de contrat, honoraires de l'année et taux de rétrocession."
+          >
+            <ContratManager
+              selectedTypeContrat={selectedTypeContrat}
+              setSelectedTypeContrat={setSelectedTypeContrat}
+              chiffreAffaires={chiffreAffaires}
+              setChiffreAffaires={setChiffreAffaires}
+              retrocession={retrocession}
+              setRetrocession={setRetrocessionManuelle}
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
+              availableYears={availableYears}
+            />
+          </Panneau>
+
+          <Panneau
+            id="fiscalite"
+            actif={onglet}
+            icon={Receipt}
+            titre="Fiscalité & options"
+            description="TVA portée par les factures et auto-parrainage."
+          >
+            <div className="flex flex-wrap items-start gap-x-12 gap-y-6">
               <div className="flex flex-col space-y-2">
                 <Label className="text-sm text-gray-700">Assujetti à la TVA</Label>
                 <RadioCustom
@@ -571,45 +640,33 @@ export default function FormParams() {
                 />
               </div>
             </div>
-          </div>
+          </Panneau>
 
-          {/* Informations facture de recrutement */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <span className="text-sm font-semibold text-gray-700">Informations facture de recrutement</span>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Société au nom de laquelle sont établis les factures de recrutement et les avoirs qui les régularisent. Vide : identité du conseiller.
-              </p>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <InputCustom
-                  disable={false}
-                  name="nom_societe_facture"
-                  label="Nom de société"
-                  id="nom_societe_facture"
-                  type="text"
-                  value={nomSocieteFacture}
-                  onChange={(val) => setNomSocieteFacture(String(val))}
-                />
-                <InputCustom
-                  disable={false}
-                  name="siren_facture"
-                  label="SIREN / RSAC / RCS"
-                  id="siren_facture"
-                  type="text"
-                  value={sirenFacture}
-                  onChange={(val) => setSirenFacture(String(val))}
-                />
-              </div>
+          <Panneau
+            id="recrutement"
+            actif={onglet}
+            icon={Building2}
+            titre="Facturation recrutement"
+            description="Société au nom de laquelle sont établies les factures de recrutement et les avoirs qui les régularisent. Vide : identité du conseiller."
+          >
+            <div className={GRILLE}>
               <InputCustom
                 disable={false}
-                name="adresse_facture"
-                label="Adresse de facturation"
-                id="adresse_facture"
+                name="nom_societe_facture"
+                label="Nom de société"
+                id="nom_societe_facture"
                 type="text"
-                value={adresseFacture}
-                onChange={(val) => setAdresseFacture(String(val))}
+                value={nomSocieteFacture}
+                onChange={(val) => setNomSocieteFacture(String(val))}
+              />
+              <InputCustom
+                disable={false}
+                name="siren_facture"
+                label="SIREN / RSAC / RCS"
+                id="siren_facture"
+                type="text"
+                value={sirenFacture}
+                onChange={(val) => setSirenFacture(String(val))}
               />
               <InputCustom
                 disable={false}
@@ -620,59 +677,57 @@ export default function FormParams() {
                 value={emailFacture}
                 onChange={(val) => setEmailFacture(String(val))}
               />
+              <div className="lg:col-span-2 2xl:col-span-3">
+                <InputCustom
+                  disable={false}
+                  name="adresse_facture"
+                  label="Adresse de facturation"
+                  id="adresse_facture"
+                  type="text"
+                  value={adresseFacture}
+                  onChange={(val) => setAdresseFacture(String(val))}
+                />
+              </div>
             </div>
-          </div>
+          </Panneau>
 
-          <ContratManager
-            selectedTypeContrat={selectedTypeContrat}
-            setSelectedTypeContrat={setSelectedTypeContrat}
-            chiffreAffaires={chiffreAffaires}
-            setChiffreAffaires={setChiffreAffaires}
-            retrocession={retrocession}
-            setRetrocession={setRetrocessionManuelle}
-            selectedYear={selectedYear}
-            setSelectedYear={setSelectedYear}
-            availableYears={availableYears}
-          />
+          <Panneau
+            id="parrainage"
+            actif={onglet}
+            icon={Network}
+            titre="Chaîne de parrainage"
+            description="Les trois parrains du conseiller, du plus proche au plus éloigné. Ils déterminent les factures de recrutement."
+          >
+            <ParrainagesManager
+              parrains={parrains}
+              openParrain1={openParrain1}
+              setOpenParrain1={setOpenParrain1}
+              selectedParrain={selectedParrain}
+              handleSelectParrain={handleSelectParrain}
+              selectedParrainId={selectedParrainId}
+              openParrain2={openParrain2}
+              setOpenParrain2={setOpenParrain2}
+              selectedParrain2={selectedParrain2}
+              handleSelectParrain2={handleSelectParrain2}
+              selectedParrain2Id={selectedParrain2Id}
+              openParrain3={openParrain3}
+              setOpenParrain3={setOpenParrain3}
+              selectedParrain3={selectedParrain3}
+              handleSelectParrain3={handleSelectParrain3}
+              selectedParrain3Id={selectedParrain3Id}
+            />
+          </Panneau>
 
-          <ParrainagesManager
-            parrains={parrains}
-            openParrain1={openParrain1}
-            setOpenParrain1={setOpenParrain1}
-            selectedParrain={selectedParrain}
-            handleSelectParrain={handleSelectParrain}
-            selectedParrainId={selectedParrainId}
-            openParrain2={openParrain2}
-            setOpenParrain2={setOpenParrain2}
-            selectedParrain2={selectedParrain2}
-            handleSelectParrain2={handleSelectParrain2}
-            selectedParrain2Id={selectedParrain2Id}
-            openParrain3={openParrain3}
-            setOpenParrain3={setOpenParrain3}
-            selectedParrain3={selectedParrain3}
-            handleSelectParrain3={handleSelectParrain3}
-            selectedParrain3Id={selectedParrain3Id}
-          />
-
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-4">
+          <div className="sticky bottom-0 -mx-5 mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 bg-white/90 px-5 py-4 backdrop-blur md:-mx-8 md:px-8">
+            <div className="min-w-0 flex-1">
               <FormStatusMessage status={statutAffiche} />
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={handleDesactiver}
-                disabled={isDeactivating}
-                className="cursor-pointer"
-              >
-                {isDeactivating ? "Désactivation..." : "Désactiver le compte"}
-              </Button>
             </div>
             <SubmitButton
               isSubmitting={isSubmitting}
               disabled={!parrainagesCharges}
             />
           </div>
-        </>
+        </CarteOnglets>
       )}
     </form>
   );

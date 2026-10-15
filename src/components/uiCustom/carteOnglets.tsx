@@ -14,6 +14,8 @@ type CarteOngletsProps = {
   actif: string;
   onChange: (id: string) => void;
   children: ReactNode;
+  /** Classes ajoutées à la carte, par exemple pour ajuster sa hauteur minimale. */
+  className?: string;
 };
 
 /**
@@ -27,6 +29,7 @@ export function CarteOnglets({
   actif,
   onChange,
   children,
+  className,
 }: CarteOngletsProps) {
   const boutons = useRef<Record<string, HTMLButtonElement | null>>({});
 
@@ -60,7 +63,12 @@ export function CarteOnglets({
   };
 
   return (
-    <div className="grid overflow-clip rounded-2xl border border-gray-200 bg-white shadow-sm md:min-h-[calc(100vh-11rem)] md:grid-cols-[15rem_minmax(0,1fr)]">
+    <div
+      className={cn(
+        "grid overflow-clip rounded-2xl border border-gray-200 bg-white shadow-sm md:min-h-[calc(100vh-11rem)] md:grid-cols-[15rem_minmax(0,1fr)]",
+        className
+      )}
+    >
       <div
         role="tablist"
         aria-label={libelle}
