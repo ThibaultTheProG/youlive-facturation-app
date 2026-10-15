@@ -8,8 +8,22 @@ import { Button } from "@/components/ui/button";
 import { Conseiller, User } from "@/lib/types";
 import { toast } from "react-hot-toast";
 import { calculRetrocession } from "@/utils/calculs";
+import { BriefcaseBusiness, Building2, Receipt, UserRound } from "lucide-react";
+import { Panneau } from "@/components/uiCustom/carteOnglets";
 
-export default function FormParams({ user }: { user: User }) {
+const EUROS = new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+});
+const GRILLE = "grid gap-4 lg:grid-cols-2 2xl:grid-cols-3";
+
+export default function FormParams({
+  user,
+  onglet,
+}: {
+  user: User;
+  onglet: string;
+}) {
   const [conseiller, setConseiller] = useState<Conseiller | null>(null);
   const [assujettiTVA, setAssujettiTVA] = useState<string>("non");
   const [autoParrain, setAutoParrain] = useState<string>("non");
@@ -28,7 +42,9 @@ export default function FormParams({ user }: { user: User }) {
   const [emailFacture, setEmailFacture] = useState<string>("");
 
   // États pour la gestion des années
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState<number>(
+    new Date().getFullYear(),
+  );
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   // Récupérer les années disponibles
@@ -55,14 +71,15 @@ export default function FormParams({ user }: { user: User }) {
     const fetchConseillers = async () => {
       try {
         const currentYear = new Date().getFullYear();
-        const url = selectedYear === currentYear
-          ? `/api/conseiller?id=${user.id}`
-          : `/api/conseiller?id=${user.id}&annee=${selectedYear}`;
+        const url =
+          selectedYear === currentYear
+            ? `/api/conseiller?id=${user.id}`
+            : `/api/conseiller?id=${user.id}&annee=${selectedYear}`;
 
         const response = await fetch(url);
 
         if (!response.ok) {
-          throw new Error("Erreur lors de la récupération du conseiller")
+          throw new Error("Erreur lors de la récupération du conseiller");
         }
 
         const data = await response.json();
@@ -99,7 +116,7 @@ export default function FormParams({ user }: { user: User }) {
       chiffreAffaires >= 0 && selectedTypeContrat
         ? calculRetrocession(selectedTypeContrat, chiffreAffaires, autoParrain)
         : 0,
-    [chiffreAffaires, selectedTypeContrat, autoParrain]
+    [chiffreAffaires, selectedTypeContrat, autoParrain],
   );
 
   const handleSubmit = async (formData: FormData) => {
@@ -112,7 +129,10 @@ export default function FormParams({ user }: { user: User }) {
         nom: conseiller?.nom,
         email: conseiller?.email,
         telephone: conseiller?.telephone,
-        adresse: formData.get("localisation")?.toString() || conseiller?.adresse || null,
+        adresse:
+          formData.get("localisation")?.toString() ||
+          conseiller?.adresse ||
+          null,
 
         siren: conseiller?.siren || null,
         tva: formData.get("tva") === "oui",
@@ -120,18 +140,23 @@ export default function FormParams({ user }: { user: User }) {
         chiffre_affaires: chiffreAffaires,
         retrocession: retrocession,
         auto_parrain: formData.get("auto_parrain")?.toString() || "non",
-        
+
         // Nouvelles données pour les informations de facture de recrutement
-        nom_societe_facture: formData.get("nom_societe_facture")?.toString() || nomSocieteFacture || null,
-        siren_facture: formData.get("siren_facture")?.toString() || sirenFacture || null,
-        adresse_facture: formData.get("adresse_facture")?.toString() || adresseFacture || null,
+        nom_societe_facture:
+          formData.get("nom_societe_facture")?.toString() ||
+          nomSocieteFacture ||
+          null,
+        siren_facture:
+          formData.get("siren_facture")?.toString() || sirenFacture || null,
+        adresse_facture:
+          formData.get("adresse_facture")?.toString() || adresseFacture || null,
         email_facture: emailFacture.trim() || null,
         taux_tva: formData.get("tva") === "oui" ? tauxTVA : null,
         tva_recrutement: tvaRecrutement === "oui",
       };
-      
+
       //console.log("Données envoyées à l'API:", conseillerData);
-      
+
       // Appel à l'API
       const response = await fetch("/api/conseillers", {
         method: "PUT",
@@ -140,7 +165,7 @@ export default function FormParams({ user }: { user: User }) {
         },
         body: JSON.stringify(conseillerData),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Erreur lors de la mise à jour");
@@ -149,11 +174,13 @@ export default function FormParams({ user }: { user: User }) {
       // Recharger les données du conseiller
       const conseillerResponse = await fetch(`/api/conseiller?id=${user.id}`);
       if (!conseillerResponse.ok) {
-        throw new Error("Erreur lors de la récupération des données mises à jour");
+        throw new Error(
+          "Erreur lors de la récupération des données mises à jour",
+        );
       }
       const updatedData = await conseillerResponse.json();
       setConseiller(updatedData);
-      
+
       // ✅ Affichage du message de succès
       setSuccessMessage("Les modifications ont bien été enregistrées !");
       setTimeout(() => setSuccessMessage(null), 3000); // Masquer après 3 secondes
@@ -166,91 +193,162 @@ export default function FormParams({ user }: { user: User }) {
   };
 
   return (
-    <form action={handleSubmit} className="space-y-4">
-
-      {/* Identité */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#fef3e8" }}>
-            <span className="text-xs font-bold" style={{ color: "#E07C24" }}>ID</span>
-          </div>
-          <span className="text-sm font-semibold text-gray-700">Identité</span>
-          {conseiller?.idapimo && (
-            <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Apimo #{conseiller.idapimo}</span>
-          )}
-        </div>
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <InputCustom disable={true} name="nom" label="Nom" id="nom" type="text" value={conseiller?.nom ?? ""} />
-            <InputCustom disable={true} name="prenom" label="Prénom" id="prenom" type="text" value={conseiller?.prenom ?? ""} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <InputCustom disable={true} name="email" label="Email" id="email" type="email" value={conseiller?.email ?? ""} />
-            {conseiller?.telephone ? (
-              <InputCustom disable={true} name="telephone" label="Téléphone" id="telephone" type="tel" value={conseiller.telephone} />
-            ) : conseiller?.mobile ? (
-              <InputCustom disable={true} name="mobile" label="Mobile" id="mobile" type="tel" value={conseiller.mobile} />
-            ) : null}
-          </div>
+    <form action={handleSubmit} hidden={onglet === "securite"}>
+      <Panneau
+        id="identite"
+        actif={onglet}
+        icon={UserRound}
+        titre="Identité"
+        description="Vos coordonnées, telles que synchronisées depuis Apimo. Seule l'adresse est modifiable ici."
+        aside={
+          conseiller?.idapimo ? (
+            <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-500">
+              Apimo #{conseiller.idapimo}
+            </span>
+          ) : null
+        }
+      >
+        <div className={GRILLE}>
           <InputCustom
-            disable={false}
-            name="localisation"
-            label="Adresse"
-            id="localisation"
-            value={conseiller?.adresse ?? ""}
-            onChange={(val) => setConseiller((prev) => prev ? { ...prev, adresse: String(val) } : prev)}
+            disable={true}
+            name="nom"
+            label="Nom"
+            id="nom"
+            type="text"
+            value={conseiller?.nom ?? ""}
           />
-        </div>
-      </div>
-
-      {/* Contrat & CA */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <span className="text-sm font-semibold text-gray-700">Contrat & Chiffre d&apos;affaires</span>
-        </div>
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <InputCustom disable={true} name="siren" label="SIREN / RSAC / RCS" id="siren" type="text" value={conseiller?.siren ?? ""} />
-            <InputCustom disable={true} name="type_contrat" label="Type de contrat" id="type_contrat" type="text" value={selectedTypeContrat} />
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="flex flex-col space-y-2">
-              <Label htmlFor="year_selector" className="text-sm text-gray-700">Année consultée</Label>
-              <select
-                id="year_selector"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none"
-              >
-                {availableYears.map((year) => (
-                  <option key={year} value={year}>
-                    {year}{year === new Date().getFullYear() ? " (en cours)" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <InputCustom
+            disable={true}
+            name="prenom"
+            label="Prénom"
+            id="prenom"
+            type="text"
+            value={conseiller?.prenom ?? ""}
+          />
+          <InputCustom
+            disable={true}
+            name="email"
+            label="Email"
+            id="email"
+            type="email"
+            value={conseiller?.email ?? ""}
+          />
+          {conseiller?.telephone ? (
             <InputCustom
               disable={true}
-              name="chiffre_affaire_annuel"
-              label={`Honoraires HT (${selectedYear})`}
-              id="chiffre_affaire_annuel"
-              type="number"
-              value={chiffreAffaires}
+              name="telephone"
+              label="Téléphone"
+              id="telephone"
+              type="tel"
+              value={conseiller.telephone}
             />
-            <InputCustom disable={true} name="retrocession" label="% de rétrocession" id="retrocession" type="number" value={retrocession} />
+          ) : conseiller?.mobile ? (
+            <InputCustom
+              disable={true}
+              name="mobile"
+              label="Mobile"
+              id="mobile"
+              type="tel"
+              value={conseiller.mobile}
+            />
+          ) : null}
+          <div className="lg:col-span-2">
+            <InputCustom
+              disable={false}
+              name="localisation"
+              label="Adresse"
+              id="localisation"
+              value={conseiller?.adresse ?? ""}
+              onChange={(val) =>
+                setConseiller((prev) =>
+                  prev ? { ...prev, adresse: String(val) } : prev,
+                )
+              }
+            />
           </div>
         </div>
-      </div>
+      </Panneau>
 
-      {/* Fiscalité */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <span className="text-sm font-semibold text-gray-700">Fiscalité</span>
+      <Panneau
+        id="contrat"
+        actif={onglet}
+        icon={BriefcaseBusiness}
+        titre="Contrat & chiffre d'affaires"
+        description="Votre contrat et vos honoraires de l'année. Ces valeurs sont calculées, vous ne les modifiez pas."
+        aside={
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <Label htmlFor="year_selector" className="text-xs text-gray-500">
+              Année consultée
+            </Label>
+            <select
+              id="year_selector"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E07C24]/60"
+            >
+              {availableYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                  {year === new Date().getFullYear() ? " (en cours)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        }
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              Honoraires HT ({selectedYear})
+            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900 xl:text-3xl">
+              {EUROS.format(chiffreAffaires)}
+            </p>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              Rétrocession
+            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-[#b35a10] xl:text-3xl">
+              {retrocession} %
+            </p>
+          </div>
         </div>
-        <div className="p-6 flex flex-wrap gap-10">
+        <div className={GRILLE}>
+          <InputCustom
+            disable={true}
+            name="type_contrat"
+            label="Type de contrat"
+            id="type_contrat"
+            type="text"
+            value={selectedTypeContrat}
+          />
+          <InputCustom
+            disable={true}
+            name="siren"
+            label="SIREN / RSAC / RCS"
+            id="siren"
+            type="text"
+            value={conseiller?.siren ?? ""}
+          />
+        </div>
+      </Panneau>
+
+      <Panneau
+        id="fiscalite"
+        actif={onglet}
+        icon={Receipt}
+        titre="Fiscalité"
+        description="Détermine la TVA portée par vos factures."
+      >
+        <div className="flex flex-wrap items-start gap-x-12 gap-y-6">
           <div className="flex flex-col space-y-2">
             <Label className="text-sm text-gray-700">Assujetti à la TVA</Label>
-            <RadioCustom onChange={(value) => setAssujettiTVA(value)} value={assujettiTVA} name="tva" />
+            <RadioCustom
+              onChange={(value) => setAssujettiTVA(value)}
+              value={assujettiTVA}
+              name="tva"
+            />
           </div>
           {assujettiTVA === "oui" && (
             <InputCustom
@@ -265,48 +363,44 @@ export default function FormParams({ user }: { user: User }) {
           )}
           {assujettiTVA === "oui" && (
             <div className="flex flex-col space-y-2">
-              <Label className="text-sm text-gray-700">TVA sur les factures de recrutement</Label>
-              <RadioCustom onChange={(value) => setTvaRecrutement(value)} value={tvaRecrutement} name="tva_recrutement" />
+              <Label className="text-sm text-gray-700">
+                TVA sur les factures de recrutement
+              </Label>
+              <RadioCustom
+                onChange={(value) => setTvaRecrutement(value)}
+                value={tvaRecrutement}
+                name="tva_recrutement"
+              />
             </div>
           )}
         </div>
-      </div>
+      </Panneau>
 
-      {/* Informations facture de recrutement */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <span className="text-sm font-semibold text-gray-700">Informations facture de recrutement</span>
-          <p className="text-xs text-gray-400 mt-0.5">À compléter uniquement si différentes des informations ci-dessus</p>
-        </div>
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <InputCustom
-              disable={false}
-              name="nom_societe_facture"
-              label="Nom de société"
-              id="nom_societe_facture"
-              type="text"
-              value={nomSocieteFacture}
-              onChange={(val) => setNomSocieteFacture(String(val))}
-            />
-            <InputCustom
-              disable={false}
-              name="siren_facture"
-              label="SIREN / RSAC / RCS"
-              id="siren_facture"
-              type="text"
-              value={sirenFacture}
-              onChange={(val) => setSirenFacture(String(val))}
-            />
-          </div>
+      <Panneau
+        id="recrutement"
+        actif={onglet}
+        icon={Building2}
+        titre="Facturation recrutement"
+        description="À compléter uniquement si votre société qui facture les recrutements diffère des informations de l'onglet Identité."
+      >
+        <div className={GRILLE}>
           <InputCustom
             disable={false}
-            name="adresse_facture"
-            label="Adresse de facturation"
-            id="adresse_facture"
+            name="nom_societe_facture"
+            label="Nom de société"
+            id="nom_societe_facture"
             type="text"
-            value={adresseFacture}
-            onChange={(val) => setAdresseFacture(String(val))}
+            value={nomSocieteFacture}
+            onChange={(val) => setNomSocieteFacture(String(val))}
+          />
+          <InputCustom
+            disable={false}
+            name="siren_facture"
+            label="SIREN / RSAC / RCS"
+            id="siren_facture"
+            type="text"
+            value={sirenFacture}
+            onChange={(val) => setSirenFacture(String(val))}
           />
           <InputCustom
             disable={false}
@@ -317,18 +411,31 @@ export default function FormParams({ user }: { user: User }) {
             value={emailFacture}
             onChange={(val) => setEmailFacture(String(val))}
           />
+          <div className="lg:col-span-2 2xl:col-span-3">
+            <InputCustom
+              disable={false}
+              name="adresse_facture"
+              label="Adresse de facturation"
+              id="adresse_facture"
+              type="text"
+              value={adresseFacture}
+              onChange={(val) => setAdresseFacture(String(val))}
+            />
+          </div>
         </div>
-      </div>
+      </Panneau>
 
-      <div className="flex items-center justify-between pt-2">
-        {successMessage && (
-          <p className="text-sm text-green-600">{successMessage}</p>
-        )}
-        <div className="ml-auto">
-          <Button className="bg-orange-strong cursor-pointer" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Enregistrement..." : "Enregistrer"}
-          </Button>
-        </div>
+      <div className="sticky bottom-0 -mx-5 mt-8 flex items-center justify-between gap-4 border-t border-gray-100 bg-white/90 px-5 py-4 backdrop-blur md:-mx-8 md:px-8">
+        <p role="status" className="text-sm text-green-600">
+          {successMessage}
+        </p>
+        <Button
+          className="bg-orange-strong cursor-pointer"
+          type="submit"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Enregistrement..." : "Enregistrer"}
+        </Button>
       </div>
     </form>
   );
