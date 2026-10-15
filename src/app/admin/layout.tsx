@@ -1,13 +1,12 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { BarreSuperieure } from "@/components/navigation/BarreSuperieure";
+import { PiedDePage } from "@/components/PiedDePage";
 import { AppSidebar } from "./sidebarAdmin";
 import "../globals.css";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { devUser } from "@/lib/devAuth";
 import { AuthProvider } from "../context/authContext";
-import Link from "next/link";
-import Image from "next/image";
 
 export const runtime = 'nodejs';
 
@@ -37,21 +36,7 @@ export default async function Layout({
           <div className="flex-grow">
             {children}
           </div>
-          <footer className="w-full py-4 px-6 mt-auto">
-            <div className="flex flex-row space-x-4 items-center justify-center max-w-7xl mx-auto">
-              <span className="text-md text-gray-500 font-bold">
-                Application développée par
-              </span>
-              <Link href="https://websmith.fr">
-                <Image
-                  src="/images/logoWebsmith.svg"
-                  alt="logo"
-                  width={150}
-                  height={100}
-                />
-              </Link>
-            </div>
-          </footer>
+          <PiedDePage />
         </main>
       </SidebarProvider>
     </AuthProvider>
