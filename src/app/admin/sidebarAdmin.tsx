@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, FileCheck, KeyRound, RefreshCw } from "lucide-react";
+import { Settings, FileCheck, KeyRound, RefreshCw, BookOpen } from "lucide-react";
 import { NavLateral } from "@/components/navigation/NavLateral";
 
 const liens = [
@@ -8,6 +8,7 @@ const liens = [
   { href: "/admin/inscription", label: "Assigner un mot de passe", icon: KeyRound },
   { href: "/admin/suiviFactures", label: "Suivi des factures", icon: FileCheck },
   { href: "/admin/synchronisations", label: "Synchronisations", icon: RefreshCw },
+  { href: "/admin/documentation", label: "Documentation", icon: BookOpen },
 ];
 
 export function AppSidebar() {

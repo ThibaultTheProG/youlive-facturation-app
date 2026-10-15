@@ -13,7 +13,7 @@ function libelleType(facture: Pick<Facture, "type" | "retrocession">): string {
   return facture.type;
 }
 
-export function PastilleType({ facture }: { facture: Facture }) {
+export function PastilleType({ facture }: { facture: Pick<Facture, "type" | "retrocession"> }) {
   const couleur =
     facture.type === "commission"
       ? "bg-[#fef3e8] text-[#b35a10]"
