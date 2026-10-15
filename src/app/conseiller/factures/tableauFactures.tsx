@@ -13,11 +13,6 @@ import { User, Facture } from "@/lib/types";
 import { getFactures } from "@/backend/gestionFactures";
 import Popin from "./popin";
 import {
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   FileSearch,
   HandCoins,
@@ -29,6 +24,9 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EnTeteTriable, ENTETE_COLONNE } from "@/components/uiCustom/enTeteTriable";
+import { TuileStat } from "@/components/uiCustom/tuileStat";
+import { PiedPagination } from "@/components/uiCustom/piedPagination";
 import {
   Tooltip,
   TooltipContent,
@@ -54,63 +52,6 @@ function raisonEnvoiImpossible(f: Facture): string | null {
     return "Numéro de facture manquant : il doit d'abord être attribué";
   return null;
 }
-
-// En-tête de colonne triable. Défini au niveau module : une définition à
-// l'intérieur du composant recrée le type à chaque rendu et force React à
-// démonter/remonter la colonne.
-function SortableHeader({
-  title,
-  field,
-  currentSortField,
-  currentSortDirection,
-  onSort,
-  align = "left",
-}: {
-  title: string;
-  field: string;
-  currentSortField: string | null;
-  currentSortDirection: "asc" | "desc";
-  onSort: (field: string) => void;
-  align?: "left" | "right";
-}) {
-  const actif = currentSortField === field;
-  return (
-    <TableHead
-      aria-sort={
-        actif
-          ? currentSortDirection === "asc"
-            ? "ascending"
-            : "descending"
-          : "none"
-      }
-      className={cn("px-3", align === "right" && "text-right")}
-    >
-      <button
-        type="button"
-        onClick={() => onSort(field)}
-        className={cn(
-          "-mx-2 inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold uppercase tracking-wide outline-none transition-colors",
-          "hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-[#E07C24]/60",
-          actif ? "text-gray-900" : "text-gray-500",
-        )}
-      >
-        {title}
-        {actif ? (
-          currentSortDirection === "asc" ? (
-            <ArrowUp className="h-3.5 w-3.5" />
-          ) : (
-            <ArrowDown className="h-3.5 w-3.5" />
-          )
-        ) : (
-          <ArrowUpDown className="h-3.5 w-3.5 text-gray-300" />
-        )}
-      </button>
-    </TableHead>
-  );
-}
-
-const ENTETE =
-  "px-3 text-xs font-semibold uppercase tracking-wide text-gray-500";
 
 function BoutonIcone({
   libelle,
@@ -150,30 +91,6 @@ function BoutonIcone({
       </TooltipTrigger>
       <TooltipContent side="top">{libelle}</TooltipContent>
     </Tooltip>
-  );
-}
-
-function Tuile({
-  icone: Icone,
-  titre,
-  montant,
-}: {
-  icone: typeof Eye;
-  titre: string;
-  montant: number;
-}) {
-  return (
-    <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#fef3e8]">
-        <Icone className="h-5 w-5 text-[#E07C24]" />
-      </span>
-      <div className="min-w-0">
-        <p className="truncate text-xs font-medium text-gray-500">{titre}</p>
-        <p className="mt-0.5 text-xl font-semibold tabular-nums text-gray-900">
-          {EUROS.format(montant)}
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -426,21 +343,21 @@ export default function TableauFactures({ user }: { user: User }) {
   return (
     <>
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <Tuile
+        <TuileStat
           icone={HandCoins}
           titre="Rétrocessions · Commission"
-          montant={totalRetrocessionCommission}
+          valeur={EUROS.format(totalRetrocessionCommission)}
         />
-        <Tuile
+        <TuileStat
           icone={Receipt}
           titre="Rétrocessions · Recrutement"
-          montant={totalRetrocessionRecrutement}
+          valeur={EUROS.format(totalRetrocessionRecrutement)}
         />
         {totalAvoir !== 0 && (
-          <Tuile
+          <TuileStat
             icone={Undo2}
             titre="Avoirs / ajustements"
-            montant={totalAvoir}
+            valeur={EUROS.format(totalAvoir)}
           />
         )}
       </div>
@@ -591,32 +508,32 @@ export default function TableauFactures({ user }: { user: User }) {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50/60 hover:bg-gray-50/60">
-                <SortableHeader title="Numéro" field="numero" {...trie} />
-                <SortableHeader title="Type" field="type" {...trie} />
-                <TableHead className={ENTETE}>Mandat</TableHead>
-                <SortableHeader
+                <EnTeteTriable title="Numéro" field="numero" {...trie} />
+                <EnTeteTriable title="Type" field="type" {...trie} />
+                <TableHead className={ENTETE_COLONNE}>Mandat</TableHead>
+                <EnTeteTriable
                   title="Signature"
                   field="date_signature"
                   {...trie}
                 />
-                <TableHead className={cn(ENTETE, "text-right")}>
+                <TableHead className={cn(ENTETE_COLONNE, "text-right")}>
                   Honoraires HT
                 </TableHead>
-                <TableHead className={cn(ENTETE, "text-right")}>Taux</TableHead>
-                <SortableHeader
+                <TableHead className={cn(ENTETE_COLONNE, "text-right")}>Taux</TableHead>
+                <EnTeteTriable
                   title="Rétrocession HT"
                   field="montant"
                   align="right"
                   {...trie}
                 />
-                <TableHead className={ENTETE}>Statut</TableHead>
-                <TableHead className={cn(ENTETE, "hidden xl:table-cell")}>
+                <TableHead className={ENTETE_COLONNE}>Statut</TableHead>
+                <TableHead className={cn(ENTETE_COLONNE, "hidden xl:table-cell")}>
                   Paiement
                 </TableHead>
-                <TableHead className={cn(ENTETE, "hidden 2xl:table-cell")}>
+                <TableHead className={cn(ENTETE_COLONNE, "hidden 2xl:table-cell")}>
                   Ajoutée le
                 </TableHead>
-                <TableHead className={cn(ENTETE, "text-right")}>
+                <TableHead className={cn(ENTETE_COLONNE, "text-right")}>
                   <span className="sr-only">Actions</span>
                 </TableHead>
               </TableRow>
@@ -713,36 +630,16 @@ export default function TableauFactures({ user }: { user: User }) {
           </Table>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 md:px-5">
-          <p className="text-sm text-gray-500" aria-live="polite">
-            {total === 0
-              ? "0 facture"
-              : `${debut}–${fin} sur ${total} facture${total > 1 ? "s" : ""}`}
-          </p>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">
-              Page {currentPage} sur {totalPages}
-            </span>
-            <button
-              type="button"
-              aria-label="Page précédente"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => prev - 1)}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-gray-200 text-gray-600 outline-none hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-[#E07C24]/60 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              aria-label="Page suivante"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((prev) => prev + 1)}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-gray-200 text-gray-600 outline-none hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-[#E07C24]/60 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+        <PiedPagination
+          debut={debut}
+          fin={fin}
+          total={total}
+          element="facture"
+          page={currentPage}
+          totalPages={totalPages ?? 1}
+          onPrecedent={() => setCurrentPage((prev) => prev - 1)}
+          onSuivant={() => setCurrentPage((prev) => prev + 1)}
+        />
       </div>
 
       {selectedFacture && (

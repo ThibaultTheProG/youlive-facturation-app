@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/app/context/authContext";
 import { cn } from "@/lib/utils";
+import { initiales } from "@/utils/initiales";
 
 export type LienNav = { href: string; label: string; icon: LucideIcon };
 
@@ -36,14 +37,6 @@ const LIBELLE_ROLE: Record<string, string> = {
   admin: "Administrateur",
   conseiller: "Conseiller",
 };
-
-function initiales(nom: string | undefined): string {
-  const mots = (nom ?? "").trim().split(/\s+/).filter(Boolean);
-  if (mots.length === 0) return "?";
-  return (
-    mots[0][0] + (mots.length > 1 ? mots[mots.length - 1][0] : "")
-  ).toUpperCase();
-}
 
 /** Infobulle affichée seulement quand le menu est réduit aux icônes (desktop). */
 function InfoBulle({
