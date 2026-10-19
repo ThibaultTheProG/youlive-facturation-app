@@ -99,3 +99,19 @@ export function emailsAdminFactures(): string[] {
   }
   return [process.env.SMTP_TO_EMAIL].filter(Boolean) as string[];
 }
+
+/**
+ * Destinataires en copie du mail « club des 99 % » : l'administration de
+ * factures, plus `CLUB99_EMAILS_COPIE` (liste séparée par des virgules), sans
+ * doublon.
+ */
+export function emailsCopieClub99(): string[] {
+  const liste = process.env.CLUB99_EMAILS_COPIE;
+  const supplementaires = liste
+    ? liste
+        .split(",")
+        .map((adresse) => adresse.trim())
+        .filter(Boolean)
+    : [];
+  return [...new Set([...emailsAdminFactures(), ...supplementaires])];
+}

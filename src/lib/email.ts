@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { baseUrl, destinataires, emailsAdminFactures, sujet } from './environnement';
+import { baseUrl, destinataires, emailsCopieClub99, sujet } from './environnement';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_SERVER_HOST,
@@ -63,7 +63,7 @@ function echapperHtml(texte: string): string {
  * Félicitations au franchissement du seuil de CA annuel (70 000 €) : la
  * rétrocession passe à 99 %. Déclenché par la sync `/api/contrats`, une seule
  * fois par (conseiller, année) — cf. `historique_ca_annuel.email_club99_envoye_le`.
- * L'administration est en copie.
+ * L'administration et les destinataires de `emailsCopieClub99()` sont en copie.
  */
 export async function sendEmailClub99({
   email,
@@ -74,7 +74,7 @@ export async function sendEmailClub99({
   prenom: string | null;
   annee: number;
 }) {
-  const admins = emailsAdminFactures();
+  const copies = emailsCopieClub99();
   const lien = `${baseUrl()}/conseiller/factures`;
   const salutation = prenom ? `Hello ${echapperHtml(prenom)},` : 'Hello,';
 
@@ -82,8 +82,8 @@ export async function sendEmailClub99({
     await transporter.sendMail({
       from: `"Youlive" <${process.env.SMTP_SERVER_USERNAME}>`,
       to: destinataires([email]),
-      cc: admins.length ? destinataires(admins) : undefined,
-      subject: sujet('Bienvenue dans le club des 99 % ! 🎉', [email, ...admins]),
+      cc: copies.length ? destinataires(copies) : undefined,
+      subject: sujet('Bienvenue dans le club des 99 % ! 🎉', [email, ...copies]),
       html: `
         <p>${salutation}</p>
         <p>J’ai le plaisir de t’annoncer que tu viens de franchir le seuil des <strong>70 000 € HT</strong> de chiffre d’affaires agence pour l’année ${annee} ! 🎉</p>
