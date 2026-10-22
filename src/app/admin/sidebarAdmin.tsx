@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, FileCheck, LogOut, KeyRound, RefreshCw } from "lucide-react";
+import { Settings, FileCheck, LogOut, KeyRound, RefreshCw, Mail } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +20,7 @@ const navItems = [
   { href: "/admin/inscription", label: "Assigner un mot de passe", icon: KeyRound },
   { href: "/admin/suiviFactures", label: "Suivi des factures", icon: FileCheck },
   { href: "/admin/synchronisations", label: "Synchronisations", icon: RefreshCw },
+  { href: "/admin/emails", label: "Emails", icon: Mail },
 ];
 
 export function AppSidebar() {

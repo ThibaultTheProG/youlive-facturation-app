@@ -233,3 +233,17 @@ model synchronisations {
 
   @@index([type, debut(sort: Desc)], map: "idx_synchronisations_type_debut")
 }
+
+/// Adresses que l'admin associe aux emails envoyés par l'application (`/admin/emails`).
+/// `evenement` : `invitation` | `notification_facture` | `facture_admin` | `club99`
+/// (cf. `src/lib/emailsEvenements.ts`). `mode` : `a` (destinataires de la liste) | `cc`.
+/// Lue par `src/lib/emailsConfiguration.ts`, jamais directement par les points d'envoi.
+model emails_destinataires {
+  id         Int      @id @default(autoincrement())
+  evenement  String   @db.VarChar(30)
+  mode       String   @db.VarChar(2)
+  adresse    String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@unique([evenement, mode, adresse], map: "emails_destinataires_unique")
+}

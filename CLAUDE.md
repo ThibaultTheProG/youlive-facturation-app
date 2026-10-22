@@ -98,6 +98,17 @@ l'environnement. Ne jamais relire `VERCEL_ENV` ailleurs (même règle que `devAu
   final donnerait `https://x//chemin`, que les navigateurs lisent comme une URL
   *protocol-relative*, et `VERCEL_URL` désigne un déploiement précis qui change à chaque push.
 
+**Destinataires et copies paramétrables** (depuis le 22/10/2026) : l'admin tient, depuis
+`/admin/emails`, les adresses `a` (destinataires) et `cc` (copie) de chaque email, dans la table
+`emails_destinataires`. Les événements se déclarent dans `src/lib/emailsEvenements.ts` (module
+client-safe, partagé avec la page) ; la lecture passe par `adressesPour(evenement, mode)` de
+`src/lib/emailsConfiguration.ts` (cache de 15 s : le cron envoie un email par facture), dont le
+résultat va **dans** `destinataires()` et `sujet()`, jamais à la place. Le destinataire principal
+d'un email adressé à un conseiller reste calculé par le code. Repli : tant qu'un couple
+(`facture_admin`/`a`, `club99`/`cc`) n'a aucune adresse en base, `FACTURES_ADMIN_EMAILS` et
+`CLUB99_EMAILS_COPIE` restent en vigueur — retirer la dernière adresse les rétablit. Un nouvel
+email se déclare dans `EVENEMENTS_EMAIL`.
+
 Le défaut est délibérément sûr : il faut une production explicite pour écrire à de vraies
 personnes. **Tout nouvel envoi d'email doit passer par `destinataires()` et `sujet()`.** Les quatre
 points d'envoi existants sont `src/lib/email.ts` (invitation, → le conseiller),
