@@ -7,6 +7,7 @@ import { PrismaClient } from "@prisma/client";
 import { RelationContrat } from "@/lib/types.js";
 import nodemailer from "nodemailer";
 import { destinataires, sujet, baseUrl } from "@/lib/environnement";
+import { adressesPour } from "@/lib/emailsConfiguration";
 import { decoupageSeuil, round2 } from "@/utils/decoupageSeuil";
 import { tvaParDefaut } from "@/utils/montantsFacture";
 import { getCAForYear, getHistoriqueForYear } from "@/utils/historiqueCA";
@@ -580,6 +581,8 @@ async function sendEmailNotification(userId: number, factureType: string, montan
       },
     });
     
+    const copies = await adressesPour("notification_facture", "cc");
+
     // Configuration de l'email
     const mailOptions = {
       from: process.env.SMTP_FROM_EMAIL,
@@ -587,7 +590,8 @@ async function sendEmailNotification(userId: number, factureType: string, montan
       // fois par facture créée par le cron nocturne, soit potentiellement tout
       // le réseau de conseillers en une nuit.
       to: destinataires([email]),
-      subject: sujet(`Nouvelle facture ${factureType} créée`, [email]),
+      cc: copies.length ? destinataires(copies) : undefined,
+      subject: sujet(`Nouvelle facture ${factureType} créée`, [email, ...copies]),
       text: `Une nouvelle facture de type ${factureType} d'un montant de ${montant.toLocaleString()} € a été créée pour vous.`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">

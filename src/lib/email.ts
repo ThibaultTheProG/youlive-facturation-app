@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
-import { baseUrl, destinataires, emailsAdminFactures, sujet } from './environnement';
+import { baseUrl, destinataires, sujet } from './environnement';
+import { adressesPour } from './emailsConfiguration';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_SERVER_HOST,
@@ -25,6 +26,8 @@ export async function sendInvitationEmail(
   prenom: string,
   nom: string
 ) {
+  const copies = await adressesPour('invitation', 'cc');
+
   try {
     await transporter.sendMail({
       from: `"Youlive" <${process.env.SMTP_SERVER_USERNAME}>`,
@@ -32,7 +35,8 @@ export async function sendInvitationEmail(
       // il définirait son mot de passe dans la base de préproduction et se
       // croirait activé côté production.
       to: destinataires([email]),
-      subject: sujet('Active ton espace de facturation Youlive', [email]),
+      cc: copies.length ? destinataires(copies) : undefined,
+      subject: sujet('Active ton espace de facturation Youlive', [email, ...copies]),
       html: `
         <h1>Bienvenue ${prenom} ${nom} !</h1>
         <p>Ton espace de factures en ligne est prêt : tu pourras y suivre le paiement de tes commissions, l'évolution de ton chiffre d'affaires et celui des conseillers que tu auras recrutés.</p>
@@ -63,7 +67,7 @@ function echapperHtml(texte: string): string {
  * Félicitations au franchissement du seuil de CA annuel (70 000 €) : la
  * rétrocession passe à 99 %. Déclenché par la sync `/api/contrats`, une seule
  * fois par (conseiller, année) — cf. `historique_ca_annuel.email_club99_envoye_le`.
- * L'administration est en copie.
+ * Les adresses configurées dans `/admin/emails` sont en copie.
  */
 export async function sendEmailClub99({
   email,
@@ -74,7 +78,7 @@ export async function sendEmailClub99({
   prenom: string | null;
   annee: number;
 }) {
-  const admins = emailsAdminFactures();
+  const copies = await adressesPour('club99', 'cc');
   const lien = `${baseUrl()}/conseiller/factures`;
   const salutation = prenom ? `Hello ${echapperHtml(prenom)},` : 'Hello,';
 
@@ -82,8 +86,8 @@ export async function sendEmailClub99({
     await transporter.sendMail({
       from: `"Youlive" <${process.env.SMTP_SERVER_USERNAME}>`,
       to: destinataires([email]),
-      cc: admins.length ? destinataires(admins) : undefined,
-      subject: sujet('Bienvenue dans le club des 99 % ! 🎉', [email, ...admins]),
+      cc: copies.length ? destinataires(copies) : undefined,
+      subject: sujet('Bienvenue dans le club des 99 % ! 🎉', [email, ...copies]),
       html: `
         <p>${salutation}</p>
         <p>J’ai le plaisir de t’annoncer que tu viens de franchir le seuil des <strong>70 000 € HT</strong> de chiffre d’affaires agence pour l’année ${annee} ! 🎉</p>

@@ -57,6 +57,25 @@ Sur Vercel, la branche `preprod` est reliée à l'environnement personnalisé **
 `PREPROD_DATABASE_URL` : c'est le `DATABASE_URL` **de cet environnement** qui porte l'URL de
 préproduction. Vercel isole les variables par environnement, c'est lui qui joue le rôle du script.
 
+### Ouvrir psql sur l'une des deux branches
+
+```bash
+./scripts/psql-preprod.sh -tAc 'SELECT count(*) FROM factures'
+./scripts/psql-prod.sh -v ON_ERROR_STOP=1 -f /tmp/correction.sql
+```
+
+Deux scripts et non un seul avec un argument : **la cible se lit dans le nom de la commande**, et
+c'est tout l'objet du détour. Ils délèguent à `scripts/lib/psql-cible.sh`, qui applique la règle
+d'extraction `$(grep -m1 …)` ci-dessus, annonce sur `stderr` la branche et l'hôte joints, et ajoute
+`sslrootcert=system` **aux seules URL en `sslmode=verify-*`** — `~/.postgresql/root.crt` n'existe
+pas sur la machine de Thibault, et sous `sslmode=require` (l'URL de préproduction) psql refuse la
+combinaison.
+
+Les deux sont autorisés dans `.claude/settings.local.json`, ce qui évite une invite à chaque
+requête. La facturation étant propriétaire du schéma `public`, y écrire est son métier ; mais sur
+la production, lire les lignes visées avant tout `UPDATE`/`DELETE` et préférer une transaction
+explicite.
+
 ### Emails : déroutage hors production (obligatoire)
 
 `src/lib/environnement.ts` est le **point d'entrée unique** de tout comportement dépendant de
@@ -70,12 +89,25 @@ l'environnement. Ne jamais relire `VERCEL_ENV` ailleurs (même règle que `devAu
   sans quoi un email dérouté est indiscernable d'un email correctement adressé.
 - `emailsAdminFactures()` — `FACTURES_ADMIN_EMAILS` (liste séparée par des virgules), à défaut
   `SMTP_TO_EMAIL`. Les adresses des destinataires admin ne sont plus en dur dans le code.
+- `emailsCopieClub99()` — les destinataires admin, plus `CLUB99_EMAILS_COPIE` (liste séparée par
+  des virgules, sans doublon) : la copie du mail « club des 99 % ».
 - `baseUrl()` — racine des liens composés dans les emails, **sans slash final**. Prend
   `NEXT_PUBLIC_BASE_URL` si définie (la production), sinon `VERCEL_BRANCH_URL` — l'alias stable
   de la branche déployée, ce qui dispense `staging` de toute variable d'URL — sinon localhost.
   Ne jamais composer une URL d'email à partir de `NEXT_PUBLIC_BASE_URL` directement : un slash
   final donnerait `https://x//chemin`, que les navigateurs lisent comme une URL
   *protocol-relative*, et `VERCEL_URL` désigne un déploiement précis qui change à chaque push.
+
+**Destinataires et copies paramétrables** (depuis le 22/10/2026) : l'admin tient, depuis
+`/admin/emails`, les adresses `a` (destinataires) et `cc` (copie) de chaque email, dans la table
+`emails_destinataires`. Les événements se déclarent dans `src/lib/emailsEvenements.ts` (module
+client-safe, partagé avec la page) ; la lecture passe par `adressesPour(evenement, mode)` de
+`src/lib/emailsConfiguration.ts` (cache de 15 s : le cron envoie un email par facture), dont le
+résultat va **dans** `destinataires()` et `sujet()`, jamais à la place. Le destinataire principal
+d'un email adressé à un conseiller reste calculé par le code. Repli : tant qu'un couple
+(`facture_admin`/`a`, `club99`/`cc`) n'a aucune adresse en base, `FACTURES_ADMIN_EMAILS` et
+`CLUB99_EMAILS_COPIE` restent en vigueur — retirer la dernière adresse les rétablit. Un nouvel
+email se déclare dans `EVENEMENTS_EMAIL`.
 
 Le défaut est délibérément sûr : il faut une production explicite pour écrire à de vraies
 personnes. **Tout nouvel envoi d'email doit passer par `destinataires()` et `sujet()`.** Les quatre
@@ -89,6 +121,14 @@ migration l'a pré-rempli pour ceux déjà au-dessus du seuil, d'où aucun envoi
 `JWT_SECRET` et `CRON_SECRET` **doivent différer entre staging et production** : partagés, un
 cookie `authToken` ou un jeton `set-password` émis par staging serait valide en production.
 
+## Mémoire commune : le vault Youlive
+
+Les trois projets Youlive (facturation, avis de valeur, dashboard) partagent un vault Obsidian,
+`../youlive-vault`, qui porte le contrat, les notes transverses et la mémoire de Claude. Son
+guide est importé ci-dessous : il dit ce qui s'y écrit et comment.
+
+@../youlive-vault/CLAUDE.md
+
 ## Cette base est partagée avec une seconde application
 
 L'application **avis de valeur** (`../avis_de_valeur/avisdevaleur`) vit dans la même base
@@ -96,13 +136,13 @@ L'application **avis de valeur** (`../avis_de_valeur/avisdevaleur`) vit dans la 
 d'autre de `public` — pour authentifier les conseillers, la facturation restant la source de
 vérité unique des comptes, des rôles et des mots de passe.
 
-Le contrat entre les deux applications est dans `../contrat/`, importé ci-dessous. C'est le seul
+Le contrat entre les deux applications est dans `../youlive-vault/Contrat/`, importé ci-dessous. C'est le seul
 endroit où ce que l'une doit savoir de l'autre est écrit : deux sessions Claude ne partagent ni
 conversation ni mémoire.
 
-@../contrat/UTILISATEURS.md
-@../contrat/SCHEMAS_ET_ROLES.md
-@../contrat/EVOLUTIONS.md
+@../youlive-vault/Contrat/UTILISATEURS.md
+@../youlive-vault/Contrat/SCHEMAS_ET_ROLES.md
+@../youlive-vault/Contrat/EVOLUTIONS.md
 
 Ce que cela impose ici, concrètement :
 
@@ -294,8 +334,9 @@ Required: `DATABASE_URL`, `JWT_SECRET`, `CRON_SECRET`, `SMTP_SERVER_HOST`, `SMTP
 Optional: `NEXT_PUBLIC_AUTH_DISABLED=true` to bypass authentication (sans effet sur Vercel, où
 `NODE_ENV` vaut toujours `production`) · `PROD_DATABASE_URL` et `PREPROD_DATABASE_URL` (local
 uniquement, cf. « Travailler en préproduction » ; le code ne lit ni l'une ni l'autre) · `FACTURES_ADMIN_EMAILS` (destinataires admin, liste séparée par
-des virgules ; à défaut `SMTP_TO_EMAIL`) · `EMAIL_REDIRECTION` (adresse recevant tout le courrier
-hors production ; à défaut `thibault.tuffin@youlive-immobilier.fr`)
+des virgules ; à défaut `SMTP_TO_EMAIL`) · `CLUB99_EMAILS_COPIE` (copies supplémentaires du mail
+« club des 99 % », en plus des admins de factures) · `EMAIL_REDIRECTION` (adresse recevant tout le
+courrier hors production ; à défaut `thibault.tuffin@youlive-immobilier.fr`)
 
 `VERCEL_ENV` est fourni par Vercel et ne se définit pas à la main.
 
