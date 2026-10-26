@@ -6,6 +6,7 @@ import {
   Calculator,
   KeyRound,
   LifeBuoy,
+  Mail,
   RefreshCw,
   Settings,
   Workflow,
@@ -27,6 +28,7 @@ const SOMMAIRE = [
   { id: "corrections", titre: "Corriger une erreur" },
   { id: "acces", titre: "Accès des conseillers" },
   { id: "synchronisations", titre: "Page Synchronisations" },
+  { id: "emails", titre: "Page Emails" },
   { id: "faq", titre: "Questions fréquentes" },
   { id: "glossaire", titre: "Glossaire" },
 ];
@@ -88,7 +90,7 @@ export default function Documentation() {
                   ["Apimo", "Source des conseillers, ventes, honoraires, mandats, acheteurs et vendeurs. Toute erreur de ces données se corrige dans Apimo."],
                   ["L’application", "Importe, calcule les montants, crée les factures, génère les PDF et envoie les emails."],
                   ["Le conseiller", "Complète ses factures (numéro, date, apporteur d’affaire) et les envoie. Il peut aussi modifier son adresse, sa TVA et sa société de facturation."],
-                  ["L’administration (vous)", "Règle les paramètres des conseillers, suit les paiements, établit les avoirs et surveille les synchronisations."],
+                  ["L’administration (vous)", "Règle les paramètres des conseillers, suit les paiements, établit les avoirs, surveille les synchronisations et choisit qui reçoit les emails de l’application."],
                 ]}
               />
               <Encart ton="attention" titre="Ce qui se corrige dans Apimo, pas ici">
@@ -427,6 +429,46 @@ export default function Documentation() {
               </Encart>
             </Section>
 
+            {/* ───────────────────────────── Emails */}
+            <Section id="emails" titre="Page Emails" icone={Mail}>
+              <p>
+                Elle permet de choisir, pour chacun des quatre emails envoyés par l’application, qui le reçoit et qui est
+                en copie, <strong>sans faire appel à Thibault</strong>.
+              </p>
+              <Definitions
+                colonnes={["Email", "Qui le reçoit"]}
+                lignes={[
+                  ["Invitation à activer son espace", "Le conseiller invité. Vous réglez les copies."],
+                  ["Nouvelle facture créée", "Le conseiller concerné, une fois par facture créée la nuit. Vous réglez les copies."],
+                  ["Facture envoyée à l’administration", "Les destinataires que vous listez. Vous réglez aussi les copies."],
+                  ["Club des 99 %", "Le conseiller qui franchit les 70 000 €. Vous réglez les copies."],
+                ]}
+              />
+              <p>
+                Quand l’email s’adresse à un conseiller, c’est toujours lui qui le reçoit : l’application le détermine
+                seule, vous ne pouvez qu’ajouter des personnes en copie. Seul l’email « Facture envoyée à
+                l’administration » a une liste de destinataires, qui est entièrement entre vos mains.
+              </p>
+              <p>
+                Saisissez une adresse puis <Ui>Ajouter</Ui>. Chaque adresse enregistrée peut ensuite être corrigée ou
+                retirée. Un changement s’applique aux emails envoyés dans la minute qui suit.
+              </p>
+              <Encart ton="attention" titre="Une liste vide n’est pas une liste sans destinataire">
+                <p>
+                  Tant qu’aucune adresse n’est enregistrée pour les destinataires de « Facture envoyée à
+                  l’administration » ou pour les copies de « Club des 99 % », ce sont les adresses de la configuration du
+                  serveur qui s’appliquent. La page les affiche sous la liste. Dès que vous ajoutez une adresse, seules les
+                  adresses enregistrées comptent. Si vous retirez la dernière, la configuration du serveur reprend la main.
+                </p>
+              </Encart>
+              <Encart ton="astuce" titre="Avant de retirer une adresse de l’administration">
+                <p>
+                  Vérifiez qu’il reste au moins une personne destinataire des factures envoyées : c’est par cet email que
+                  vous savez qu’une facture est à régler.
+                </p>
+              </Encart>
+            </Section>
+
             {/* ───────────────────────────── FAQ */}
             <Section id="faq" titre="Questions fréquentes" icone={CircleHelp}>
               <div className="space-y-2">
@@ -459,6 +501,12 @@ export default function Documentation() {
                   <p>
                     La liste affiche la rétrocession HT avant déduction de l’apporteur d’affaire. Le PDF donne le montant
                     réellement dû.
+                  </p>
+                </Question>
+                <Question question="Une collègue doit recevoir les factures envoyées par les conseillers">
+                  <p>
+                    Dans <Ui>Emails</Ui>, ajoutez son adresse aux destinataires de « Facture envoyée à
+                    l’administration », ou en copie si elle doit seulement être tenue informée.
                   </p>
                 </Question>
                 <Question question="Un conseiller a changé de société de facturation ou d’email de facturation">
@@ -502,7 +550,7 @@ export default function Documentation() {
             </Section>
 
             <p className="border-t border-gray-100 pt-5 text-xs text-gray-400">
-              Documentation rédigée le 15/10/2026. Si l’application et ce document ne disent pas la même chose, c’est le
+              Documentation rédigée le 15/10/2026, mise à jour le 26/10/2026. Si l’application et ce document ne disent pas la même chose, c’est le
               document qui est à mettre à jour : signalez-le à Thibault.
             </p>
           </article>
