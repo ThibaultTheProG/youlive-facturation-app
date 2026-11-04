@@ -283,7 +283,7 @@ export default function Documentation() {
             {/* ───────────────────────────── Paramètres */}
             <Section id="parametres" titre="Paramètres conseillers" icone={Settings}>
               <p>
-                Choisissez un conseiller dans le bandeau du haut : ses paramètres s’affichent en cinq onglets.{" "}
+                Choisissez un conseiller dans le bandeau du haut : ses paramètres s’affichent en six onglets.{" "}
                 <Ui>Valider</Ui> enregistre <strong>tous les onglets d’un coup</strong>.
               </p>
               <Definitions
@@ -294,6 +294,7 @@ export default function Documentation() {
                   ["Fiscalité & options", "Assujettissement à la TVA, taux, TVA sur les recrutements, et auto-parrainage."],
                   ["Facturation recrutement", "Société au nom de laquelle sont établies les factures de recrutement et les avoirs qui les régularisent (nom, SIREN, adresse, email). Vide : l’identité du conseiller s’applique."],
                   ["Parrainage", "Les trois parrains du conseiller, du plus proche au plus éloigné. Ils décident des factures de recrutement."],
+                  ["Historique", "Qui a changé quoi sur la fiche, et quand (taux de TVA, rétrocession, parrains, activation…). Lecture seule : cet onglet n’est pas enregistré par Valider. Les écritures automatiques (synchronisation, recalcul du CA) sont masquées tant que vous ne cochez pas la case. Une modification marquée « Hors application » a été faite directement en base, pas depuis l’application. Le journal existe depuis le 04/11/2026."],
                 ]}
               />
               <Encart ton="attention" titre="Parrainage : attendre le chargement">

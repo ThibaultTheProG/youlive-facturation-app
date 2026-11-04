@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { requireAdmin } from "@/lib/apiAuth";
 import { avecAuteurParrainage } from "@/utils/parrainagesHistorique";
+import { avecAuteurUtilisateur, SOURCES_UTILISATEUR } from "@/utils/utilisateursHistorique";
 
 export async function POST(req: Request) {
   const auth = await requireAdmin();
@@ -32,10 +33,12 @@ export async function POST(req: Request) {
     }
 
     // 1. Désactiver le conseiller
-    await prisma.utilisateurs.update({
-      where: { id: conseillerId },
-      data: { actif: false },
-    });
+    await avecAuteurUtilisateur(auth.user.id, SOURCES_UTILISATEUR.adminDesactivation, (tx) =>
+      tx.utilisateurs.update({
+        where: { id: conseillerId },
+        data: { actif: false },
+      })
+    );
 
     // 2 et 3, signés pour `parrainages_historique`
     await avecAuteurParrainage(auth.user.id, "admin:desactivation", async (tx) => {

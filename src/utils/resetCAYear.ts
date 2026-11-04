@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import { calculRetrocession } from "./calculs";
+import { SOURCES_UTILISATEUR } from "./utilisateursHistorique";
 
 /**
  * Vérifie si une réinitialisation annuelle est nécessaire
@@ -79,6 +80,9 @@ export async function checkAndResetYearIfNeeded(): Promise<boolean> {
           }
         });
       }
+
+      // Signature des écritures sur `utilisateurs` pour `utilisateurs_historique`
+      await tx.$queryRaw`SELECT set_config('app.utilisateur_auteur', '', true), set_config('app.utilisateur_source', ${SOURCES_UTILISATEUR.reinitialisationCA}, true)`;
 
       // 3. Réinitialiser les CA dans utilisateurs
       await tx.utilisateurs.updateMany({

@@ -5,6 +5,7 @@ import { memeTexte, runChunked } from "@/utils/sync";
 import { requireCronOrAdmin, requireSelfOrAdmin } from "@/lib/apiAuth";
 import { journaliserSync, type JournalSync } from "@/lib/journalSync";
 import { avecAuteurParrainage } from "@/utils/parrainagesHistorique";
+import { avecAuteurUtilisateur, SOURCES_UTILISATEUR } from "@/utils/utilisateursHistorique";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -148,9 +149,9 @@ async function synchroniser(journal: JournalSync) {
 
     await runChunked(aCreer, async (cible) => {
       try {
-        const cree = await prisma.utilisateurs.create({
-          data: { ...cible, role: "conseiller" },
-        });
+        const cree = await avecAuteurUtilisateur(null, SOURCES_UTILISATEUR.synchroApimo, (tx) =>
+          tx.utilisateurs.create({ data: { ...cible, role: "conseiller" } })
+        );
         idsSansParrainage.push(cree.id);
       } catch (error) {
         erreurs++;
@@ -161,19 +162,21 @@ async function synchroniser(journal: JournalSync) {
     await runChunked(aMaj, async (cible) => {
       const { idapimo, prenom, nom, email, telephone, mobile, siren } = cible;
       try {
-        await prisma.utilisateurs.update({
-          where: { idapimo },
-          // `adresse` volontairement absente : cf. commentaire plus haut
-          data: {
-            prenom,
-            nom,
-            email,
-            telephone,
-            mobile,
-            siren,
-            updated_at: new Date(),
-          },
-        });
+        await avecAuteurUtilisateur(null, SOURCES_UTILISATEUR.synchroApimo, (tx) =>
+          tx.utilisateurs.update({
+            where: { idapimo },
+            // `adresse` volontairement absente : cf. commentaire plus haut
+            data: {
+              prenom,
+              nom,
+              email,
+              telephone,
+              mobile,
+              siren,
+              updated_at: new Date(),
+            },
+          })
+        );
       } catch (error) {
         erreurs++;
         console.error(`❌ Conseiller ${idapimo} non mis à jour :`, error);
@@ -290,10 +293,15 @@ export async function PUT(req: Request) {
 
     // Mise à jour des informations du conseiller
     try {
-      await prisma.utilisateurs.update({
-        where: { id: Number(id) },
-        data: conseillerData,
-      });
+      await avecAuteurUtilisateur(
+        auth.user.id,
+        estAdmin ? SOURCES_UTILISATEUR.adminFiche : SOURCES_UTILISATEUR.conseillerFiche,
+        (tx) =>
+          tx.utilisateurs.update({
+            where: { id: Number(id) },
+            data: conseillerData,
+          })
+      );
       console.log("Mise à jour utilisateur réussie");
     } catch (updateError) {
       console.error(

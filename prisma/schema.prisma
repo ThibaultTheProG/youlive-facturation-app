@@ -126,6 +126,27 @@ model parrainages_historique {
   @@index([user_id, created_at])
 }
 
+/// Journal des modifications de `utilisateurs`, une ligne par champ modifié, alimenté par le trigger
+/// `utilisateurs_historique_trigger` (cf. migration 20261104120000_utilisateurs_historique) :
+/// toute écriture est tracée, qu'elle vienne de l'app, d'un cron ou d'un SQL manuel.
+/// `auteur_id` et `source` sont lus dans les réglages de session `app.utilisateur_auteur` et
+/// `app.utilisateur_source` (cf. `src/utils/utilisateursHistorique.ts`) ; une source nulle
+/// désigne une écriture hors de l'app. Le mot de passe est tracé sans ses valeurs.
+/// Pas de clé étrangère : l'historique doit survivre à la suppression d'un utilisateur.
+model utilisateurs_historique {
+  id         Int      @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  user_id    Int
+  operation  String   @db.VarChar(10)
+  champ      String?  @db.VarChar(60)
+  avant      String?
+  apres      String?
+  auteur_id  Int?
+  source     String?  @db.VarChar(100)
+
+  @@index([user_id, created_at])
+}
+
 model property {
   id            Int       @id @default(autoincrement())
   adresse       String?   @db.VarChar(120)

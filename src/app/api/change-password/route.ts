@@ -6,7 +6,7 @@ import {
   MESSAGE_LONGUEUR_MIN,
 } from "@/lib/passwordPolicy";
 import { cookies } from "next/headers";
-import prisma from "@/lib/db";
+import { avecAuteurUtilisateur, SOURCES_UTILISATEUR } from "@/utils/utilisateursHistorique";
 
 export const runtime = 'nodejs';
 
@@ -46,14 +46,16 @@ export async function POST(request: Request) {
 
     const hashedPassword = await hashPassword(password);
 
-    await prisma.utilisateurs.update({
-      where: {
-        id: user.id
-      },
-      data: {
-        motDePasse: hashedPassword
-      }
-    });
+    await avecAuteurUtilisateur(user.id, SOURCES_UTILISATEUR.conseillerMotDePasse, (tx) =>
+      tx.utilisateurs.update({
+        where: {
+          id: user.id
+        },
+        data: {
+          motDePasse: hashedPassword
+        }
+      })
+    );
 
     return NextResponse.json({ message: "Mot de passe mis à jour avec succès." });
   } catch (error) {
