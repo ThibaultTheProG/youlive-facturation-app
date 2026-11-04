@@ -318,6 +318,15 @@ Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `
   via `avecAuteurParrainage` (`src/utils/parrainagesHistorique.ts`) pour y ajouter auteur et source.
   Le cron `/api/factures/create` ne regarde que les relations créées depuis 7 jours : un parrain
   remis après coup ne régénère **rien**, les factures manquantes se créent manuellement.
+- **Modifications de `utilisateurs` sans trace** (cas Lory LAMATY, TVA repassée de 8,5 à 20 % entre le
+  07/10 et le 03/11/2026, auteur introuvable) : depuis le 04/11/2026, un trigger PostgreSQL consigne
+  chaque champ modifié dans `utilisateurs_historique` (hors `updated_at` et `chiffre_affaires` ; mot
+  de passe sans valeurs). `utilisateurs.updated_at` n'est **pas** tenu à jour automatiquement : ne pas
+  s'y fier pour dater un changement. **Toute écriture sur `utilisateurs` passe par
+  `avecAuteurUtilisateur`** (`src/utils/utilisateursHistorique.ts`), qui pose l'auteur et la source
+  (`SOURCES_UTILISATEUR`) ; une source nulle dans le journal signifie « écriture hors application »
+  (SQL, script), et c'est voulu. Lecture : onglet « Historique » de `/admin/parametres`
+  (`GET /api/conseillers/historique`, fusionné avec `parrainages_historique`).
 - One-shot recompute + audit script: `scripts/migrate-ca-2026.ts` (re-fetches Apimo, sets `historique_ca_annuel` for 2026, and reports — without modifying — inconsistent commission invoices to regenerate).
 
 ### Key Files

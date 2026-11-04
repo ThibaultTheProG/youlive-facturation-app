@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
+import { avecAuteurUtilisateur, SOURCES_UTILISATEUR } from "@/utils/utilisateursHistorique";
 import { hashPassword } from "@/lib/password";
 import {
   LONGUEUR_MIN_MOT_DE_PASSE,
@@ -49,10 +49,13 @@ export async function POST(request: Request) {
       );
     }
 
-    await prisma.utilisateurs.update({
-      where: { id: resultat.userId },
-      data: { motDePasse: await hashPassword(password) },
-    });
+    const motDePasse = await hashPassword(password);
+    await avecAuteurUtilisateur(resultat.userId, SOURCES_UTILISATEUR.lienMotDePasse, (tx) =>
+      tx.utilisateurs.update({
+        where: { id: resultat.userId },
+        data: { motDePasse },
+      })
+    );
 
     return NextResponse.json({ message: "Mot de passe défini avec succès." });
   } catch (error) {

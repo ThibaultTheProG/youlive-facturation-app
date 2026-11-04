@@ -1,6 +1,7 @@
 import prisma from "@/lib/db";
 import { calculRetrocession } from "./calculs";
 import { round2 } from "./decoupageSeuil";
+import { avecAuteurUtilisateur, SOURCES_UTILISATEUR } from "./utilisateursHistorique";
 
 /**
  * Récupère le CA de l'année en cours pour un utilisateur
@@ -126,13 +127,23 @@ export async function recomputeCAForYear(
 
   // Synchroniser le cache utilisateurs uniquement pour l'année en cours
   if (year === currentYear) {
-    await prismaClient.utilisateurs.update({
-      where: { id: userId },
-      data: {
-        chiffre_affaires: totalCA,
-        retrocession: newRetrocession
-      }
-    });
+    const ecrire = (client: typeof prisma) =>
+      client.utilisateurs.update({
+        where: { id: userId },
+        data: {
+          chiffre_affaires: totalCA,
+          retrocession: newRetrocession
+        }
+      });
+    if (tx) {
+      // Déjà dans une transaction : on y pose la signature plutôt que d'en ouvrir une seconde.
+      await tx.$queryRaw`SELECT set_config('app.utilisateur_auteur', '', true), set_config('app.utilisateur_source', ${SOURCES_UTILISATEUR.recalculCA}, true)`;
+      await ecrire(tx as unknown as typeof prisma);
+    } else {
+      await avecAuteurUtilisateur(null, SOURCES_UTILISATEUR.recalculCA, (t) =>
+        ecrire(t as unknown as typeof prisma)
+      );
+    }
   }
 
   return { newCA: totalCA, newRetrocession };

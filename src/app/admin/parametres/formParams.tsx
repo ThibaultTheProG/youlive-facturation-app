@@ -19,7 +19,8 @@ import ConseillerSelector from "./_components/ConseillerSelector";
 import ConseillerDetails from "./_components/ConseillerDetails";
 import ContratManager from "./_components/ContratManager";
 import ParrainagesManager from "./_components/ParrainagesManager";
-import { BriefcaseBusiness, Building2, Network, Receipt, TriangleAlert, UserRound } from "lucide-react";
+import HistoriqueConseiller from "./_components/HistoriqueConseiller";
+import { BriefcaseBusiness, Building2, History, Network, Receipt, TriangleAlert, UserRound } from "lucide-react";
 import { CarteOnglets, Panneau, type Onglet } from "@/components/uiCustom/carteOnglets";
 
 const ONGLETS: Onglet[] = [
@@ -28,6 +29,7 @@ const ONGLETS: Onglet[] = [
   { id: "fiscalite", label: "Fiscalité & options", icon: Receipt },
   { id: "recrutement", label: "Facturation recrutement", icon: Building2 },
   { id: "parrainage", label: "Parrainage", icon: Network },
+  { id: "historique", label: "Historique", icon: History },
 ];
 const GRILLE = "grid gap-4 lg:grid-cols-2 2xl:grid-cols-3";
 
@@ -718,6 +720,19 @@ export default function FormParams() {
             />
           </Panneau>
 
+          <Panneau
+            id="historique"
+            actif={onglet}
+            icon={History}
+            titre="Historique des modifications"
+            description="Qui a changé quoi sur cette fiche, et quand : application, synchronisation, ou écriture directe en base."
+          >
+            {onglet === "historique" && (
+              <HistoriqueConseiller key={selectedConseiller.id} conseillerId={selectedConseiller.id} />
+            )}
+          </Panneau>
+
+          {onglet !== "historique" && (
           <div className="sticky bottom-0 -mx-5 mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 bg-white/90 px-5 py-4 backdrop-blur md:-mx-8 md:px-8">
             <div className="min-w-0 flex-1">
               <FormStatusMessage status={statutAffiche} />
@@ -727,6 +742,7 @@ export default function FormParams() {
               disabled={!parrainagesCharges}
             />
           </div>
+          )}
         </CarteOnglets>
       )}
     </form>
