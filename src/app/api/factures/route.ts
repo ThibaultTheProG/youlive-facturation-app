@@ -76,7 +76,9 @@ export async function GET(request: Request) {
     } else if (sortField === 'date_signature') {
       orderBy.relations_contrats = {
         contrats: {
-          date_signature: sortDirection as Prisma.SortOrder
+          // Sans `nulls: 'last'`, PostgreSQL place les NULL en premier en décroissant :
+          // les factures sans signature masqueraient les dernières signées.
+          date_signature: { sort: sortDirection as Prisma.SortOrder, nulls: 'last' }
         }
       };
     } else if (sortField === 'statut_envoi') {
@@ -87,7 +89,7 @@ export async function GET(request: Request) {
       orderBy.relations_contrats = {
         contrats: {
           property: {
-            numero_mandat: sortDirection as Prisma.SortOrder
+            numero_mandat: { sort: sortDirection as Prisma.SortOrder, nulls: 'last' }
           }
         }
       };
