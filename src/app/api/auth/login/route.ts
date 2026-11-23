@@ -21,7 +21,10 @@ export async function POST(request: Request) {
       where: { 
         email,
         motDePasse: { not: null },
-        role: { not: null }
+        role: { not: null },
+        // Un compte désactivé ne se connecte plus. Même réponse qu'un email
+        // inconnu : la désactivation n'a pas à être révélée.
+        actif: true
       },
       select: {
         id: true,

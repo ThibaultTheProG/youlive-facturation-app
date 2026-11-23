@@ -19,7 +19,7 @@ npx prisma generate       # Regenerate Prisma client after schema changes
 npx prisma studio         # Open Prisma Studio GUI
 ```
 
-There are no automated tests.
+Tests : `pnpm test` (`node --test`), aujourd'hui limité à `src/utils/decoupageSeuil.test.ts`.
 
 ## Travailler en préproduction
 
@@ -327,6 +327,10 @@ Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `
   (`SOURCES_UTILISATEUR`) ; une source nulle dans le journal signifie « écriture hors application »
   (SQL, script), et c'est voulu. Lecture : onglet « Historique » de `/admin/parametres`
   (`GET /api/conseillers/historique`, fusionné avec `parrainages_historique`).
+- **Tranches et niveaux créés à moitié** (corrigé le 23/11/2026) : le cron saute une relation dès
+  qu'une commission (ou un recrutement) existe pour elle. Les factures d'une même relation — deux
+  tranches de commission, trois niveaux de recrutement — s'écrivent donc **en un seul
+  `createMany`**, jamais une à une : un échec au milieu laissait les suivantes à jamais absentes.
 - One-shot recompute + audit script: `scripts/migrate-ca-2026.ts` (re-fetches Apimo, sets `historique_ca_annuel` for 2026, and reports — without modifying — inconsistent commission invoices to regenerate).
 
 ### Key Files
