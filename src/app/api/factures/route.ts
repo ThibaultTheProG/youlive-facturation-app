@@ -3,20 +3,44 @@ import prisma from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/apiAuth";
 
+/** Colonnes triables du suivi des factures (`FacturesTable.tsx`). */
+const TRIS_AUTORISES = [
+  'conseiller',
+  'montant',
+  'numero_mandat',
+  'date_signature',
+  'statut_envoi',
+  'date_paiement',
+] as const;
+
+/** Taille de page maximale, export Excel compris (809 factures au 23/11/2026). */
+const TAILLE_PAGE_MAX = 10000;
+
+function entierPositif(valeur: string | null, defaut: number): number {
+  const n = Number.parseInt(valeur ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : defaut;
+}
+
 export async function GET(request: Request) {
   const auth = await requireAdmin();
   if ("error" in auth) return auth.error;
 
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '10');
+    const page = entierPositif(searchParams.get('page'), 1);
+    // Plafonné : l'export Excel demande toutes les factures d'un coup (TAILLE_PAGE_MAX),
+    // et vérifie lui-même qu'il a tout reçu (totalCount).
+    const pageSize = Math.min(entierPositif(searchParams.get('pageSize'), 10), TAILLE_PAGE_MAX);
     const searchTerm = searchParams.get('searchTerm') || '';
     const filterStatut = searchParams.get('filterStatut') || '';
     const filterType = searchParams.get('filterType') || '';
     const filterStatutEnvoi = searchParams.get('filterStatutEnvoi') || '';
-    const sortField = searchParams.get('sortField') || 'date_signature';
-    const sortDirection = searchParams.get('sortDirection') || 'desc';
+    // Liste fermée : une valeur inconnue passée telle quelle à Prisma donnait une 500.
+    const sortFieldDemande = searchParams.get('sortField') ?? '';
+    const sortField = (TRIS_AUTORISES as readonly string[]).includes(sortFieldDemande)
+      ? sortFieldDemande
+      : 'date_signature';
+    const sortDirection: Prisma.SortOrder = searchParams.get('sortDirection') === 'asc' ? 'asc' : 'desc';
 
     // Construire la condition de recherche
     const where: Prisma.facturesWhereInput = {
@@ -70,31 +94,30 @@ export async function GET(request: Request) {
     // Construire l'ordre de tri
     const orderBy: Prisma.facturesOrderByWithRelationInput = {};
     if (sortField === 'conseiller') {
-      orderBy.utilisateurs = { nom: sortDirection as Prisma.SortOrder };
+      orderBy.utilisateurs = { nom: sortDirection };
     } else if (sortField === 'montant') {
-      orderBy.retrocession = sortDirection as Prisma.SortOrder;
-    } else if (sortField === 'date_signature') {
-      orderBy.relations_contrats = {
-        contrats: {
-          // Sans `nulls: 'last'`, PostgreSQL place les NULL en premier en décroissant :
-          // les factures sans signature masqueraient les dernières signées.
-          date_signature: { sort: sortDirection as Prisma.SortOrder, nulls: 'last' }
-        }
-      };
+      orderBy.retrocession = sortDirection;
     } else if (sortField === 'statut_envoi') {
-      orderBy.statut_envoi = sortDirection as Prisma.SortOrder;
+      orderBy.statut_envoi = sortDirection;
     } else if (sortField === 'date_paiement') {
-      orderBy.date_paiement = { sort: sortDirection as Prisma.SortOrder, nulls: 'last' };
+      orderBy.date_paiement = { sort: sortDirection, nulls: 'last' };
     } else if (sortField === 'numero_mandat') {
       orderBy.relations_contrats = {
         contrats: {
           property: {
-            numero_mandat: { sort: sortDirection as Prisma.SortOrder, nulls: 'last' }
+            numero_mandat: { sort: sortDirection, nulls: 'last' }
           }
         }
       };
     } else {
-      orderBy[sortField as keyof Prisma.facturesOrderByWithRelationInput] = sortDirection as Prisma.SortOrder;
+      // date_signature, et le défaut
+      orderBy.relations_contrats = {
+        contrats: {
+          // Sans `nulls: 'last'`, PostgreSQL place les NULL en premier en décroissant :
+          // les factures sans signature masqueraient les dernières signées.
+          date_signature: { sort: sortDirection, nulls: 'last' }
+        }
+      };
     }
 
     // Récupérer les factures avec leurs relations en une seule requête
@@ -133,6 +156,9 @@ export async function GET(request: Request) {
     // Transformer les données pour le format attendu
     const facturesFormatees = factures.map(({ remplace, ...facture }) => ({
       ...facture,
+      // Decimal → nombre : le JSON gardait un nombre quand la colonne était un Float.
+      retrocession: facture.retrocession != null ? Number(facture.retrocession) : null,
+      apporteur_amount: facture.apporteur_amount != null ? Number(facture.apporteur_amount) : null,
       annulee: facture.en_vigueur !== true,
       annulee_le: facture.annulee_le?.toISOString() ?? null,
       remplace: facture.remplace_id ? { id: facture.remplace_id, numero: remplace?.numero ?? null } : null,

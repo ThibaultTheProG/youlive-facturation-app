@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
 import prisma from "@/lib/db";
 import { computeMontantsFacture } from "@/utils/montantsFacture";
 import { buildFactureAdminEmail } from "@/lib/emailFacture";
 import { requireSelfOrAdmin } from "@/lib/apiAuth";
 import { destinataires, sujet, baseUrl } from "@/lib/environnement";
 import { adressesPour } from "@/lib/emailsConfiguration";
+import { envoyerEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
@@ -42,12 +42,12 @@ export async function POST(req: Request) {
     const montants = computeMontantsFacture(
       {
         type: facture.type,
-        retrocession: facture.retrocession,
+        retrocession: facture.retrocession?.toString(),
         honoraires_agent: facture.relations_contrats?.honoraires_agent?.toString(),
         montant_honoraires: facture.montant_honoraires?.toString(),
         taux_retrocession: facture.taux_retrocession?.toString(),
         apporteur: facture.apporteur,
-        apporteur_amount: facture.apporteur_amount,
+        apporteur_amount: facture.apporteur_amount?.toString(),
         apply_tva: facture.apply_tva,
         taux_tva: facture.taux_tva?.toString(),
         montant_tva: facture.montant_tva?.toString(),
@@ -76,17 +76,6 @@ export async function POST(req: Request) {
       factureUrl,
     });
 
-    // Configuration du transporteur Nodemailer pour Infomaniak
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_SERVER_HOST,
-      port: Number(process.env.SMTP_SERVER_PORT),
-      secure: true, // true pour le port 465, false pour 587
-      auth: {
-        user: process.env.SMTP_SERVER_USERNAME,
-        pass: process.env.SMTP_SERVER_PASSWORD,
-      },
-    });
-
     const principaux = await adressesPour("facture_admin", "a");
     const copies = await adressesPour("facture_admin", "cc");
 
@@ -103,7 +92,7 @@ export async function POST(req: Request) {
     };
 
     // Envoi de l'email
-    await transporter.sendMail(mailOptions);
+    await envoyerEmail(mailOptions);
 
     // Marquer la facture comme envoyée uniquement si l'email est bien parti
     await prisma.factures.update({

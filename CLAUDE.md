@@ -110,10 +110,13 @@ d'un email adressé à un conseiller reste calculé par le code. Repli : tant qu
 email se déclare dans `EVENEMENTS_EMAIL`.
 
 Le défaut est délibérément sûr : il faut une production explicite pour écrire à de vraies
-personnes. **Tout nouvel envoi d'email doit passer par `destinataires()` et `sujet()`.** Les quatre
-points d'envoi existants sont `src/lib/email.ts` (invitation, → le conseiller),
-`/api/factures/create` (notification de facture, → le conseiller, une par facture du cron nocturne),
-`/api/factures/send` (→ l'administration) et `/api/contrats` (mail « club des 99 % » via
+personnes. **Tout nouvel envoi d'email doit passer par `destinataires()` et `sujet()`**, et
+s'expédier par `envoyerEmail` de `src/lib/email.ts`, seul transporteur SMTP de l'application
+(depuis le 23/11/2026 ; ne pas recréer de `nodemailer.createTransport` ailleurs, ni réintroduire
+`tls.rejectUnauthorized: false`). Les quatre envois existants : invitation (`sendInvitationEmail`,
+→ le conseiller), notification de facture (`sendNotificationFacture`, appelée par
+`/api/factures/create`, → le conseiller, une par facture du cron nocturne), `/api/factures/send`
+(→ l'administration) et `/api/contrats` (mail « club des 99 % » via
 `sendEmailClub99`, → le conseiller, administration en copie, une fois par an au franchissement des
 70 000 € ; marqueur `historique_ca_annuel.email_club99_envoye_le`, posé après envoi réussi — la
 migration l'a pré-rempli pour ceux déjà au-dessus du seuil, d'où aucun envoi rétroactif).
@@ -331,6 +334,12 @@ Annual CA is tracked in `historique_ca_annuel` (source of truth) and cached in `
   qu'une commission (ou un recrutement) existe pour elle. Les factures d'une même relation — deux
   tranches de commission, trois niveaux de recrutement — s'écrivent donc **en un seul
   `createMany`**, jamais une à une : un échec au milieu laissait les suivantes à jamais absentes.
+- **`factures.retrocession` et `apporteur_amount` sont des `Decimal`** (depuis le 23/11/2026, Float
+  et Int auparavant). Prisma rend un objet `Decimal` : le convertir (`Number()` ou `.toString()`)
+  avant toute arithmétique, avant de le renvoyer en JSON (sinon il devient une chaîne) et surtout
+  avant de le faire traverser une action serveur, qui refuse les objets de classe
+  (`src/backend/gestionFactures.tsx`). Un champ numérique qui doit accepter des centimes prend
+  `step="0.01"` : sans lui, le navigateur refuse toute décimale.
 - One-shot recompute + audit script: `scripts/migrate-ca-2026.ts` (re-fetches Apimo, sets `historique_ca_annuel` for 2026, and reports — without modifying — inconsistent commission invoices to regenerate).
 
 ### Key Files
