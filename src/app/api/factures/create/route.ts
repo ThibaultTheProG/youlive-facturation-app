@@ -327,68 +327,47 @@ async function createFactureCommission(
     console.log(`📊 CA pour calcul des tranches (année ${contratYear}): ${round2(currentCA)}€ → ${round2(currentCA + honoraires_agent)}€ (honoraires: ${honoraires_agent}€)`);
     console.log(`📊 Tranches: avant ${montantAvantSeuil}€ @${tauxAvantSeuil}%, après ${montantApresSeuil}€ @${tauxApresSeuil}%`);
 
-    // Créer les factures pour chaque tranche si nécessaire
-    if (montantAvantSeuil > 0) {
-      const retrocessionAvantSeuil = Number((montantAvantSeuil * (tauxAvantSeuil / 100)).toFixed(2));
-      const montantTvaAvantSeuil = userTva ? Number((retrocessionAvantSeuil * userTauxTva / 100).toFixed(2)) : 0;
+    // Préparer les factures de chaque tranche, puis les écrire en UNE instruction.
+    // Écrites séparément, un échec sur la seconde laissait la première seule en
+    // base : au passage suivant, le contrôle d'existence ci-dessus voyait « une
+    // commission existe » et la tranche manquante n'était jamais créée.
+    const tranches = [
+      { tranche: 'avant_seuil', montant: montantAvantSeuil, taux: tauxAvantSeuil },
+      { tranche: 'apres_seuil', montant: montantApresSeuil, taux: tauxApresSeuil },
+    ].filter((t) => t.montant > 0);
 
-      await prisma.factures.create({
-        data: {
-          relation_id: relationid,
-          user_id: user_id,
-          type: 'commission',
-          retrocession: retrocessionAvantSeuil,
-          montant_honoraires: montantAvantSeuil,
-          taux_retrocession: tauxAvantSeuil,
-          tranche: 'avant_seuil',
-          montant_tva: montantTvaAvantSeuil,
-          apply_tva: userTva,
-          taux_tva: userTva ? userTauxTva : null,
-          statut_paiement: 'non payé',
-          statut_envoi: 'non envoyée',
-          created_at: new Date(),
-          added_at: new Date()
-        }
-      });
+    const maintenant = new Date();
+    const facturesACreer = tranches.map(({ tranche, montant, taux }) => {
+      const retrocession = Number((montant * (taux / 100)).toFixed(2));
+      return {
+        relation_id: relationid,
+        user_id: user_id,
+        type: 'commission',
+        retrocession,
+        montant_honoraires: montant,
+        taux_retrocession: taux,
+        tranche,
+        montant_tva: userTva ? Number((retrocession * userTauxTva / 100).toFixed(2)) : 0,
+        apply_tva: userTva,
+        taux_tva: userTva ? userTauxTva : null,
+        statut_paiement: 'non payé',
+        statut_envoi: 'non envoyée',
+        created_at: maintenant,
+        added_at: maintenant
+      };
+    });
 
-      console.log(`✅ Facture commission avant seuil créée pour l'utilisateur ${user_id}: ${retrocessionAvantSeuil}€ (${tauxAvantSeuil}% de ${montantAvantSeuil}€)`);
-      
-      notifications.push({
-        userId: user_id,
-        factureType: 'commission_avant_seuil',
-        montant: retrocessionAvantSeuil
-      });
+    if (facturesACreer.length > 0) {
+      // createMany = un seul INSERT : toutes les tranches ou aucune.
+      await prisma.factures.createMany({ data: facturesACreer });
     }
 
-    if (montantApresSeuil > 0) {
-      const retrocessionApresSeuil = Number((montantApresSeuil * (tauxApresSeuil / 100)).toFixed(2));
-      const montantTvaApresSeuil = userTva ? Number((retrocessionApresSeuil * userTauxTva / 100).toFixed(2)) : 0;
-
-      await prisma.factures.create({
-        data: {
-          relation_id: relationid,
-          user_id: user_id,
-          type: 'commission',
-          retrocession: retrocessionApresSeuil,
-          montant_honoraires: montantApresSeuil,
-          taux_retrocession: tauxApresSeuil,
-          tranche: 'apres_seuil',
-          montant_tva: montantTvaApresSeuil,
-          apply_tva: userTva,
-          taux_tva: userTva ? userTauxTva : null,
-          statut_paiement: 'non payé',
-          statut_envoi: 'non envoyée',
-          created_at: new Date(),
-          added_at: new Date()
-        }
-      });
-
-      console.log(`✅ Facture commission après seuil créée pour l'utilisateur ${user_id}: ${retrocessionApresSeuil}€ (${tauxApresSeuil}% de ${montantApresSeuil}€)`);
-      
+    for (const f of facturesACreer) {
+      console.log(`✅ Facture commission ${f.tranche} créée pour l'utilisateur ${user_id}: ${f.retrocession}€ (${f.taux_retrocession}% de ${f.montant_honoraires}€)`);
       notifications.push({
         userId: user_id,
-        factureType: 'commission_apres_seuil',
-        montant: retrocessionApresSeuil
+        factureType: `commission_${f.tranche}`,
+        montant: f.retrocession
       });
     }
 
@@ -448,6 +427,25 @@ async function createFactureRecrutement(
       console.log(`❌ Aucun parrain trouvé pour l'utilisateur ${user_id}`);
       return notifications;
     }
+
+    // Factures à créer, toutes ensemble après la boucle (voir le createMany plus bas)
+    const maintenant = new Date();
+    const facturesACreer: {
+      relation_id: number;
+      user_id: number;
+      type: string;
+      retrocession: number;
+      montant_honoraires: number;
+      taux_retrocession: number;
+      tranche: string;
+      montant_tva: number;
+      apply_tva: boolean;
+      taux_tva: number | null;
+      statut_paiement: string;
+      statut_envoi: string;
+      created_at: Date;
+      added_at: Date;
+    }[] = [];
 
     // Traiter chaque niveau de parrainage
     for (const parrainage of parrainages) {
@@ -514,46 +512,53 @@ async function createFactureRecrutement(
           continue;
         }
 
-        // Double vérification: essayer de créer avec gestion d'erreur si la contrainte unique échoue
-        try {
-          await prisma.factures.create({
-            data: {
-              relation_id: relationid,
-              user_id: parrainId,
-              type: 'recrutement',
-              retrocession: retrocessionAmount, // Stocker le montant de rétrocession
-              montant_honoraires: honoraires_agent, // Stocker le montant des honoraires pour le calcul
-              taux_retrocession: percentage, // Stocker le pourcentage de parrainage (6%, 8%, 2%, 1%)
-              tranche: 'avant_seuil',
-              montant_tva: montantTvaRecrutement,
-              apply_tva: parrainTva,
-              taux_tva: parrainTva ? parrainTauxTva : null,
-              statut_paiement: 'non payé',
-              statut_envoi: 'non envoyée',
-              created_at: new Date(),
-              added_at: new Date()
-            }
-          });
-
-          console.log(`✅ Nouvelle facture recrutement créée pour le parrain ${parrainId} (${percentage}%) - relation ${relationid}`);
-
-          notifications.push({
-            userId: parrainId,
-            factureType: 'recrutement',
-            montant: retrocessionAmount
-          });
-        } catch (createError: unknown) {
-          // Si l'erreur est une violation de contrainte unique, ignorer silencieusement
-          if (createError && typeof createError === 'object' && 'code' in createError && createError.code === 'P2002') {
-            console.log(`⚠️ Contrainte unique violée pour le parrain ${parrainId} et la relation ${relationid} - facture déjà existante (ignoré)`);
-          } else {
-            // Pour toute autre erreur, la relancer
-            throw createError;
-          }
-        }
+        facturesACreer.push({
+          relation_id: relationid,
+          user_id: parrainId,
+          type: 'recrutement',
+          retrocession: retrocessionAmount, // Stocker le montant de rétrocession
+          montant_honoraires: honoraires_agent, // Stocker le montant des honoraires pour le calcul
+          taux_retrocession: percentage, // Stocker le pourcentage de parrainage (6%, 8%, 2%, 1%)
+          tranche: 'avant_seuil',
+          montant_tva: montantTvaRecrutement,
+          apply_tva: parrainTva,
+          taux_tva: parrainTva ? parrainTauxTva : null,
+          statut_paiement: 'non payé',
+          statut_envoi: 'non envoyée',
+          created_at: maintenant,
+          added_at: maintenant
+        });
       }
     }
-    
+
+    if (facturesACreer.length === 0) return notifications;
+
+    // Toutes les factures de recrutement de la relation en UNE instruction.
+    // Écrites une à une, un échec au niveau 2 laissait le niveau 1 seul en base,
+    // et la vérification globale en tête de fonction (« un recrutement existe
+    // déjà pour cette relation ») empêchait à jamais de créer les niveaux 2 et 3.
+    try {
+      await prisma.factures.createMany({ data: facturesACreer });
+    } catch (createError: unknown) {
+      // Violation de la contrainte unique : un autre passage a créé ces factures
+      // entre la vérification et l'écriture. Rien n'est écrit ici (INSERT unique),
+      // donc rien à notifier.
+      if (createError && typeof createError === 'object' && 'code' in createError && createError.code === 'P2002') {
+        console.log(`⚠️ Contrainte unique violée pour la relation ${relationid} - factures recrutement déjà existantes (ignoré)`);
+        return notifications;
+      }
+      throw createError;
+    }
+
+    for (const f of facturesACreer) {
+      console.log(`✅ Nouvelle facture recrutement créée pour le parrain ${f.user_id} (${f.taux_retrocession}%) - relation ${relationid}`);
+      notifications.push({
+        userId: f.user_id,
+        factureType: 'recrutement',
+        montant: f.retrocession
+      });
+    }
+
     return notifications;
   } catch (error) {
     console.error("❌ Erreur lors de la création des factures de parrainage :", error);
