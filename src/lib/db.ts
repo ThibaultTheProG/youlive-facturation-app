@@ -7,17 +7,21 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-const connectionString = process.env.DATABASE_URL;
+// Le pool n'est créé qu'avec le client : en dev, chaque rechargement à chaud
+// réévalue ce module, et un `new Pool` hors de cette fonction ouvrait un pool de
+// plus à chaque fois, alors que le client réutilisé (global.prisma) ne s'en
+// servait jamais.
+function creerClient(): PrismaClient {
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  return new PrismaClient({
+    adapter: new PrismaPg(pool),
+    // En production, ne pas logger chaque requête : sur les crons de synchro
+    // (centaines de requêtes), l'écriture des logs devient un coût mesurable.
+    log: process.env.NODE_ENV === 'production' ? ['error', 'warn'] : ['query', 'error', 'warn'],
+  });
+}
 
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-
-// En production, ne pas logger chaque requête : sur les crons de synchro
-// (centaines de requêtes), l'écriture des logs devient un coût mesurable.
-const prisma = global.prisma || new PrismaClient({
-  adapter,
-  log: process.env.NODE_ENV === 'production' ? ['error', 'warn'] : ['query', 'error', 'warn'],
-});
+const prisma = global.prisma ?? creerClient();
 
 if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma;

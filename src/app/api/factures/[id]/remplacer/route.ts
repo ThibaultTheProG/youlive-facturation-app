@@ -79,7 +79,7 @@ export async function POST(
       const conseiller = origine.utilisateurs ?? {};
       const applyTva = tvaParDefaut(origine.type, conseiller);
       const tauxTva = origine.utilisateurs?.taux_tva != null ? Number(origine.utilisateurs.taux_tva) : 20;
-      const retrocession = origine.retrocession ?? 0;
+      const retrocession = Number(origine.retrocession ?? 0);
 
       return tx.factures.create({
         data: {

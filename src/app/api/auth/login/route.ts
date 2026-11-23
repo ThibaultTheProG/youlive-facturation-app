@@ -5,6 +5,10 @@ import { NextResponse } from "next/server";
 
 export const runtime = 'nodejs';
 
+const ECHEC_CONNEXION = "Email ou mot de passe incorrect.";
+/** Hash bcrypt (coût 12) d'une valeur sans compte, comparé quand l'email est inconnu. */
+const HASH_LEURRE = "$2a$12$Gh3CTVeNHLxgKWUKHkqPd.95B0Toh6ztcaS5X6JXL7GwaIYpPRklW";
+
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
@@ -35,11 +39,13 @@ export async function POST(request: Request) {
       }
     });
 
+    // Même réponse pour un email inconnu, un compte désactivé ou un mauvais mot de
+    // passe : distinguer les cas révélait quels emails ont un compte.
     if (!user) {
-      return NextResponse.json(
-        { error: "Utilisateur non trouvé" },
-        { status: 404 }
-      );
+      // Un bcrypt factice, pour que le temps de réponse ne trahisse pas non plus
+      // l'absence de compte (sans lui, la réponse revenait ~250 ms plus tôt).
+      await comparePassword(password, HASH_LEURRE);
+      return NextResponse.json({ error: ECHEC_CONNEXION }, { status: 401 });
     }
 
     const { id, motDePasse: hashedPassword, role } = user;
@@ -48,10 +54,7 @@ export async function POST(request: Request) {
     const isValid = await comparePassword(password, hashedPassword as string);
 
     if (!isValid) {
-      return NextResponse.json(
-        { error: "Mot de passe incorrect" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: ECHEC_CONNEXION }, { status: 401 });
     }
 
     // Générer un token JWT

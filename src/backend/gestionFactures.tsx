@@ -55,7 +55,9 @@ export async function getFactures(userId: number) {
     montant_honoraires: montant_honoraires ? Number(montant_honoraires) : undefined,
     taux_retrocession: taux_retrocession ? Number(taux_retrocession) : undefined,
     tranche: tranche || undefined,
-    date_paiement: rest.date_paiement ? rest.date_paiement.toISOString() : undefined
+    date_paiement: rest.date_paiement ? rest.date_paiement.toISOString() : undefined,
+    // Decimal : un objet de classe ne traverse pas une action serveur, il faut un nombre.
+    apporteur_amount: rest.apporteur_amount != null ? Number(rest.apporteur_amount) : null
   }));
 }
 

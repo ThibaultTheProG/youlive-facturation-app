@@ -44,6 +44,8 @@ export type inputCustomProps = {
   label: string;
   id: string;
   type?: string;
+  /** Pas d'un champ numérique : sans lui, le navigateur refuse toute décimale. */
+  step?: string;
   placeholder?: string;
   value?: string | number;
   onChange?: (val: string | number) => void;

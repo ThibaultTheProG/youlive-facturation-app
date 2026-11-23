@@ -15,7 +15,8 @@ export default function ExportExcelButton() {
       // Récupérer toutes les factures sans pagination
       const params = new URLSearchParams({
         page: "1",
-        pageSize: "99999",
+        // Plafond de l'API (TAILLE_PAGE_MAX dans /api/factures)
+        pageSize: "10000",
         searchTerm: "",
         filterStatut: "",
         filterType: "",
@@ -27,6 +28,13 @@ export default function ExportExcelButton() {
       const response = await fetch(`/api/factures?${params.toString()}`);
       if (!response.ok) throw new Error("Erreur lors de la récupération des factures");
       const data = await response.json();
+
+      // Jamais d'export tronqué en silence : l'API plafonne la taille de page.
+      if (data.factures.length < data.totalCount) {
+        throw new Error(
+          `Export incomplet : ${data.factures.length} factures reçues sur ${data.totalCount}`
+        );
+      }
 
       // Créer le workbook et la feuille
       const workbook = new ExcelJS.Workbook();

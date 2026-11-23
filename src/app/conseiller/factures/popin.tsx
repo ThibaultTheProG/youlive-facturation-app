@@ -150,6 +150,7 @@ export default function Popin({
                   label="Montant de l'apporteur"
                   id="apporteur_amount"
                 type="number"
+                step="0.01"
                 value={apporteurAmount}
                   onChange={(val) => setApporteurAmount(Number(val))}
                 />

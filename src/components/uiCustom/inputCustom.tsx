@@ -9,6 +9,7 @@ export default function InputCustom({
   label,
   id,
   type,
+  step,
   placeholder,
   value,
   onChange,
@@ -28,6 +29,7 @@ export default function InputCustom({
         readOnly={disable}
         id={id}
         type={type}
+        step={step}
         placeholder={placeholder}
         value={value} // Utilise la valeur contrôlée
         onChange={handleChange}

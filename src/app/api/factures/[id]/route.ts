@@ -144,7 +144,7 @@ export async function GET(request: Request) {
       numero: result.numero || '',
       vat_rate: Number(result.relations_contrats?.vat_rate ?? 20),
       apporteur: result.apporteur,
-      apporteur_amount: result.apporteur_amount || 0,
+      apporteur_amount: Number(result.apporteur_amount ?? 0),
       // Nouveaux champs pour les factures avec tranches
       montant_honoraires: result.montant_honoraires ? Number(result.montant_honoraires) : undefined,
       taux_retrocession: result.taux_retrocession ? Number(result.taux_retrocession) : undefined,
@@ -274,7 +274,6 @@ export async function PUT(request: Request) {
     }
 
 
-      console.log(statut_paiement, numero, created_at, apporteur, apporteur_amount);
 
     // // Vérifier les données à mettre à jour
     // if (!numero && !created_at) {
