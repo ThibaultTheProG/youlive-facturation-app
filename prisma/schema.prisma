@@ -190,6 +190,10 @@ model utilisateurs {
   tva                  Boolean?
   typecontrat          String?                @db.VarChar(100)
   siren                String?                @db.VarChar(255)
+  /// Ville du conseiller, `city.name` d'Apimo, réécrite à chaque synchro (comme `siren`).
+  /// Lue par l'avis de valeur pour la signature du document client. À ne pas confondre
+  /// avec `adresse`, posée à la création puis éditable dans l'app.
+  ville                String?                @db.VarChar(255)
   chiffre_affaires     Decimal?               @db.Decimal(10, 2)
   retrocession         Decimal?               @db.Decimal(5, 2)
   auto_parrain         String?                @default("non") @db.VarChar(3)

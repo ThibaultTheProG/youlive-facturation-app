@@ -83,6 +83,7 @@ async function synchroniser(journal: JournalSync) {
           telephone: true,
           mobile: true,
           siren: true,
+          ville: true,
         },
       }),
       prisma.parrainages.findMany({ select: { user_id: true } }),
@@ -101,6 +102,7 @@ async function synchroniser(journal: JournalSync) {
       telephone: string | null;
       mobile: string | null;
       siren: string | null;
+      ville: string | null;
       adresse: string | null;
     };
     const aCreer: Cible[] = [];
@@ -124,6 +126,9 @@ async function synchroniser(journal: JournalSync) {
         telephone: phone || null,
         mobile: mobile || null,
         siren: identifiantLegal(partners),
+        // Ville Apimo, rafraîchie à chaque passage : l'avis de valeur la
+        // lit pour signer ses documents clients. Non éditable dans l'app.
+        ville: city?.name?.trim() || null,
         // `adresse` n'est renseignée qu'à la création : elle est ensuite
         // modifiable dans l'app et ne doit pas être écrasée par Apimo.
         adresse: city?.name || null,
@@ -138,7 +143,8 @@ async function synchroniser(journal: JournalSync) {
         !memeTexte(existant.email, cible.email) ||
         !memeTexte(existant.telephone, cible.telephone) ||
         !memeTexte(existant.mobile, cible.mobile) ||
-        !memeTexte(existant.siren, cible.siren)
+        !memeTexte(existant.siren, cible.siren) ||
+        !memeTexte(existant.ville, cible.ville)
       ) {
         aMaj.push(cible);
       }
@@ -160,7 +166,7 @@ async function synchroniser(journal: JournalSync) {
     });
 
     await runChunked(aMaj, async (cible) => {
-      const { idapimo, prenom, nom, email, telephone, mobile, siren } = cible;
+      const { idapimo, prenom, nom, email, telephone, mobile, siren, ville } = cible;
       try {
         await avecAuteurUtilisateur(null, SOURCES_UTILISATEUR.synchroApimo, (tx) =>
           tx.utilisateurs.update({
@@ -173,6 +179,7 @@ async function synchroniser(journal: JournalSync) {
               telephone,
               mobile,
               siren,
+              ville,
               updated_at: new Date(),
             },
           })
